@@ -1,14 +1,17 @@
 /**
- * PADEL PRO 3D - CONSOLE ULTRA EDITION
- * PBR Procedural Shaders, True Hitbox CCD Engine, Volumetric Lighting,
- * Articulated 3D Humanoid Athletes, Particle FX & Ball Seam Spin
+ * GRAND SLAM TENNIS 3D - PRO TOUR EDITION
+ * High-Performance Three.js Tennis Engine
+ * Open Grand Slam Hard Court, Strung Tennis Rackets, Official Tennis Rules,
+ * 1st & 2nd Serve System, Continuous Collision Detection (CCD), Zero-Allocation Loops,
+ * P2P WebRTC Multiplayer & Realistic Audio Synthesizer.
  */
 
-// --- Web Audio Synthesizer ---
-class PadelAudioPro {
+// --- Web Audio Synthesizer (Tennis Acoustic Model) ---
+class TennisAudioPro {
   constructor() {
     this.ctx = null;
   }
+
   init() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -18,102 +21,96 @@ class PadelAudioPro {
       this.ctx.resume();
     }
   }
+
+  // Crisp Tennis Racket String Impact Pop (Polyester / Gut String Bed)
   playHit(power = 1.0, isSmash = false, isSweetSpot = false) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
+
+    // High tension string ping
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = 'triangle';
-    const startFreq = isSmash ? 320 : (isSweetSpot ? 260 : 210);
+    const startFreq = isSmash ? 580 : (isSweetSpot ? 490 : 380);
     osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(75, t + 0.09);
 
-    g.gain.setValueAtTime(0.8 * Math.min(1.3, power), t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    g.gain.setValueAtTime(0.9 * Math.min(1.3, power), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
     osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.12);
+    osc.start(t); osc.stop(t + 0.09);
 
-    // Carbon fiber perforation snap & friction noise
-    const bSize = this.ctx.sampleRate * 0.045;
+    // String snap transient / friction whoosh
+    const bSize = Math.floor(this.ctx.sampleRate * 0.04);
     const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
     const d = b.getChannelData(0);
-    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bSize * 0.22));
+    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bSize * 0.25));
     const noise = this.ctx.createBufferSource();
     noise.buffer = b;
+
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = isSmash ? 3800 : (isSweetSpot ? 3000 : 2400);
+    filter.frequency.value = isSmash ? 4200 : (isSweetSpot ? 3400 : 2600);
+    filter.Q.value = 3.5;
+
     const ng = this.ctx.createGain();
-    ng.gain.setValueAtTime(0.55 * power, t);
-    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    ng.gain.setValueAtTime(0.65 * power, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
     noise.connect(filter); filter.connect(ng); ng.connect(this.ctx.destination);
     noise.start(t);
   }
+
+  // Hard Court Tennis Ball Bounce (Thud)
   playBounce(v = 1.0) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.exponentialRampToValueAtTime(32, t + 0.08);
-    g.gain.setValueAtTime(Math.min(0.45 * v, 0.55), t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    osc.frequency.setValueAtTime(165, t);
+    osc.frequency.exponentialRampToValueAtTime(36, t + 0.075);
+
+    g.gain.setValueAtTime(Math.min(0.50 * v, 0.60), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
     osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.08);
+    osc.start(t); osc.stop(t + 0.075);
   }
-  playGlass(v = 1.0) {
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(520, t);
-    osc.frequency.exponentialRampToValueAtTime(115, t + 0.24);
-    g.gain.setValueAtTime(Math.min(0.55 * (v / 10), 0.65), t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
-    osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.24);
-  }
-  playCrowd() {
-    if (!this.ctx) return;
-    const t = this.ctx.currentTime;
-    const dur = 1.8;
-    const bSize = this.ctx.sampleRate * dur;
-    const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / bSize) * Math.PI);
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = b;
-    const f = this.ctx.createBiquadFilter();
-    f.type = 'lowpass';
-    f.frequency.setValueAtTime(900, t);
-    f.frequency.linearRampToValueAtTime(1800, t + 0.7);
-    f.frequency.linearRampToValueAtTime(700, t + dur);
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.01, t);
-    g.gain.linearRampToValueAtTime(0.32, t + 0.4);
-    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
-    noise.start(t);
-  }
+
+  // Electronic Line-Calling "OUT!" Tone / Umpire Whistle
   playWhistle() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(2600, t);
-    osc.frequency.setValueAtTime(2800, t + 0.08);
-    g.gain.setValueAtTime(0.2, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc.frequency.setValueAtTime(2400, t);
+    osc.frequency.setValueAtTime(2700, t + 0.07);
+    g.gain.setValueAtTime(0.25, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
     osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.25);
+    osc.start(t); osc.stop(t + 0.22);
   }
+
+  // Line Calling "OUT" Buzzer
+  playOut() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.linearRampToValueAtTime(240, t + 0.16);
+    g.gain.setValueAtTime(0.28, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    osc.connect(g); g.connect(this.ctx.destination);
+    osc.start(t); osc.stop(t + 0.16);
+  }
+
+  // Racket Swift Air Swing
   playAirSwing() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    const dur = 0.20;
+    const dur = 0.18;
     const bSize = Math.floor(this.ctx.sampleRate * dur);
     const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
     const d = b.getChannelData(0);
@@ -122,20 +119,47 @@ class PadelAudioPro {
     noise.buffer = b;
     const f = this.ctx.createBiquadFilter();
     f.type = 'bandpass';
-    f.frequency.setValueAtTime(450, t);
-    f.frequency.exponentialRampToValueAtTime(950, t + 0.08);
-    f.frequency.exponentialRampToValueAtTime(280, t + dur);
+    f.frequency.setValueAtTime(500, t);
+    f.frequency.exponentialRampToValueAtTime(1100, t + 0.07);
+    f.frequency.exponentialRampToValueAtTime(300, t + dur);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.35, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
     noise.start(t);
   }
+
+  // Grand Slam Stadium Crowd Cheering
+  playCrowd() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dur = 2.0;
+    const bSize = Math.floor(this.ctx.sampleRate * dur);
+    const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / bSize) * Math.PI);
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = b;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(950, t);
+    f.frequency.linearRampToValueAtTime(1900, t + 0.7);
+    f.frequency.linearRampToValueAtTime(750, t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.01, t);
+    g.gain.linearRampToValueAtTime(0.34, t + 0.45);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    noise.start(t);
+  }
 }
+
+// Alias for backward compatibility
+const PadelAudioPro = TennisAudioPro;
 
 // --- Procedural PBR Texture Generators ---
 const TextureFactory = {
-  // 1. Padel Ball Texture (Optic Yellow Felt + Curved Seams + Bump)
+  // 1. Official Tennis Ball (Optic Yellow Felt + Iconic Curved White Seams)
   createBallTextures() {
     const size = 512;
     const colorCanvas = document.createElement('canvas');
@@ -143,26 +167,28 @@ const TextureFactory = {
     const cCtx = colorCanvas.getContext('2d');
 
     // Optic Yellow Base
-    cCtx.fillStyle = '#ccff00';
+    cCtx.fillStyle = '#d4fc02';
     cCtx.fillRect(0, 0, size, size);
 
-    // Felt fuzz noise
-    for (let i = 0; i < 40000; i++) {
+    // Fuzzy felt fiber noise
+    for (let i = 0; i < 45000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      cCtx.fillStyle = Math.random() > 0.5 ? '#b8ea00' : '#d8ff22';
+      cCtx.fillStyle = Math.random() > 0.5 ? '#bde500' : '#e4ff33';
       cCtx.fillRect(x, y, 2, 2);
     }
 
-    // Regulation White Curved Seams
+    // Classic Curved White Tennis Seams
     cCtx.strokeStyle = '#ffffff';
-    cCtx.lineWidth = 14;
+    cCtx.lineWidth = 15;
+    cCtx.lineCap = 'round';
     cCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y1 = size * 0.25 + Math.sin((x / size) * Math.PI * 2) * (size * 0.18);
       if (x === 0) { cCtx.moveTo(x, y1); } else { cCtx.lineTo(x, y1); }
     }
     cCtx.stroke();
+
     cCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y2 = size * 0.75 + Math.sin((x / size) * Math.PI * 2 + Math.PI) * (size * 0.18);
@@ -172,27 +198,27 @@ const TextureFactory = {
 
     const colorTex = new THREE.CanvasTexture(colorCanvas);
 
-    // Ball Bump Map (Felt depth and recessed rubber seam)
+    // Ball Bump Map (Grooved Seam and Felt Texture)
     const bumpCanvas = document.createElement('canvas');
     bumpCanvas.width = bumpCanvas.height = size;
     const bCtx = bumpCanvas.getContext('2d');
     bCtx.fillStyle = '#808080';
     bCtx.fillRect(0, 0, size, size);
 
-    for (let i = 0; i < 30000; i++) {
+    for (let i = 0; i < 35000; i++) {
       bCtx.fillStyle = Math.random() > 0.5 ? '#999999' : '#666666';
       bCtx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
     }
 
-    // Indented seam groove
     bCtx.strokeStyle = '#222222';
-    bCtx.lineWidth = 14;
+    bCtx.lineWidth = 15;
     bCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y1 = size * 0.25 + Math.sin((x / size) * Math.PI * 2) * (size * 0.18);
       if (x === 0) { bCtx.moveTo(x, y1); } else { bCtx.lineTo(x, y1); }
     }
     bCtx.stroke();
+
     bCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y2 = size * 0.75 + Math.sin((x / size) * Math.PI * 2 + Math.PI) * (size * 0.18);
@@ -204,100 +230,138 @@ const TextureFactory = {
     return { colorTex, bumpTex };
   },
 
-  // 2. Carbon Fiber Padel Racket Face with Drilled Perforations
+  // 2. High-Tension Strung Tennis Racket Grid with Stencil Logo
   createRacketFaceTexture(accentHex) {
     const size = 512;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    // Carbon Twill Weave Pattern
-    ctx.fillStyle = '#111822';
-    ctx.fillRect(0, 0, size, size);
+    // Transparent Background (Open Strings)
+    ctx.clearRect(0, 0, size, size);
 
-    for (let y = 0; y < size; y += 8) {
-      for (let x = 0; x < size; x += 8) {
-        if ((x / 8 + y / 8) % 2 === 0) {
-          ctx.fillStyle = '#1e293b';
-          ctx.fillRect(x, y, 8, 8);
-        }
-      }
+    // Cross-Strung String Bed (Mains & Crosses)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+    ctx.lineWidth = 3;
+
+    // Vertical Strings (Mains)
+    for (let x = 60; x <= size - 60; x += 22) {
+      ctx.beginPath();
+      ctx.moveTo(x, 50);
+      ctx.lineTo(x, size - 50);
+      ctx.stroke();
     }
 
-    // Aerodynamic Pro Accent Decal
+    // Horizontal Strings (Crosses)
+    for (let y = 60; y <= size - 60; y += 22) {
+      ctx.beginPath();
+      ctx.moveTo(50, y);
+      ctx.lineTo(size - 50, y);
+      ctx.stroke();
+    }
+
+    // Pro Tournament String Stencil Logo (Custom [W] / Chevron)
     ctx.strokeStyle = accentHex;
-    ctx.lineWidth = 16;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size * 0.38, 0, Math.PI * 2);
+    ctx.moveTo(size * 0.32, size * 0.38);
+    ctx.lineTo(size * 0.41, size * 0.62);
+    ctx.lineTo(size * 0.50, size * 0.44);
+    ctx.lineTo(size * 0.59, size * 0.62);
+    ctx.lineTo(size * 0.68, size * 0.38);
     ctx.stroke();
-
-    // Drilled Hole Pattern (Perforaciones circulares)
-    ctx.fillStyle = '#050810';
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 2;
-
-    const rings = [0.12, 0.22, 0.30];
-    rings.forEach((rRatio, rIdx) => {
-      const count = 8 + rIdx * 6;
-      const r = size * rRatio;
-      for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2;
-        const hx = size / 2 + Math.cos(angle) * r;
-        const hy = size / 2 + Math.sin(angle) * r;
-        ctx.beginPath();
-        ctx.arc(hx, hy, 7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
-    });
 
     const tex = new THREE.CanvasTexture(canvas);
     return tex;
   },
 
-  // 3. Pro Turf (Official Premier Padel Blue with synthetic grain)
+  // 3. Official Grand Slam Hard Court (DecoTurf Australian / US Open Blue with Crisp Lines)
   createTurfTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 2048;
     const ctx = canvas.getContext('2d');
 
-    // Deep Electric Blue
-    ctx.fillStyle = '#0a54bf';
+    // Outer Court: Deep Tournament Green / Marine
+    ctx.fillStyle = '#0e4a36';
     ctx.fillRect(0, 0, 1024, 2048);
 
-    // Micro-texture grain
-    for (let i = 0; i < 70000; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.14)';
-      ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 3);
+    // Coordinate Mapping (Tennis Court: Length 23.77m, Width 10.97m)
+    const scaleX = 1024 / 16.0; // 16m total canvas width representation
+    const scaleY = 2048 / 30.0; // 30m total canvas length representation
+    const toCanvasX = (x) => 512 + x * scaleX;
+    const toCanvasY = (z) => 1024 + z * scaleY;
+
+    // Inner Court Rectangle (DecoTurf Electric Blue)
+    const doublesW = 5.485; // half width (10.97m total)
+    const courtHalfL = 11.885; // half length (23.77m total)
+
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    ctx.fillStyle = '#1a56db'; // Grand Slam Electric Blue
+    ctx.fillRect(xL, yT, xR - xL, yB - yT);
+
+    // Fine court surface grain
+    for (let i = 0; i < 90000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)';
+      ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
     }
 
-    // Center Sponsor Circle
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 10;
+    // Grand Slam Tournament Center Crest (Subtle watermark)
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.arc(512, 1024, 190, 0, Math.PI * 2);
+    ctx.arc(512, 1024, 160, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = 'bold 54px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.font = '900 48px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('PREMIER PADEL', 512, 1042);
+    ctx.fillText('GRAND SLAM TOUR', 512, 1038);
 
-    // Regulation White Lines
+    // Regulation White Chalk Lines
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 16;
-    ctx.strokeRect(32, 32, 1024 - 64, 2048 - 64);
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'square';
 
-    const netY = 1024;
-    const sDist = 6.95 * (2048 / 20); // ~711px
-    const sPlayer = netY + sDist;
-    const sAI = netY - sDist;
+    // 1. Doubles Perimeter Baseline & Sidelines
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    // 2. Singles Sidelines (8.23m total -> +/-4.115m)
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
 
     ctx.beginPath();
-    ctx.moveTo(32, sPlayer); ctx.lineTo(1024 - 32, sPlayer);
-    ctx.moveTo(32, sAI); ctx.lineTo(1024 - 32, sAI);
-    ctx.moveTo(512, sAI); ctx.lineTo(512, sPlayer);
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    // 3. Service Lines (6.40m from net)
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.stroke();
+
+    // 4. Center Service Line (From -6.40m to +6.40m)
+    ctx.beginPath();
+    ctx.moveTo(512, yS1); ctx.lineTo(512, yS2);
+    ctx.stroke();
+
+    // 5. Baseline Center Marks (0.10m ticks on baselines)
+    const tickLen = 0.15 * scaleY;
+    ctx.beginPath();
+    ctx.moveTo(512, yT); ctx.lineTo(512, yT + tickLen);
+    ctx.moveTo(512, yB); ctx.lineTo(512, yB - tickLen);
     ctx.stroke();
 
     const tex = new THREE.CanvasTexture(canvas);
@@ -305,7 +369,7 @@ const TextureFactory = {
     return tex;
   },
 
-  // 4. Pro Athlete Athletic Jersey Texture (Sport Mesh, Ergonomic Panels & Number)
+  // 4. Pro Tennis Athlete Athletic Jersey Texture
   createJerseyTexture(baseColorHex, accentColorHex, numberStr, isAI) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -316,163 +380,128 @@ const TextureFactory = {
     ctx.fillStyle = baseColorHex;
     ctx.fillRect(0, 0, 512, 512);
 
-    // Honeycomb Micro-Perforations for Technical Fabric
+    // Technical Aero Fabric Mesh
     ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    for (let y = 0; y < 512; y += 10) {
-      for (let x = 0; x < 512; x += 10) {
-        const ox = (y % 20 === 0) ? 5 : 0;
-        ctx.fillRect(x + ox, y, 3, 3);
+    for (let y = 0; y < 512; y += 8) {
+      for (let x = 0; x < 512; x += 8) {
+        const ox = (y % 16 === 0) ? 4 : 0;
+        ctx.fillRect(x + ox, y, 2, 2);
       }
     }
 
-    // Dynamic Flank Racing Stripes (Ergonomic side panels)
+    // Dynamic Flank Racing Stripes
     ctx.fillStyle = accentColorHex;
     ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(70, 0); ctx.lineTo(110, 512); ctx.lineTo(0, 512);
+    ctx.moveTo(0, 0); ctx.lineTo(65, 0); ctx.lineTo(100, 512); ctx.lineTo(0, 512);
     ctx.fill();
 
     ctx.beginPath();
-    ctx.moveTo(512, 0); ctx.lineTo(512 - 70, 0); ctx.lineTo(512 - 110, 512); ctx.lineTo(512, 512);
+    ctx.moveTo(512, 0); ctx.lineTo(512 - 65, 0); ctx.lineTo(512 - 100, 512); ctx.lineTo(512, 512);
     ctx.fill();
 
-    // Tournament Sponsor & Crest on Front Chest
+    // Tournament Crest
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 36px sans-serif';
+    ctx.font = 'bold 32px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('WORLD TOUR', 256, 110);
+    ctx.fillText('GRAND SLAM', 256, 110);
 
     ctx.fillStyle = accentColorHex;
-    ctx.fillRect(196, 125, 120, 6);
+    ctx.fillRect(196, 122, 120, 5);
 
-    // Big Stencil Player Number on Back
+    // Player Number
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 130px sans-serif';
+    ctx.font = '900 120px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(numberStr, 256, 380);
+    ctx.fillText(numberStr, 256, 320);
 
     const tex = new THREE.CanvasTexture(canvas);
     return tex;
   },
 
-  // 5. Spiral Overgrip Handle Texture
+  // 5. Spiral Wrapped Tennis Grip Tape
   createGripTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 256;
+    canvas.width = 256; canvas.height = 512;
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, 128, 256);
+    ctx.fillRect(0, 0, 256, 512);
 
-    // Overlapping spiral wrap lines
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 4;
-    for (let y = -64; y < 320; y += 32) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(128, y + 64);
-      ctx.stroke();
+    for (let y = -256; y < 768; y += 42) {
+      ctx.fillStyle = 'rgba(0,0,0,0.14)';
+      ctx.fillRect(0, y, 256, 8);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(0, y + 8, 256, 4);
     }
-
-    // Grip texture micro-dots
-    ctx.fillStyle = '#cbd5e1';
-    for (let i = 0; i < 400; i++) {
-      ctx.fillRect(Math.random() * 128, Math.random() * 256, 2, 2);
-    }
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(1, 4);
-    return tex;
+    return new THREE.CanvasTexture(canvas);
   }
 };
 
-// --- Particle System (Contact Sparks, Court Dust) ---
+// --- Particle FX Engine ---
 class ParticleSystem {
   constructor(scene) {
     this.scene = scene;
     this.particles = [];
-
-    const pGeo = new THREE.BufferGeometry();
-    const pCount = 200;
-    const positions = new Float32Array(pCount * 3);
-    pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-    const pMat = new THREE.PointsMaterial({
-      color: 0x00f0ff,
-      size: 0.14,
-      transparent: true,
-      opacity: 0.9,
-      blending: THREE.AdditiveBlending
-    });
-    this.points = new THREE.Points(pGeo, pMat);
-    this.points.frustumCulled = false;
-    this.scene.add(this.points);
-
-    for (let i = 0; i < pCount; i++) {
-      this.particles.push({
-        pos: new THREE.Vector3(0, -100, 0),
-        vel: new THREE.Vector3(),
-        life: 0,
-        maxLife: 0.5,
-        color: 0x00f0ff
-      });
-    }
+    const geo = new THREE.SphereGeometry(0.045, 6, 6);
+    this.geo = geo;
   }
 
-  burst(pos, count = 25, color = 0x00f0ff, speed = 4.0) {
-    let spawned = 0;
-    for (let p of this.particles) {
-      if (p.life <= 0) {
-        p.pos.copy(pos);
-        p.vel.set(
-          (Math.random() - 0.5) * speed,
-          Math.random() * speed * 0.8 + 1.0,
-          (Math.random() - 0.5) * speed
-        );
-        p.life = p.maxLife;
-        p.color = color;
-        spawned++;
-        if (spawned >= count) break;
-      }
+  burst(pos, count = 18, colorHex = 0xffea00, speedScale = 3.5) {
+    const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 1.0 });
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(this.geo, mat);
+      mesh.position.copy(pos);
+      const vel = new THREE.Vector3(
+        (Math.random() - 0.5) * speedScale,
+        Math.random() * speedScale * 0.85 + 0.5,
+        (Math.random() - 0.5) * speedScale
+      );
+      this.scene.add(mesh);
+      this.particles.push({ mesh, vel, life: 1.0 });
     }
   }
 
   update(dt) {
-    const posAttr = this.points.geometry.attributes.position;
-    for (let i = 0; i < this.particles.length; i++) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
-      if (p.life > 0) {
-        p.life -= dt;
-        p.vel.y -= 9.8 * dt; // gravity
-        p.pos.addScaledVector(p.vel, dt);
-        posAttr.setXYZ(i, p.pos.x, p.pos.y, p.pos.z);
-      } else {
-        posAttr.setXYZ(i, 0, -100, 0);
+      p.life -= dt * 2.6;
+      p.vel.y -= 9.8 * dt;
+      p.mesh.position.addScaledVector(p.vel, dt);
+      p.mesh.material.opacity = Math.max(0, p.life);
+
+      if (p.life <= 0) {
+        this.scene.remove(p.mesh);
+        p.mesh.geometry.dispose();
+        this.particles.splice(i, 1);
       }
     }
-    posAttr.needsUpdate = true;
   }
 }
 
-// --- Main Padel Engine Class ---
-class PadelGameEngine {
+// --- Main Tennis Game Engine ---
+class TennisGameEngine {
   constructor() {
     this.container = document.getElementById('canvas-container');
-    this.audio = new PadelAudioPro();
+    this.audio = new TennisAudioPro();
 
-    this.COURT_W = 10.0;
-    this.COURT_L = 20.0;
-    this.HALF_W = 5.0;
-    this.HALF_L = 10.0;
-    this.NET_H = 0.88;
-    this.WALL_H = 3.6;
+    // Official Regulation Tennis Dimensions
+    this.COURT_W = 10.97; // Doubles full court width
+    this.DOUBLES_HALF_W = 5.485;
+    this.SINGLES_W = 8.23; // Singles full court width
+    this.HALF_W = 4.115; // In-play singles lateral boundary (+/-4.115m)
+    this.COURT_L = 23.77; // Total length
+    this.HALF_L = 11.885; // Baseline distance from net (+/-11.885m)
+    this.SERVICE_Z = 6.40; // Service line distance from net (+/-6.40m)
+    this.NET_H = 0.914; // Center net height (0.914m / 3ft)
+    this.NET_POST_H = 1.07; // Post height at doubles tramlines
 
     this.isPlaying = false;
     this.pointActive = false;
-    this.server = 'player';
-    this.servingSide = 1;
+    this.server = 'player'; // 'player' or 'ai'
+    this.servingSide = 1; // 1: Deuce court (right), -1: Ad court (left)
+    this.serveFaultCount = 0; // 0: 1st serve, 1: 2nd serve
+
+    // Tennis Scores (0, 15, 30, 40, ADV)
     this.scorePlayer = 0;
     this.scoreAI = 0;
     this.gamesPlayer = 0;
@@ -482,7 +511,7 @@ class PadelGameEngine {
     this.rally = 0;
 
     this.shotType = 'DRIVE';
-    this.power = 0.5;
+    this.power = 0.55;
     this.isChargingPower = false;
     this.cameraMode = 'third';
 
@@ -492,21 +521,14 @@ class PadelGameEngine {
     this.conn = null;
     this.roomCode = null;
     this.netTimer = 0;
-    this.p2Input = {
-      pos: new THREE.Vector3(-1.8, 0, -7.5),
-      isSwinging: false,
-      swingType: 'forehand',
-      runCycle: 0,
-      shotPending: null
-    };
 
-    // Ball Physics with True 3D Spin
-    this.ballRadius = 0.12;
+    // Ball Physics with True 3D Aerodynamics & Spin
+    this.ballRadius = 0.125;
     this.ball = {
-      pos: new THREE.Vector3(0, 1.0, 7.5),
-      prevPos: new THREE.Vector3(0, 1.0, 7.5),
+      pos: new THREE.Vector3(1.8, 1.0, 12.2),
+      prevPos: new THREE.Vector3(1.8, 1.0, 12.2),
       vel: new THREE.Vector3(0, 0, 0),
-      spin: new THREE.Vector3(0, 0, 0), // angular velocity
+      spin: new THREE.Vector3(0, 0, 0),
       mesh: null,
       shadow: null,
       targetMarker: null,
@@ -517,11 +539,11 @@ class PadelGameEngine {
 
     // Humanoid Athletes
     this.player = {
-      pos: new THREE.Vector3(1.8, 0, 7.5),
-      speed: 7.6,
+      pos: new THREE.Vector3(1.8, 0, 12.2),
+      speed: 7.8,
       model: null,
       limbs: {},
-      racketHitbox: { pos: new THREE.Vector3(), radius: 0.38 },
+      racketHitbox: { pos: new THREE.Vector3(), radius: 0.42 },
       runCycle: 0,
       isSwinging: false,
       swingType: 'forehand',
@@ -529,12 +551,12 @@ class PadelGameEngine {
     };
 
     this.ai = {
-      pos: new THREE.Vector3(-1.8, 0, -7.5),
-      targetPos: new THREE.Vector3(0, 0, -7.5),
+      pos: new THREE.Vector3(-1.8, 0, -12.2),
+      targetPos: new THREE.Vector3(0, 0, -11.8),
       speed: 8.5,
       model: null,
       limbs: {},
-      racketHitbox: { pos: new THREE.Vector3(), radius: 0.38 },
+      racketHitbox: { pos: new THREE.Vector3(), radius: 0.42 },
       runCycle: 0,
       isSwinging: false,
       swingType: 'forehand',
@@ -575,11 +597,11 @@ class PadelGameEngine {
   // --- Three.js & Lighting Setup ---
   initThree() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x080f1c);
-    this.scene.fog = new THREE.FogExp2(0x080f1c, 0.012);
+    this.scene.background = new THREE.Color(0x081326);
+    this.scene.fog = new THREE.FogExp2(0x081326, 0.010);
 
-    this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 250);
-    this.camera.position.set(0, 4.4, 15.6);
+    this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 260);
+    this.camera.position.set(0, 4.8, 17.5);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -587,57 +609,57 @@ class PadelGameEngine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.25;
     this.container.appendChild(this.renderer.domElement);
 
-    // Warm Stadium Lighting
-    const ambient = new THREE.AmbientLight(0xdbeafe, 0.6);
+    // Warm Grand Slam Stadium Lighting
+    const ambient = new THREE.AmbientLight(0xdbeafe, 0.65);
     this.scene.add(ambient);
 
-    // Main Overhead Directional Sun
-    const sun = new THREE.DirectionalLight(0xfff7ed, 1.25);
-    sun.position.set(14, 24, 10);
+    const sun = new THREE.DirectionalLight(0xfff8ee, 1.35);
+    sun.position.set(16, 28, 12);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 2048;
     sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 5;
-    sun.shadow.camera.far = 60;
-    sun.shadow.camera.left = -16;
-    sun.shadow.camera.right = 16;
-    sun.shadow.camera.top = 20;
-    sun.shadow.camera.bottom = -20;
+    sun.shadow.camera.far = 70;
+    sun.shadow.camera.left = -20;
+    sun.shadow.camera.right = 20;
+    sun.shadow.camera.top = 24;
+    sun.shadow.camera.bottom = -24;
     sun.shadow.bias = -0.0006;
     this.scene.add(sun);
 
-    // 4 Corner Volumetric Floodlights
+    // 4 Corner Stadium Floodlight Towers
     const lightTowers = [
-      { x: -9.5, z: -14.5 }, { x: 9.5, z: -14.5 },
-      { x: -9.5, z: 14.5 }, { x: 9.5, z: 14.5 }
+      { x: -13.0, z: -18.0 }, { x: 13.0, z: -18.0 },
+      { x: -13.0, z: 18.0 }, { x: 13.0, z: 18.0 }
     ];
 
     lightTowers.forEach(t => {
-      const spot = new THREE.SpotLight(0xffffff, 0.9, 45, Math.PI / 3.4, 0.4);
-      spot.position.set(t.x, 12, t.z);
-      spot.target.position.set(0, 0, (t.z > 0 ? 3 : -3));
+      const spot = new THREE.SpotLight(0xffffff, 0.95, 55, Math.PI / 3.2, 0.45);
+      spot.position.set(t.x, 15, t.z);
+      spot.target.position.set(0, 0, (t.z > 0 ? 4 : -4));
       this.scene.add(spot);
       this.scene.add(spot.target);
 
       // Steel Spaceframe Truss Pillar
-      const trussGeo = new THREE.BoxGeometry(0.3, 12, 0.3);
+      const trussGeo = new THREE.BoxGeometry(0.35, 15, 0.35);
       const trussMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
       const truss = new THREE.Mesh(trussGeo, trussMat);
-      truss.position.set(t.x, 6, t.z);
+      truss.position.set(t.x, 7.5, t.z);
       this.scene.add(truss);
 
-      // Emissive Bank of Lamps
-      const bankGeo = new THREE.BoxGeometry(1.6, 0.6, 0.8);
-      const bankMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-      const bank = new THREE.Mesh(bankGeo, bankMat);
-      bank.position.set(t.x, 12.2, t.z);
+      // Emissive Bank of Floodlamps
+      const bank = new THREE.Mesh(
+        new THREE.BoxGeometry(2.0, 0.8, 0.9),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      bank.position.set(t.x, 15.2, t.z);
       this.scene.add(bank);
 
       // Volumetric Light Cone Illusion
-      const coneGeo = new THREE.ConeGeometry(3.5, 14, 16, 1, true);
+      const coneGeo = new THREE.ConeGeometry(4.2, 17, 16, 1, true);
       const coneMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
@@ -646,8 +668,8 @@ class PadelGameEngine {
         depthWrite: false
       });
       const cone = new THREE.Mesh(coneGeo, coneMat);
-      cone.position.set(t.x * 0.7, 6, t.z * 0.7);
-      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -12, -t.z).normalize());
+      cone.position.set(t.x * 0.7, 7.5, t.z * 0.7);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -15, -t.z).normalize());
       this.scene.add(cone);
     });
 
@@ -658,7 +680,7 @@ class PadelGameEngine {
     });
   }
 
-  // --- Grandstands, Roof & LED Perimeter ---
+  // --- Grand Slam Arena: Grandstands, Umpire Chair, LED Ribbons ---
   buildArena() {
     const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
     const seatBlue = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 });
@@ -667,30 +689,33 @@ class PadelGameEngine {
 
     // Lateral Grandstands with 8 Tiered Rows
     [-1, 1].forEach(side => {
-      const xBase = side * 11.8;
+      const xBase = side * 13.5;
       for (let row = 0; row < 8; row++) {
-        const step = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.65, 28), standMat);
-        step.position.set(xBase + side * (row * 1.35), row * 0.65 + 0.32, 0);
+        const step = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.70, 36), standMat);
+        step.position.set(xBase + side * (row * 1.45), row * 0.70 + 0.35, 0);
         step.receiveShadow = true;
         this.scene.add(step);
 
-        // Seats & 3D Cheering Spectators
-        for (let s = -12; s <= 12; s += 0.85) {
+        for (let s = -16; s <= 16; s += 0.9) {
           const sChoice = Math.abs(s + row) % 3;
           const sMat = (sChoice === 0) ? seatBlue : (sChoice === 1 ? seatRed : seatGold);
-          const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.55), sMat);
-          seat.position.set(xBase + side * (row * 1.35), row * 0.65 + 0.72, s);
+          const seat = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.48, 0.60), sMat);
+          seat.position.set(xBase + side * (row * 1.45), row * 0.70 + 0.76, s);
           this.scene.add(seat);
 
-          // 3D Spectator
-          if (Math.sin(s * 2.8 + row * 1.9) > -0.1) {
-            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.65, 8),
-              new THREE.MeshStandardMaterial({ color: (s * row) % 2 === 0 ? 0x38bdf8 : 0xf43f5e, roughness: 0.9 }));
-            body.position.set(xBase + side * (row * 1.35), row * 0.65 + 1.15, s);
+          // 3D Cheering Spectators
+          if (Math.sin(s * 2.8 + row * 1.9) > -0.2) {
+            const body = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.19, 0.23, 0.70, 8),
+              new THREE.MeshStandardMaterial({ color: (s * row) % 2 === 0 ? 0x38bdf8 : 0xf43f5e, roughness: 0.9 })
+            );
+            body.position.set(xBase + side * (row * 1.45), row * 0.70 + 1.22, s);
 
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8),
-              new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.7 }));
-            head.position.set(xBase + side * (row * 1.35), row * 0.65 + 1.58, s);
+            const head = new THREE.Mesh(
+              new THREE.SphereGeometry(0.14, 8, 8),
+              new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.7 })
+            );
+            head.position.set(xBase + side * (row * 1.45), row * 0.70 + 1.68, s);
 
             this.scene.add(body);
             this.scene.add(head);
@@ -699,157 +724,148 @@ class PadelGameEngine {
       }
     });
 
-    // Glowing LED Perimeter Advertising Boards
+    // Elevated Tennis Umpire Chair (Silla de juez de árbitro)
+    const umpireGroup = new THREE.Group();
+    umpireGroup.position.set(6.8, 0, 0);
+
+    const uMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
+
+    // Ladder Legs
+    const l1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
+    l1.position.set(-0.35, 1.25, 0.35); l1.rotation.z = -0.12;
+    const l2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
+    l2.position.set(-0.35, 1.25, -0.35); l2.rotation.z = -0.12;
+    const l3 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
+    l3.position.set(0.35, 1.25, 0.35); l3.rotation.z = 0.12;
+    const l4 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
+    l4.position.set(0.35, 1.25, -0.35); l4.rotation.z = 0.12;
+    umpireGroup.add(l1, l2, l3, l4);
+
+    // Platform & High Chair
+    const uPlat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.9), uMat);
+    uPlat.position.y = 2.4;
+    const uSeat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.6, 0.6), seatMat);
+    uSeat.position.set(0, 2.75, 0);
+    umpireGroup.add(uPlat, uSeat);
+
+    // Umpire Canopy Umbrella
+    const uCanopy = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.35, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.3 }));
+    uCanopy.position.set(0, 3.4, 0);
+    umpireGroup.add(uCanopy);
+    this.scene.add(umpireGroup);
+
+    // Player Rest Benches (Opposite side at X = -6.8m)
+    const benchGroup = new THREE.Group();
+    benchGroup.position.set(-6.8, 0, 0);
+    const bench1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
+    bench1.position.set(0, 0.3, 2.0);
+    const bench2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
+    bench2.position.set(0, 0.3, -2.0);
+    benchGroup.add(bench1, bench2);
+    this.scene.add(benchGroup);
+
+    // LED Grand Slam Digital Ribbon Banners
     const ledCanvas = document.createElement('canvas');
     ledCanvas.width = 1024; ledCanvas.height = 128;
     const lctx = ledCanvas.getContext('2d');
     lctx.fillStyle = '#06101e';
     lctx.fillRect(0, 0, 1024, 128);
     lctx.fillStyle = '#00f0ff';
-    lctx.font = '900 40px sans-serif';
-    lctx.fillText('PREMIER PADEL • BULLPADEL • NOX • WILSON • HEAD • CUPRA', 15, 78);
+    lctx.font = '900 38px sans-serif';
+    lctx.fillText('GRAND SLAM TOUR • ROLEX • EMIRATES • WILSON • HEAD', 15, 78);
     const ledTex = new THREE.CanvasTexture(ledCanvas);
     ledTex.wrapS = THREE.RepeatWrapping;
     ledTex.repeat.set(3, 1);
 
     const ledMat = new THREE.MeshBasicMaterial({ map: ledTex });
-    const ledGeo = new THREE.PlaneGeometry(26, 0.95);
+    const ledGeo = new THREE.PlaneGeometry(34, 1.0);
 
     const ledLeft = new THREE.Mesh(ledGeo, ledMat);
-    ledLeft.position.set(-6.9, 0.48, 0);
+    ledLeft.position.set(-9.2, 0.50, 0);
     ledLeft.rotation.y = Math.PI / 2;
     this.scene.add(ledLeft);
 
     const ledRight = new THREE.Mesh(ledGeo, ledMat);
-    ledRight.position.set(6.9, 0.48, 0);
+    ledRight.position.set(9.2, 0.50, 0);
     ledRight.rotation.y = -Math.PI / 2;
     this.scene.add(ledRight);
 
-    // Overhead Stadium Space-frame Trusses
+    // Overhead Spaceframe Roof Trusses
     const trussMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.3 });
-    for (let z = -12; z <= 12; z += 6) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(26, 0.35, 0.35), trussMat);
-      beam.position.set(0, 14, z);
+    for (let z = -15; z <= 15; z += 7.5) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(32, 0.38, 0.38), trussMat);
+      beam.position.set(0, 16, z);
       this.scene.add(beam);
     }
   }
 
-  // --- Official Court with Realistic Glass & Wire Mesh ---
+  // --- Official Open Tennis Court (No Glass Walls) ---
   buildCourt() {
-    // 1. Synthetic Turf
-    const turfTex = TextureFactory.createTurfTexture();
-    const courtGeo = new THREE.PlaneGeometry(this.COURT_W, this.COURT_L);
+    // 1. DecoTurf Court Ground Plane
+    const courtTex = TextureFactory.createTurfTexture();
+    const courtGeo = new THREE.PlaneGeometry(16.0, 30.0);
     const courtMat = new THREE.MeshStandardMaterial({
-      map: turfTex,
-      roughness: 0.72,
-      metalness: 0.08
+      map: courtTex,
+      roughness: 0.76,
+      metalness: 0.05
     });
     const court = new THREE.Mesh(courtGeo, courtMat);
     court.rotation.x = -Math.PI / 2;
     court.receiveShadow = true;
     this.scene.add(court);
 
-    // Surrounding Floor
-    const outerGeo = new THREE.PlaneGeometry(32, 44);
-    const outerMat = new THREE.MeshStandardMaterial({ color: 0x091422, roughness: 0.95 });
+    // Surrounding Stadium Floor
+    const outerGeo = new THREE.PlaneGeometry(38, 52);
+    const outerMat = new THREE.MeshStandardMaterial({ color: 0x050c18, roughness: 0.95 });
     const outer = new THREE.Mesh(outerGeo, outerMat);
     outer.rotation.x = -Math.PI / 2;
-    outer.position.y = -0.01;
+    outer.position.y = -0.015;
     outer.receiveShadow = true;
     this.scene.add(outer);
 
-    // 2. High-Tech Beveled Tempered Glass Walls
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x9be8ff,
-      transparent: true,
-      opacity: 0.38,
-      roughness: 0.04,
-      metalness: 0.12,
-      transmission: 0.88,
-      ior: 1.5,
-      reflectivity: 0.85,
-      side: THREE.DoubleSide
-    });
-
-    // Back Glass Walls (Z = +/-10m)
-    const backGeo = new THREE.BoxGeometry(this.COURT_W, this.WALL_H, 0.08);
-    const bWallP = new THREE.Mesh(backGeo, glassMat);
-    bWallP.position.set(0, this.WALL_H / 2, this.HALF_L);
-    this.scene.add(bWallP);
-
-    const bWallAI = new THREE.Mesh(backGeo, glassMat);
-    bWallAI.position.set(0, this.WALL_H / 2, -this.HALF_L);
-    this.scene.add(bWallAI);
-
-    // Corner Glass Walls (4m length)
-    const sGlassGeo = new THREE.BoxGeometry(0.08, this.WALL_H, 4.0);
-    [
-      [this.HALF_W, 8.0], [-this.HALF_W, 8.0],
-      [this.HALF_W, -8.0], [-this.HALF_W, -8.0]
-    ].forEach(([x, z]) => {
-      const g = new THREE.Mesh(sGlassGeo, glassMat);
-      g.position.set(x, this.WALL_H / 2, z);
-      this.scene.add(g);
-    });
-
-    // Center Metallic Wire Mesh (Z: -6 to +6)
-    const fenceMat = new THREE.MeshStandardMaterial({
-      color: 0x475569,
-      metalness: 0.85,
-      roughness: 0.35,
+    // 2. Official Tennis Net with Center Strap (0.914m center, 1.07m posts)
+    const netWidth = 12.4; // Spanning full width past tramlines
+    const netGeo = new THREE.PlaneGeometry(netWidth, this.NET_H, 48, 12);
+    const netMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0a0a,
+      roughness: 0.9,
       wireframe: true
     });
-    const fenceGeo = new THREE.PlaneGeometry(12.0, this.WALL_H, 48, 16);
-
-    const fR = new THREE.Mesh(fenceGeo, fenceMat);
-    fR.rotation.y = -Math.PI / 2;
-    fR.position.set(this.HALF_W, this.WALL_H / 2, 0);
-    this.scene.add(fR);
-
-    const fL = new THREE.Mesh(fenceGeo, fenceMat);
-    fL.rotation.y = Math.PI / 2;
-    fL.position.set(-this.HALF_W, this.WALL_H / 2, 0);
-    this.scene.add(fL);
-
-    // Structural Posts & Chrome Glass Mounting Clips
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
-    const postGeo = new THREE.CylinderGeometry(0.05, 0.05, this.WALL_H, 12);
-    [
-      [-this.HALF_W, -this.HALF_L], [this.HALF_W, -this.HALF_L],
-      [-this.HALF_W, this.HALF_L], [this.HALF_W, this.HALF_L]
-    ].forEach(([x, z]) => {
-      const p = new THREE.Mesh(postGeo, postMat);
-      p.position.set(x, this.WALL_H / 2, z);
-      this.scene.add(p);
-    });
-
-    // 3. Realistic 3D Net
-    const netGeo = new THREE.PlaneGeometry(this.COURT_W, this.NET_H, 40, 10);
-    const netMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9, wireframe: true });
     const net = new THREE.Mesh(netGeo, netMat);
     net.position.set(0, this.NET_H / 2, 0);
     this.scene.add(net);
 
-    const tapeGeo = new THREE.BoxGeometry(this.COURT_W, 0.09, 0.06);
+    // Top White Vinyl Band (5cm regulation tape)
+    const tapeGeo = new THREE.BoxGeometry(netWidth, 0.065, 0.045);
     const tapeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
     const tape = new THREE.Mesh(tapeGeo, tapeMat);
     tape.position.set(0, this.NET_H, 0);
     this.scene.add(tape);
 
-    const nPostGeo = new THREE.CylinderGeometry(0.06, 0.06, 1.05, 16);
+    // Center White Strap (Fita central)
+    const strapGeo = new THREE.BoxGeometry(0.06, this.NET_H, 0.05);
+    const strap = new THREE.Mesh(strapGeo, tapeMat);
+    strap.position.set(0, this.NET_H / 2, 0);
+    this.scene.add(strap);
+
+    // Net Steel Posts (1.07m height at X = +/-5.8m)
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.2 });
+    const nPostGeo = new THREE.CylinderGeometry(0.065, 0.065, this.NET_POST_H, 16);
+
     const np1 = new THREE.Mesh(nPostGeo, postMat);
-    np1.position.set(-this.HALF_W - 0.05, 1.05 / 2, 0);
+    np1.position.set(-netWidth / 2, this.NET_POST_H / 2, 0);
     const np2 = new THREE.Mesh(nPostGeo, postMat);
-    np2.position.set(this.HALF_W + 0.05, 1.05 / 2, 0);
-    this.scene.add(np1);
-    this.scene.add(np2);
+    np2.position.set(netWidth / 2, this.NET_POST_H / 2, 0);
+    this.scene.add(np1, np2);
   }
 
-  // --- Pro Athlete 3D Model with Sculpted Sportswear, Articulated Joints & PBR Racket ---
+  // --- Pro Tennis Athlete 3D Model with Strung Tennis Racket ---
   createProAthlete(jerseyColor, shortsColor, accentHex, jerseyNumber, isAI = false) {
     const root = new THREE.Group();
 
-    // 1. Athletic Anatomical Torso & Technical Jersey
+    // 1. Athletic Torso & Technical Tennis Polo
     const torsoGroup = new THREE.Group();
     torsoGroup.position.y = 0.98;
 
@@ -863,14 +879,12 @@ class PadelGameEngine {
       metalness: 0.15
     });
 
-    // Upper Chest / Pecs (V-taper)
     const chestGeo = new THREE.CylinderGeometry(0.24, 0.20, 0.36, 24);
     const chest = new THREE.Mesh(chestGeo, jerseyMat);
     chest.position.y = 0.12;
     chest.castShadow = true;
     torsoGroup.add(chest);
 
-    // Tapered Athletic Waist
     const waistGeo = new THREE.CylinderGeometry(0.20, 0.175, 0.28, 24);
     const waistMat = new THREE.MeshStandardMaterial({
       color: shortsColor,
@@ -882,7 +896,6 @@ class PadelGameEngine {
     waist.castShadow = true;
     torsoGroup.add(waist);
 
-    // Anatomical Neck & Ribbed Collar
     const skinMat = new THREE.MeshStandardMaterial({
       color: 0xefc4a4,
       roughness: 0.55,
@@ -900,7 +913,7 @@ class PadelGameEngine {
 
     root.add(torsoGroup);
 
-    // 2. Sculpted Athletic Head with Fade/Cap & Polarized Sports Eyewear
+    // 2. Sculpted Athletic Head with Tennis Cap & Sports Visor
     const headGroup = new THREE.Group();
     headGroup.position.y = 1.48;
 
@@ -909,13 +922,12 @@ class PadelGameEngine {
     head.castShadow = true;
     headGroup.add(head);
 
-    // Nose & Brow definition
     const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.06, 8), skinMat);
     nose.position.set(0, -0.01, 0.14);
     nose.rotation.x = Math.PI / 2;
     headGroup.add(nose);
 
-    // Athletic Cap / Pro Visor
+    // Tennis Cap / Pro Visor
     const capMat = new THREE.MeshStandardMaterial({
       color: isAI ? 0x0f172a : 0xffffff,
       roughness: 0.45,
@@ -928,14 +940,13 @@ class PadelGameEngine {
     cap.position.y = 0.025;
     headGroup.add(cap);
 
-    // Aerodynamic Curved Visor Brim
     const brimGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3);
     const brim = new THREE.Mesh(brimGeo, capMat);
     brim.position.set(0, 0.045, 0.10);
     brim.rotation.x = 0.18;
     headGroup.add(brim);
 
-    // Polarized Wrap-Around Sports Sunglasses
+    // Polarized Wrap-Around Sunglasses
     const lensMat = new THREE.MeshPhysicalMaterial({
       color: isAI ? 0xff0055 : 0x00f0ff,
       metalness: 0.95,
@@ -950,293 +961,191 @@ class PadelGameEngine {
 
     root.add(headGroup);
 
-    // 3. Compression Shorts & Athletic Pelvis
-    const shortsGeo = new THREE.CylinderGeometry(0.21, 0.22, 0.26, 24);
-    const shortsMesh = new THREE.Mesh(shortsGeo, waistMat);
-    shortsMesh.position.y = 0.68;
-    shortsMesh.castShadow = true;
-    root.add(shortsMesh);
+    // 3. Articulated Legs (Hips, Knees, Calves)
+    const legGeo = new THREE.CylinderGeometry(0.088, 0.068, 0.40, 16);
+    const calfGeo = new THREE.CylinderGeometry(0.068, 0.052, 0.38, 16);
 
-    // 4. Detailed Pro Padel Sneakers (Multi-layer Outsole, Cushion & Laces)
-    const createSneaker = (isLeft) => {
-      const shoeGroup = new THREE.Group();
+    const createLeg = (isRight) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(isRight ? 0.12 : -0.12, 0.78, 0);
 
-      // Outsole Rubber Tread
-      const treadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
-      const tread = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.024, 0.30), treadMat);
-      tread.position.set(0, -0.53, 0.04);
-      shoeGroup.add(tread);
+      const thigh = new THREE.Mesh(legGeo, skinMat);
+      thigh.position.y = -0.20;
+      thigh.castShadow = true;
+      legGroup.add(thigh);
 
-      // Midsole Air Cushioning Layer
-      const midMat = new THREE.MeshStandardMaterial({
-        color: isAI ? 0xff2a55 : 0x00f0ff,
+      const kneeGroup = new THREE.Group();
+      kneeGroup.position.y = -0.40;
+
+      const calf = new THREE.Mesh(calfGeo, skinMat);
+      calf.position.y = -0.19;
+      calf.castShadow = true;
+      kneeGroup.add(calf);
+
+      // Tennis Court Sneakers
+      const shoeMat = new THREE.MeshStandardMaterial({
+        color: isRight ? 0xffffff : 0x0f172a,
         roughness: 0.35,
-        metalness: 0.4
+        metalness: 0.2
       });
-      const midsole = new THREE.Mesh(new THREE.BoxGeometry(0.128, 0.036, 0.29), midMat);
-      midsole.position.set(0, -0.505, 0.04);
-      shoeGroup.add(midsole);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.26), shoeMat);
+      shoe.position.set(0, -0.38, 0.05);
+      shoe.castShadow = true;
+      kneeGroup.add(shoe);
 
-      // Upper Technical Mesh with Curved Toe Rocker
-      const upperMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
-      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.08, 0.26), upperMat);
-      upper.position.set(0, -0.45, 0.03);
-      upper.castShadow = true;
-      shoeGroup.add(upper);
-
-      // Toe Rocker
-      const toeCap = new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 12), upperMat);
-      toeCap.scale.set(1.0, 0.55, 1.1);
-      toeCap.position.set(0, -0.47, 0.16);
-      shoeGroup.add(toeCap);
-
-      // Shoe Tongue & Laces
-      const laces = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.12),
-        new THREE.MeshStandardMaterial({ color: isAI ? 0xff2a55 : 0x0077ff }));
-      laces.position.set(0, -0.40, 0.06);
-      laces.rotation.x = -0.3;
-      shoeGroup.add(laces);
-
-      return shoeGroup;
+      legGroup.add(kneeGroup);
+      return { legGroup, kneeGroup };
     };
 
-    // 5. Two-Segment Articulated Legs
-    const thighGeo = new THREE.CylinderGeometry(0.076, 0.062, 0.32, 16);
-    const calfGeo = new THREE.CylinderGeometry(0.060, 0.046, 0.32, 16);
-    const kneeGeo = new THREE.SphereGeometry(0.058, 14, 14);
-    const tapeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.7 });
+    const leftLegData = createLeg(false);
+    const rightLegData = createLeg(true);
+    root.add(leftLegData.legGroup);
+    root.add(rightLegData.legGroup);
 
-    // Left Leg
-    const lLegGroup = new THREE.Group();
-    lLegGroup.position.set(-0.13, 0.58, 0);
+    // 4. Articulated Arms (Deltoids, Biceps, Elbows, Forearms)
+    const armGeo = new THREE.CylinderGeometry(0.065, 0.052, 0.32, 16);
+    const forearmGeo = new THREE.CylinderGeometry(0.052, 0.042, 0.30, 16);
 
-    const lThigh = new THREE.Mesh(thighGeo, skinMat);
-    lThigh.position.y = -0.16;
-    lThigh.castShadow = true;
-    lLegGroup.add(lThigh);
-
-    const lKnee = new THREE.Mesh(kneeGeo, tapeMat);
-    lKnee.position.y = -0.32;
-    lLegGroup.add(lKnee);
-
-    const lCalf = new THREE.Mesh(calfGeo, skinMat);
-    lCalf.position.y = -0.48;
-    lCalf.castShadow = true;
-    lLegGroup.add(lCalf);
-
-    const lShoe = createSneaker(true);
-    lLegGroup.add(lShoe);
-    root.add(lLegGroup);
-
-    // Right Leg
-    const rLegGroup = new THREE.Group();
-    rLegGroup.position.set(0.13, 0.58, 0);
-
-    const rThigh = new THREE.Mesh(thighGeo, skinMat);
-    rThigh.position.y = -0.16;
-    rThigh.castShadow = true;
-    rLegGroup.add(rThigh);
-
-    const rKnee = new THREE.Mesh(kneeGeo, tapeMat);
-    rKnee.position.y = -0.32;
-    rLegGroup.add(rKnee);
-
-    const rCalf = new THREE.Mesh(calfGeo, skinMat);
-    rCalf.position.y = -0.48;
-    rCalf.castShadow = true;
-    rLegGroup.add(rCalf);
-
-    const rShoe = createSneaker(false);
-    rLegGroup.add(rShoe);
-    root.add(rLegGroup);
-
-    // 6. Sculpted Shoulders & Arms
-    const deltoidGeo = new THREE.SphereGeometry(0.084, 16, 14);
-    const bicepGeo = new THREE.CylinderGeometry(0.052, 0.046, 0.26, 16);
-    const elbowGeo = new THREE.SphereGeometry(0.046, 12, 12);
-    const forearmGeo = new THREE.CylinderGeometry(0.045, 0.038, 0.25, 16);
-
-    // Left Arm (Counter-balance)
+    // Left Arm
     const lArmGroup = new THREE.Group();
-    lArmGroup.position.set(-0.31, 1.22, 0);
+    lArmGroup.position.set(-0.28, 1.25, 0);
+    const lUpper = new THREE.Mesh(armGeo, skinMat);
+    lUpper.position.y = -0.16;
+    lArmGroup.add(lUpper);
 
-    const lDeltoid = new THREE.Mesh(deltoidGeo, jerseyMat);
-    lArmGroup.add(lDeltoid);
-
-    const lBicep = new THREE.Mesh(bicepGeo, skinMat);
-    lBicep.position.y = -0.16;
-    lBicep.castShadow = true;
-    lArmGroup.add(lBicep);
-
-    const lElbow = new THREE.Mesh(elbowGeo, skinMat);
-    lElbow.position.y = -0.29;
-    lArmGroup.add(lElbow);
-
-    const lForearm = new THREE.Mesh(forearmGeo, skinMat);
-    lForearm.position.y = -0.42;
-    lForearm.castShadow = true;
-    lArmGroup.add(lForearm);
-
-    // Left Hand
-    const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.06), skinMat);
-    lHand.position.y = -0.56;
-    lArmGroup.add(lHand);
-
+    const lFore = new THREE.Mesh(forearmGeo, skinMat);
+    lFore.position.y = -0.45;
+    lArmGroup.add(lFore);
     root.add(lArmGroup);
 
-    // Right Arm (Hitter / Striking Hand)
+    // Right Arm (Dominant Playing Arm holding Racket)
     const rArmGroup = new THREE.Group();
-    rArmGroup.position.set(0.31, 1.22, 0);
+    rArmGroup.position.set(0.28, 1.25, 0);
+    const rUpper = new THREE.Mesh(armGeo, skinMat);
+    rUpper.position.y = -0.16;
+    rArmGroup.add(rUpper);
 
-    const rDeltoid = new THREE.Mesh(deltoidGeo, jerseyMat);
-    rArmGroup.add(rDeltoid);
+    const rFore = new THREE.Mesh(forearmGeo, skinMat);
+    rFore.position.y = -0.45;
+    rArmGroup.add(rFore);
 
-    const rBicep = new THREE.Mesh(bicepGeo, skinMat);
-    rBicep.position.y = -0.16;
-    rBicep.castShadow = true;
-    rArmGroup.add(rBicep);
-
-    const rElbow = new THREE.Mesh(elbowGeo, skinMat);
-    rElbow.position.y = -0.29;
-    rArmGroup.add(rElbow);
-
-    const rForearm = new THREE.Mesh(forearmGeo, skinMat);
-    rForearm.position.y = -0.42;
-    rForearm.castShadow = true;
-    rArmGroup.add(rForearm);
-
-    // Pro Terrycloth Wrist Sweatband
-    const sweatbandMat = new THREE.MeshStandardMaterial({
-      color: isAI ? 0xff2a55 : 0x00f0ff,
-      roughness: 0.85
-    });
-    const wristband = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.08, 16), sweatbandMat);
-    wristband.position.y = -0.48;
-    rArmGroup.add(wristband);
-
-    // Sculpted Gripping Hand
-    const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.08, 0.065), skinMat);
-    rHand.position.y = -0.56;
+    const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), skinMat);
+    rHand.position.y = -0.60;
     rArmGroup.add(rHand);
 
-    // 7. Next-Gen Pro Padel Racket with Twin-Bridge Airflow Throat
+    // 5. Authentic Strung Tennis Racket (Extended Two-Handed Grip & Open String Bed)
     const racketGroup = new THREE.Group();
-    racketGroup.position.set(0, -0.62, 0.18);
+    racketGroup.position.set(0, -0.60, 0.18);
 
-    // Overgrip Spiral Wrapped Handle
+    // Extended Dual-Hand Tennis Grip Handle
     const gripTex = TextureFactory.createGripTexture();
     const handleMat = new THREE.MeshStandardMaterial({
       map: gripTex,
       roughness: 0.5,
       metalness: 0.1
     });
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.24, 16), handleMat);
-    handle.position.y = 0.12;
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.025, 0.32, 16), handleMat);
+    handle.position.y = 0.16;
     racketGroup.add(handle);
 
-    // Flared Butt Cap
-    const capEnd = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.026, 0.03, 16),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 }));
-    capEnd.position.y = 0.005;
-    racketGroup.add(capEnd);
+    // Flared Butt Cap with Tournament Logo
+    const buttCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.032, 0.024, 0.03, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+    );
+    buttCap.position.y = 0.01;
+    racketGroup.add(buttCap);
 
-    // Safety Wrist Lanyard Cord
-    const lanyardMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
-    const lanyard = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.006, 6, 16), lanyardMat);
-    lanyard.position.set(0, 0.02, -0.04);
-    lanyard.rotation.x = Math.PI / 3;
-    racketGroup.add(lanyard);
+    // V-Throat Bridge
+    const throatMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
+    const pylonGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.16, 10);
+    const pL = new THREE.Mesh(pylonGeo, throatMat);
+    pL.position.set(-0.044, 0.36, 0); pL.rotation.z = -0.34;
+    const pR = new THREE.Mesh(pylonGeo, throatMat);
+    pR.position.set(0.044, 0.36, 0); pR.rotation.z = 0.34;
+    racketGroup.add(pL, pR);
 
-    // Aerodynamic Twin-Bridge Throat (Vented Pylons)
-    const throatMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.9, roughness: 0.2 });
-    const pylonGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.14, 10);
-    const pylonL = new THREE.Mesh(pylonGeo, throatMat);
-    pylonL.position.set(-0.042, 0.28, 0);
-    pylonL.rotation.z = -0.32;
-    racketGroup.add(pylonL);
-
-    const pylonR = new THREE.Mesh(pylonGeo, throatMat);
-    pylonR.position.set(0.042, 0.28, 0);
-    pylonR.rotation.z = 0.32;
-    racketGroup.add(pylonR);
-
-    // Perforated Carbon Face (PBR Decal)
-    const faceTex = TextureFactory.createRacketFaceTexture(accentHex);
-    const faceMat = new THREE.MeshStandardMaterial({
-      map: faceTex,
-      roughness: 0.22,
-      metalness: 0.85
+    // Elliptical Aerodynamic Graphite Tennis Hoop Frame
+    const hoopMat = new THREE.MeshStandardMaterial({
+      color: isAI ? 0xdc2626 : 0x0284c7,
+      metalness: 0.88,
+      roughness: 0.22
     });
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.022, 10, 36), hoopMat);
+    hoop.scale.set(0.95, 1.35, 1.0);
+    hoop.position.y = 0.56;
+    racketGroup.add(hoop);
 
-    const faceGeo = new THREE.CylinderGeometry(0.22, 0.20, 0.038, 32);
-    faceGeo.scale(1.0, 1.0, 1.25);
-    const face = new THREE.Mesh(faceGeo, faceMat);
-    face.rotation.x = Math.PI / 2;
-    face.position.y = 0.44;
-    face.castShadow = true;
-    racketGroup.add(face);
-
-    // Aerodynamic Chamfered Carbon Bezel
-    const rimMat = new THREE.MeshStandardMaterial({
-      color: 0x090d16,
-      metalness: 0.95,
-      roughness: 0.12
+    // High-Tension Cross-Strung String Bed (Double-Sided Transparent Plane)
+    const stringTex = TextureFactory.createRacketFaceTexture(accentHex);
+    const stringMat = new THREE.MeshStandardMaterial({
+      map: stringTex,
+      transparent: true,
+      opacity: 0.88,
+      roughness: 0.15,
+      metalness: 0.1,
+      side: THREE.DoubleSide
     });
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.024, 10, 36), rimMat);
-    rim.scale.set(1.0, 1.25, 1.0);
-    rim.position.y = 0.44;
-    racketGroup.add(rim);
+    const stringPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.62), stringMat);
+    stringPlane.position.y = 0.56;
+    racketGroup.add(stringPlane);
 
     rArmGroup.add(racketGroup);
     root.add(rArmGroup);
 
-    // Dynamic Contact Shadow
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 }));
+    // Athlete Dynamic Contact Shadow
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.60, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 })
+    );
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.015;
     root.add(shadow);
 
     const athlete = isAI ? this.ai : this.player;
     athlete.limbs = {
-      lLeg: lLegGroup,
-      rLeg: rLegGroup,
-      lCalf: lCalf,
-      rCalf: rCalf,
+      torso: torsoGroup,
+      head: headGroup,
+      lLeg: leftLegData.legGroup,
+      rLeg: rightLegData.legGroup,
+      lCalf: leftLegData.kneeGroup,
+      rCalf: rightLegData.kneeGroup,
       lArm: lArmGroup,
       rArm: rArmGroup,
-      racket: racketGroup,
-      torso: torsoGroup
+      racket: racketGroup
     };
 
     return root;
   }
 
-  // --- Ball with 3D Spin Seams & Dynamic Reticle ---
+  // --- Tennis Ball Model with Seam Spin & Projection Ring ---
   buildBall() {
     const { colorTex, bumpTex } = TextureFactory.createBallTextures();
+    const ballGeo = new THREE.SphereGeometry(this.ballRadius, 32, 32);
     const ballMat = new THREE.MeshStandardMaterial({
       map: colorTex,
       bumpMap: bumpTex,
-      bumpScale: 0.05,
-      roughness: 0.6,
+      bumpScale: 0.025,
+      roughness: 0.68,
       metalness: 0.05
     });
 
-    this.ball.mesh = new THREE.Mesh(new THREE.SphereGeometry(this.ballRadius, 32, 32), ballMat);
+    this.ball.mesh = new THREE.Mesh(ballGeo, ballMat);
     this.ball.mesh.castShadow = true;
     this.scene.add(this.ball.mesh);
 
-    // Dynamic Ball Shadow
-    this.ball.shadow = new THREE.Mesh(new THREE.CircleGeometry(this.ballRadius * 1.5, 20),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 }));
+    // Ball Floor Shadow
+    this.ball.shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(this.ballRadius * 1.5, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.65 })
+    );
     this.ball.shadow.rotation.x = -Math.PI / 2;
     this.ball.shadow.position.y = 0.015;
     this.scene.add(this.ball.shadow);
 
-    // Predicted Landing Target Ring
+    // Court Projected Landing Ring
     this.ball.targetMarker = new THREE.Mesh(
-      new THREE.RingGeometry(0.22, 0.32, 32),
+      new THREE.RingGeometry(0.18, 0.28, 24),
       new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
     );
     this.ball.targetMarker.rotation.x = -Math.PI / 2;
@@ -1250,6 +1159,9 @@ class PadelGameEngine {
       this.keys[e.key.toLowerCase()] = true;
       this.audio.init();
 
+      // Don't intercept game shortcuts if typing in room input
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
       if (!this.isPlaying && (e.code === 'Space' || e.code === 'Enter')) {
         document.getElementById('start-screen').classList.add('fade-out');
         this.isPlaying = true;
@@ -1261,7 +1173,10 @@ class PadelGameEngine {
         document.getElementById('current-shot').innerText = 'GLOBO (LOB)';
       } else if (e.key.toLowerCase() === 'e') {
         this.shotType = 'SMASH';
-        document.getElementById('current-shot').innerText = 'SMASH X3';
+        document.getElementById('current-shot').innerText = 'SMASH (REMATE)';
+      } else if (e.key.toLowerCase() === 'c') {
+        this.shotType = 'SLICE';
+        document.getElementById('current-shot').innerText = 'SLICE (CORTADO)';
       }
 
       if (e.key === '1') this.setCameraMode('third');
@@ -1319,16 +1234,17 @@ class PadelGameEngine {
 
   triggerGuestShot() {
     if (this.conn && this.conn.open) {
+      const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
       this.conn.send({
         type: 'p2_input',
         x: this.ai.pos.x,
         z: this.ai.pos.z,
         rc: this.ai.runCycle,
         sw: true,
-        st: (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand',
+        st: swingType,
         shot: { power: 0.88, shotType: this.shotType }
       });
-      this.startSwingAnimation(this.ai, (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand');
+      this.startSwingAnimation(this.ai, swingType);
     }
   }
 
@@ -1377,7 +1293,7 @@ class PadelGameEngine {
     if (tabOnline) tabOnline.addEventListener('click', () => setModeTab('online'));
     if (tabLocal) tabLocal.addEventListener('click', () => setModeTab('local'));
 
-    // Local 2-Player Play Button
+    // Local 2-Player Start Button
     const btnPlayLocal = document.getElementById('btn-play-local');
     if (btnPlayLocal) {
       btnPlayLocal.addEventListener('click', () => {
@@ -1385,7 +1301,7 @@ class PadelGameEngine {
         this.audio.init();
         document.getElementById('start-screen').classList.add('fade-out');
         this.isPlaying = true;
-        this.showAnnouncement('¡MODO 2 JUGADORES!', 'P1 (WASD) vs P2 (Flechas + Enter)');
+        this.showAnnouncement('¡MODO 2 JUGADORES!', 'P1 (WASD + Espacio) vs P2 (Flechas + Enter)');
       });
     }
 
@@ -1397,7 +1313,7 @@ class PadelGameEngine {
           const shareUrl = `${window.location.origin}${window.location.pathname}?room=${this.roomCode}`;
           navigator.clipboard.writeText(shareUrl).then(() => {
             btnCopy.innerText = '¡Enlace Copiado!';
-            setTimeout(() => btnCopy.innerText = 'Copiar Código', 2000);
+            setTimeout(() => btnCopy.innerText = 'Copiar Enlace', 2000);
           }).catch(() => {
             navigator.clipboard.writeText(this.roomCode);
             btnCopy.innerText = '¡Código Copiado!';
@@ -1419,15 +1335,14 @@ class PadelGameEngine {
       });
     }
 
-    // Auto-join from URL parameter (?room=...)
+    // Auto-join via URL query (?room=TENNIS-XXXX)
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam) {
       setModeTab('online');
-      if (joinInput) joinInput.value = roomParam.toUpperCase();
       setTimeout(() => {
         this.connectToPeer(roomParam.toUpperCase());
-      }, 600);
+      }, 500);
     }
   }
 
@@ -1446,7 +1361,7 @@ class PadelGameEngine {
 
   setupOnlineHost() {
     if (this.peer || typeof Peer === 'undefined') return;
-    this.roomCode = `PADEL-${Math.floor(1000 + Math.random() * 9000)}`;
+    this.roomCode = `TENNIS-${Math.floor(1000 + Math.random() * 9000)}`;
     const display = document.getElementById('room-code-display');
     if (display) display.innerText = this.roomCode;
 
@@ -1455,14 +1370,14 @@ class PadelGameEngine {
 
       this.peer.on('open', () => {
         const status = document.getElementById('host-status');
-        if (status) status.innerText = '🟢 Sala abierta. Esperando que tu amigo se una...';
+        if (status) status.innerText = '🟢 Sala abierta. Esperando que tu rival se una...';
       });
 
       this.peer.on('connection', (conn) => {
         this.conn = conn;
         this.gameMode = 'online_host';
         const status = document.getElementById('host-status');
-        if (status) status.innerText = '¡Amigo conectado! Entrando a la pista...';
+        if (status) status.innerText = '¡Rival conectado! Entrando a la pista central...';
 
         this.setupDataConnection();
 
@@ -1485,7 +1400,7 @@ class PadelGameEngine {
   connectToPeer(code) {
     if (typeof Peer === 'undefined') return;
     const joinStatus = document.getElementById('join-status');
-    if (joinStatus) joinStatus.innerText = 'Conectando con la sala...';
+    if (joinStatus) joinStatus.innerText = 'Conectando con la pista central...';
 
     try {
       if (this.peer) this.peer.destroy();
@@ -1503,12 +1418,12 @@ class PadelGameEngine {
             this.audio.init();
             document.getElementById('start-screen').classList.add('fade-out');
             this.isPlaying = true;
-            this.showAnnouncement('¡CONECTADO AL HOST!', 'Invitado (Rojo) vs Host (Azul)');
+            this.showAnnouncement('¡CONECTADO A LA PISTA!', 'Invitado (Rojo) vs Host (Azul)');
           }, 800);
         });
 
         this.conn.on('error', () => {
-          if (joinStatus) joinStatus.innerText = 'Error al conectar con la sala.';
+          if (joinStatus) joinStatus.innerText = 'Error al conectar con la sala de tenis.';
         });
       });
     } catch (e) {
@@ -1521,7 +1436,7 @@ class PadelGameEngine {
 
     this.conn.on('data', (data) => {
       if (data.type === 'sync' && this.gameMode === 'online_guest') {
-        // Guest receives authoritative state
+        // Guest receives authoritative state from host
         this.ball.pos.set(data.b.x, data.b.y, data.b.z);
         this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
         this.player.pos.set(data.p1.x, 0, data.p1.z);
@@ -1543,9 +1458,9 @@ class PadelGameEngine {
 
         if (data.snd) {
           if (data.snd === 'hit') this.audio.playHit(0.9, false, false);
-          else if (data.snd === 'glass') this.audio.playGlass(6);
           else if (data.snd === 'bounce') this.audio.playBounce(0.5);
           else if (data.snd === 'whistle') this.audio.playWhistle();
+          else if (data.snd === 'out') this.audio.playOut();
           else if (data.snd === 'crowd') this.audio.playCrowd();
         }
 
@@ -1583,7 +1498,7 @@ class PadelGameEngine {
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
 
-          if ((distToRacket <= 1.45 || distToBody <= 1.85) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai') {
+          if ((distToRacket <= 1.45 || distToBody <= 1.95) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
             this.executeHitWithHitbox('ai', data.shot.power || 0.85, 0, true);
@@ -1597,7 +1512,7 @@ class PadelGameEngine {
     });
 
     this.conn.on('close', () => {
-      this.showAnnouncement('CONEXIÓN FINALIZADA', 'Tu rival se ha desconectado');
+      this.showAnnouncement('CONEXIÓN FINALIZADA', 'Tu rival se ha desconectado de la pista');
     });
   }
 
@@ -1614,8 +1529,8 @@ class PadelGameEngine {
       this.ai.pos.addScaledVector(dir, curSpeed * dt);
       this.ai.runCycle += dt * 14;
 
-      this.ai.pos.x = THREE.MathUtils.clamp(this.ai.pos.x, -this.HALF_W + 0.6, this.HALF_W - 0.6);
-      this.ai.pos.z = THREE.MathUtils.clamp(this.ai.pos.z, -this.HALF_L + 0.6, -0.8);
+      this.ai.pos.x = THREE.MathUtils.clamp(this.ai.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
+      this.ai.pos.z = THREE.MathUtils.clamp(this.ai.pos.z, -this.HALF_L - 3.5, -0.9);
     } else {
       this.ai.runCycle *= 0.8;
     }
@@ -1630,8 +1545,7 @@ class PadelGameEngine {
         const distToP2Racket = this._rHead.distanceTo(this.ball.pos);
         const distToP2Body = this.ai.pos.distanceTo(this.ball.pos);
 
-        // Exact Hitbox: 1.45m racket reach or 1.85m body reach
-        if ((distToP2Racket <= 1.45 || distToP2Body <= 1.85) && this.ball.pos.z < -0.3 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.10) {
+        if ((distToP2Racket <= 1.45 || distToP2Body <= 1.95) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.10) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
           this.executeHitWithHitbox('ai', 0.85, 0, true);
@@ -1648,12 +1562,13 @@ class PadelGameEngine {
     this.animateCharacter(this.ai, dt, true);
   }
 
+  // --- Guest Controls (Left/Right FIXED: A adds +X (screen left), D subtracts -X (screen right)) ---
   updatePlayer2Guest(dt) {
     const dir = this._v1.set(0, 0, 0);
-    if (this.keys['w'] || this.keys['arrowup']) dir.z += 1; // inverted for guest perspective
-    if (this.keys['s'] || this.keys['arrowdown']) dir.z -= 1;
-    if (this.keys['a'] || this.keys['arrowleft']) dir.x += 1;
-    if (this.keys['d'] || this.keys['arrowright']) dir.x += 1;
+    if (this.keys['w'] || this.keys['arrowup']) dir.z += 1; // forward toward net
+    if (this.keys['s'] || this.keys['arrowdown']) dir.z -= 1; // backward away from net
+    if (this.keys['a'] || this.keys['arrowleft']) dir.x += 1; // SCREEN LEFT (projects to negative screen X)
+    if (this.keys['d'] || this.keys['arrowright']) dir.x -= 1; // SCREEN RIGHT (projects to positive screen X)
 
     const curSpeed = this.ai.speed;
     if (dir.lengthSq() > 0) {
@@ -1661,8 +1576,9 @@ class PadelGameEngine {
       this.ai.pos.addScaledVector(dir, curSpeed * dt);
       this.ai.runCycle += dt * 14;
 
-      this.ai.pos.x = THREE.MathUtils.clamp(this.ai.pos.x, -this.HALF_W + 0.6, this.HALF_W - 0.6);
-      this.ai.pos.z = THREE.MathUtils.clamp(this.ai.pos.z, -this.HALF_L + 0.6, -0.8);
+      // Allow running into doubles tramlines and wide run-off to return angled tennis balls
+      this.ai.pos.x = THREE.MathUtils.clamp(this.ai.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
+      this.ai.pos.z = THREE.MathUtils.clamp(this.ai.pos.z, -this.HALF_L - 3.5, -0.9);
     } else {
       this.ai.runCycle *= 0.8;
     }
@@ -1677,7 +1593,7 @@ class PadelGameEngine {
           z: this.ai.pos.z,
           rc: this.ai.runCycle,
           sw: true,
-          st: 'forehand',
+          st: (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand',
           shot: { power: 0.85, shotType: this.shotType }
         });
       }
@@ -1748,7 +1664,7 @@ class PadelGameEngine {
     });
   }
 
-  // --- Serve Flow ---
+  // --- Official Tennis Serve System (Behind Baseline to Diagonal Service Box) ---
   prepareServe(server) {
     this.pointActive = false;
     this.server = server;
@@ -1761,40 +1677,44 @@ class PadelGameEngine {
     this.updateHUD();
 
     const promptEl = document.getElementById('serve-prompt');
+    const serveLabel = (this.serveFaultCount === 0) ? '1ER SERVICIO' : '2DO SERVICIO';
 
     if (server === 'player') {
-      const serveX = this.servingSide * 2.2;
-      this.player.pos.set(serveX, 0, 7.8);
-      this.ball.pos.set(serveX + 0.32, 0.9, 7.4);
-      this.ai.pos.set(-this.servingSide * 2.2, 0, -7.5);
+      // Server behind baseline at Z = 12.2m
+      const serveX = this.servingSide * 1.8;
+      this.player.pos.set(serveX, 0, 12.2);
+      this.ball.pos.set(serveX + 0.35, 1.1, 11.8);
+      this.ai.pos.set(-this.servingSide * 2.5, 0, -12.2);
+
       if (promptEl) {
         promptEl.classList.remove('hidden');
-        promptEl.innerHTML = '<span>Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong> para Servir</span>';
+        promptEl.innerHTML = `<span>${serveLabel}: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong></span>`;
       }
       document.getElementById('serve-player').innerText = '🎾';
       document.getElementById('serve-ai').innerText = '';
     } else {
-      const serveX = -this.servingSide * 2.2;
-      this.ai.pos.set(serveX, 0, -7.8);
-      this.ball.pos.set(serveX - 0.32, 0.9, -7.4);
-      this.player.pos.set(this.servingSide * 2.2, 0, 7.5);
+      // Rival / AI / Guest Server behind baseline at Z = -12.2m
+      const serveX = -this.servingSide * 1.8;
+      this.ai.pos.set(serveX, 0, -12.2);
+      this.ball.pos.set(serveX - 0.35, 1.1, -11.8);
+      this.player.pos.set(this.servingSide * 2.5, 0, 12.2);
       document.getElementById('serve-player').innerText = '';
       document.getElementById('serve-ai').innerText = '🎾';
 
       if (this.gameMode === 'local') {
         if (promptEl) {
           promptEl.classList.remove('hidden');
-          promptEl.innerHTML = '<span>J2: Presiona <strong>[ENTER]</strong> para Servir</span>';
+          promptEl.innerHTML = `<span>J2 (${serveLabel}): Presiona <strong>[ENTER]</strong></span>`;
         }
       } else if (this.gameMode === 'online_guest') {
         if (promptEl) {
           promptEl.classList.remove('hidden');
-          promptEl.innerHTML = '<span>Tu Saque: Presiona <strong>[ESPACIO / CLIC]</strong></span>';
+          promptEl.innerHTML = `<span>Tu Saque (${serveLabel}): Presiona <strong>[ESPACIO / CLIC]</strong></span>`;
         }
       } else if (this.gameMode === 'online_host') {
         if (promptEl) {
           promptEl.classList.remove('hidden');
-          promptEl.innerHTML = '<span>Esperando Saque del Invitado...</span>';
+          promptEl.innerHTML = `<span>Esperando Saque del Rival (${serveLabel})...</span>`;
         }
       } else {
         // Solo vs AI
@@ -1808,6 +1728,7 @@ class PadelGameEngine {
     }
   }
 
+  // Execute Overhead Tennis Serve
   executeServe() {
     this.pointActive = true;
     const promptEl = document.getElementById('serve-prompt');
@@ -1816,21 +1737,24 @@ class PadelGameEngine {
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
 
-    const targetX = -this.servingSide * (1.6 + Math.random() * 1.6);
-    const targetZ = -5.8 - Math.random() * 1.5;
+    // Must land in opponent's diagonal service box (Z: -6.40m to 0, X: opposite side)
+    const targetX = -this.servingSide * (0.8 + Math.random() * 2.6);
+    const targetZ = -1.2 - Math.random() * 4.4; // Inside service box
 
-    const flightTime = 1.15;
+    const flightTime = 0.95;
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.1;
+    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.2;
 
     this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(8.0, 0, 0); // topspin
-    this.audio.playHit(0.9, false, true);
+    this.ball.spin.set(12.0, 0, 0); // Flat / Topspin serve
+    this.audio.playHit(1.0, true, true);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.player, 'forehand');
-    this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
-    this.showAnnouncement('¡SERVICIO!', 'Pelota en juego');
+    this.particles.burst(this.ball.pos, 22, 0x00f0ff, 3.8);
+
+    const sLabel = (this.serveFaultCount === 0) ? '1ER SAQUE' : '2DO SAQUE';
+    this.showAnnouncement(`¡${sLabel}!`, 'Pelota en juego');
     this.showTimingFeedback('SWEET SPOT • SERVICIO', 'perfect');
   }
 
@@ -1842,76 +1766,58 @@ class PadelGameEngine {
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
 
-    const targetX = this.servingSide * (1.6 + Math.random() * 1.6);
-    const targetZ = 5.8 + Math.random() * 1.5;
+    // Diagonal service box on player side (Z: 0 to 6.40m)
+    const targetX = this.servingSide * (0.8 + Math.random() * 2.6);
+    const targetZ = 1.2 + Math.random() * 4.4;
 
-    const flightTime = 1.15;
+    const flightTime = 0.95;
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.1;
+    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.2;
 
     this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(-8.0, 0, 0);
-    this.audio.playHit(0.9, false, true);
+    this.ball.spin.set(-12.0, 0, 0);
+    this.audio.playHit(1.0, true, true);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.ai, 'forehand');
-    this.particles.burst(this.ball.pos, 20, 0xff2a55, 3.5);
+    this.particles.burst(this.ball.pos, 22, 0xff2a55, 3.8);
   }
 
-  // --- Continuous Collision Detection (CCD) Racket Hitbox Engine ---
+  // --- Hitbox & Shot Execution ---
   triggerPlayerShot() {
     this.isChargingPower = false;
     const power = Math.max(0.45, this.power);
-    this.power = 0.5;
+    this.power = 0.55;
     document.getElementById('power-bar').style.width = '0%';
 
-    // Racket Head Hitbox World Position
     this.player.limbs.racket.getWorldPosition(this._rHead);
     this.player.racketHitbox.pos.copy(this._rHead);
 
-    // Natural Strike Reach Envelope:
     const distToBody = this.player.pos.distanceTo(this.ball.pos);
     const distToHead = this._rHead.distanceTo(this.ball.pos);
-    const timeOffset = (this.ball.pos.z - this.player.pos.z); // negative = in front, positive = behind
-    const heightDelta = Math.abs(this.ball.pos.y - 1.05);
+    const timeOffset = (this.ball.pos.z - this.player.pos.z);
 
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.5);
-    const maxReach = isSmash ? 2.1 : (this.keys['shift'] ? 1.95 : 1.80);
+    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
+    const canHit = (distToHead <= 1.45 || distToBody <= 1.95) &&
+                   this.ball.pos.z > 0.25 &&
+                   this.ball.lastHitter !== 'player' &&
+                   this.ball.pos.y >= 0.10;
 
-    const inStrikeZone = (distToBody <= maxReach || distToHead <= 1.45) &&
-                         this.ball.pos.z > -0.35 &&
-                         timeOffset < 0.65 &&
-                         this.ball.pos.y >= 0.10 &&
-                         this.ball.lastHitter !== 'player';
-
-    if (inStrikeZone) {
+    if (canHit) {
+      const isSweetSpot = (distToHead <= 0.85 || isSmash) && Math.abs(timeOffset) < 0.35;
       const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
       this.startSwingAnimation(this.player, swingType);
 
-      // Sweet Spot Analysis
-      let isSweetSpot = false;
-      let timingLabel = 'BUEN GOLPE';
+      let timingLabel = 'PERFECT • SWEET SPOT';
       let timingClass = 'perfect';
-
-      if ((distToHead <= 0.58 || (distToBody >= 0.7 && distToBody <= 1.35)) && heightDelta <= 0.65 && Math.abs(timeOffset + 0.25) <= 0.45) {
-        isSweetSpot = true;
-        timingLabel = 'SWEET SPOT • ¡IMPACTO PERFECTO!';
-        timingClass = 'perfect';
-      } else if (timeOffset < -0.45) {
-        timingLabel = 'GOLPE ANTICIPADO (CRUZADO)';
-        timingClass = 'early';
-      } else if (timeOffset > 0.25) {
-        timingLabel = 'GOLPE RETRASADO (FORZADO)';
-        timingClass = 'late';
-      } else {
-        timingLabel = 'IMPACTO DESCENTRADO';
+      if (!isSweetSpot) {
+        timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
         timingClass = 'early';
       }
 
       this.showTimingFeedback(timingLabel, timingClass);
       this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
     } else {
-      // Missed swing / Air swing
       this.startSwingAnimation(this.player, 'forehand');
       if (distToBody < 3.2 && this.ball.lastHitter !== 'player') {
         this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
@@ -1934,36 +1840,40 @@ class PadelGameEngine {
 
     const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
     const isLob = (this.shotType === 'GLOBO');
+    const isSlice = (this.shotType === 'SLICE');
 
-    // Directional aim calculation based on timing
-    let targetX = (Math.random() - 0.5) * 5.0;
-
-    // Early contact pulls cross-court, late contact pushes down the line
+    // Directional aim within tennis singles boundaries (+/-4.115m)
+    let targetX = (Math.random() - 0.5) * 4.5;
     if (hitter === 'player') {
-      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.2;
-      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.2;
-      else if (timingOffset < -0.4) targetX *= -1.2;
+      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.1;
+      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.1;
+      else if (timingOffset < -0.3) targetX *= -1.2;
     }
-    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.85, this.HALF_W - 0.85);
+    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.5, this.HALF_W - 0.5);
 
-    let targetZ = (hitter === 'player') ? (-7.2 - Math.random() * 1.8) : (7.2 + Math.random() * 1.8);
-    let flightTime = 1.08;
+    let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.8) : (8.2 + Math.random() * 2.8);
+    let flightTime = 1.02;
     let extraArc = 1.2;
 
     if (isSmash) {
-      flightTime = 0.72;
-      extraArc = -0.6;
-      this.showAnnouncement('¡SMASH X3!', 'Remate potente al cristal');
+      flightTime = 0.68;
+      extraArc = -0.5;
+      this.showAnnouncement('¡SMASH DIRECTO!', 'Remate ganador por encima de la red');
       this.particles.burst(this.ball.pos, 35, 0xff0055, 6.0);
     } else if (isLob) {
-      flightTime = 1.60;
-      extraArc = 6.2;
-      this.showAnnouncement('¡GLOBO ALTO!', 'Buscando el fondo de pista');
+      flightTime = 1.65;
+      extraArc = 6.4;
+      this.showAnnouncement('¡GLOBO AL FONDO!', 'Buscando la línea de fondo');
       this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
+    } else if (isSlice) {
+      flightTime = 1.15;
+      extraArc = 0.4;
+      this.showAnnouncement('¡GOLPE CORTADO (SLICE)!', 'Bajo bote con efecto invertido');
+      this.particles.burst(this.ball.pos, 22, 0xa855f7, 3.5);
     } else {
       if (isSweetSpot) {
-        flightTime = 0.95;
-        this.particles.burst(this.ball.pos, 30, 0x00ffaa, 5.0);
+        flightTime = 0.90;
+        this.particles.burst(this.ball.pos, 28, 0x00ffaa, 4.8);
       } else {
         this.particles.burst(this.ball.pos, 15, 0xffea00, 3.0);
       }
@@ -1975,8 +1885,8 @@ class PadelGameEngine {
 
     this.ball.vel.set(vx, vy, vz);
 
-    // Ball 3D Angular Velocity (Spin)
-    const spinRate = isSmash ? 18.0 : (isLob ? -12.0 : 10.0);
+    // Ball 3D Angular Velocity (Tennis Topspin / Backspin)
+    const spinRate = isSmash ? 20.0 : (isLob ? -12.0 : (isSlice ? -18.0 : 14.0));
     this.ball.spin.set(spinRate, (Math.random() - 0.5) * 6.0, 0);
 
     this.audio.playHit(power, isSmash, isSweetSpot);
@@ -1996,10 +1906,12 @@ class PadelGameEngine {
     this.timingTimeout = setTimeout(() => el.classList.add('hidden'), 1500);
   }
 
-  // --- Point Evaluation & Padel Rules ---
+  // --- Official Tennis Point Evaluation & Scoring System ---
   awardPoint(winner, reason = '') {
     if (!this.pointActive) return;
     this.pointActive = false;
+    this.serveFaultCount = 0; // Reset serve faults on point end
+
     this.audio.playWhistle();
     if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
 
@@ -2016,39 +1928,91 @@ class PadelGameEngine {
       this.showAnnouncement(`¡PUNTO PARA ${p2Label}!`, reason);
     }
 
-    if (this.scorePlayer >= 4 && this.scorePlayer - this.scoreAI >= 1) {
+    // Tennis Game Calculation (0, 15, 30, 40, Deuce, Advantage)
+    let gameWon = false;
+    let gameWinner = null;
+
+    if (this.scorePlayer >= 4 && this.scorePlayer - this.scoreAI >= 2) {
+      gameWon = true;
+      gameWinner = 'player';
       this.gamesPlayer++;
       this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement(`¡JUEGO PARA ${p1Label}!`, 'Consigue el juego');
-    } else if (this.scoreAI >= 4 && this.scoreAI - this.scorePlayer >= 1) {
+      this.showAnnouncement(`¡JUEGO PARA ${p1Label}!`, 'Gana el juego');
+    } else if (this.scoreAI >= 4 && this.scoreAI - this.scorePlayer >= 2) {
+      gameWon = true;
+      gameWinner = 'ai';
       this.gamesAI++;
       this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement(`¡JUEGO PARA ${p2Label}!`, 'Consigue el juego');
+      this.showAnnouncement(`¡JUEGO PARA ${p2Label}!`, 'Gana el juego');
+    } else if (this.scorePlayer >= 3 && this.scoreAI >= 3) {
+      if (this.scorePlayer === this.scoreAI) {
+        this.showAnnouncement('¡IGUALES (DEUCE)!', '40 - 40');
+      } else if (this.scorePlayer === this.scoreAI + 1) {
+        this.showAnnouncement(`¡VENTAJA ${p1Label}!`, 'Punto de juego');
+      } else if (this.scoreAI === this.scorePlayer + 1) {
+        this.showAnnouncement(`¡VENTAJA ${p2Label}!`, 'Punto de juego');
+      }
     }
 
-    // Freeze ball during celebration to prevent race conditions
-    this.ball.vel.set(0, 0, 0);
+    // Set check (First to 6 with 2 games lead)
+    if (gameWon) {
+      if (this.gamesPlayer >= 6 && this.gamesPlayer - this.gamesAI >= 2) {
+        this.setsPlayer++;
+        this.gamesPlayer = 0; this.gamesAI = 0;
+        this.showAnnouncement(`¡SET PARA ${p1Label}!`, 'Consigue la primera manga');
+      } else if (this.gamesAI >= 6 && this.gamesAI - this.gamesPlayer >= 2) {
+        this.setsAI++;
+        this.gamesPlayer = 0; this.gamesAI = 0;
+        this.showAnnouncement(`¡SET PARA ${p2Label}!`, 'Consigue la primera manga');
+      }
+      // Alternate server after every game
+      this.server = (this.server === 'player') ? 'ai' : 'player';
+      this.servingSide = 1;
+    } else {
+      // Alternate serving side (Deuce / Ad) after every point within game
+      this.servingSide = -this.servingSide;
+    }
 
-    this.servingSide = -this.servingSide;
+    this.ball.vel.set(0, 0, 0);
     this.updateHUD();
 
-    const nextServer = (winner === 'player') ? 'player' : 'ai';
     setTimeout(() => {
-      this.prepareServe(nextServer);
+      this.prepareServe(this.server);
     }, 2200);
   }
 
-  formatScore(pts) {
-    if (pts === 0) return '0';
-    if (pts === 1) return '15';
-    if (pts === 2) return '30';
-    if (pts === 3) return '40';
-    return 'ADV';
+  // Handle Service Fault (1st Serve fault -> 2nd serve, 2nd Serve fault -> Double Fault)
+  handleServiceFault(faultReason) {
+    this.pointActive = false;
+    this.audio.playOut();
+    if (this.gameMode === 'online_host') this._pendingSound = 'out';
+
+    if (this.serveFaultCount === 0) {
+      this.serveFaultCount = 1;
+      this.showAnnouncement('¡FALTA EN EL SAQUE!', `${faultReason} • Segundo servicio`);
+      setTimeout(() => {
+        this.prepareServe(this.server);
+      }, 1800);
+    } else {
+      this.serveFaultCount = 0;
+      const winner = (this.server === 'player') ? 'ai' : 'player';
+      this.awardPoint(winner, '¡DOBLE FALTA!');
+    }
+  }
+
+  formatScore(p1, p2) {
+    if (p1 >= 3 && p2 >= 3) {
+      if (p1 === p2) return '40';
+      if (p1 === p2 + 1) return 'AD';
+      return '40';
+    }
+    const map = ['0', '15', '30', '40'];
+    return map[Math.min(p1, 3)];
   }
 
   updateHUD() {
-    document.getElementById('pts-player').innerText = this.formatScore(this.scorePlayer);
-    document.getElementById('pts-ai').innerText = this.formatScore(this.scoreAI);
+    document.getElementById('pts-player').innerText = this.formatScore(this.scorePlayer, this.scoreAI);
+    document.getElementById('pts-ai').innerText = this.formatScore(this.scoreAI, this.scorePlayer);
     document.getElementById('games-player').innerText = this.gamesPlayer;
     document.getElementById('games-ai').innerText = this.gamesAI;
     document.getElementById('sets-player').innerText = this.setsPlayer;
@@ -2072,13 +2036,13 @@ class PadelGameEngine {
     }
   }
 
-  // --- Physics Loop with Continuous Collision Detection ---
+  // --- Official Tennis Physics Loop (No Walls, Strictly Singles Court Out Rules) ---
   updatePhysics(dt) {
     if (!this.pointActive) return;
 
     this.ball.prevPos.copy(this.ball.pos);
 
-    // Gravity & Air Resistance
+    // Gravity & Air Drag
     const GRAVITY = -9.8;
     this.ball.vel.y += GRAVITY * dt;
     this.ball.vel.x *= (1 - 0.02 * dt);
@@ -2086,7 +2050,7 @@ class PadelGameEngine {
 
     this.ball.pos.addScaledVector(this.ball.vel, dt);
 
-    // Ball 3D Rotation based on Spin Vector
+    // Ball 3D Spin
     this.ball.mesh.rotation.x += this.ball.spin.x * dt;
     this.ball.mesh.rotation.y += this.ball.spin.y * dt;
     this.ball.mesh.rotation.z += this.ball.spin.z * dt;
@@ -2094,38 +2058,82 @@ class PadelGameEngine {
     const speedKmH = Math.round(this.ball.vel.length() * 3.6);
     document.getElementById('ball-speed').innerHTML = `${speedKmH} <small>km/h</small>`;
 
-    // 1. Turf Bounce (Y <= ballRadius)
+    // 1. Continuous Collision Detection (CCD) Net Check
+    const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
+    if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
+      this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+      this.ball.vel.z = -this.ball.vel.z * 0.22;
+      this.ball.vel.y *= 0.4;
+      this.audio.playBounce(0.4);
+      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+
+      // Check if it's during serve
+      if (this.rally === 0) {
+        this.handleServiceFault('Pelota en la red');
+      } else {
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, 'Pelota atrapada en la red');
+      }
+      return;
+    }
+
+    // 2. Court Ground Bounce (Y <= ballRadius)
     if (this.ball.pos.y <= this.ballRadius) {
       this.ball.pos.y = this.ballRadius;
-      this.ball.vel.y = -this.ball.vel.y * 0.74; // Restitution
+      this.ball.vel.y = -this.ball.vel.y * 0.74; // Hard court restitution
       this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
       if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
 
-      // Dust puff particles on turf impact
       this.particles.burst(this.ball.pos, 8, 0x88ccff, 2.0);
 
-      const inCourtX = Math.abs(this.ball.pos.x) <= this.HALF_W;
-      const inCourtZ = Math.abs(this.ball.pos.z) <= this.HALF_L;
+      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
 
-      if (!inCourtX || !inCourtZ) {
+      // Rule A: SERVICE BOUNCE CHECK
+      if (this.rally === 0 && !this.ball.hitGroundInCourt) {
+        // Must land inside the diagonal service box
+        // Player serve: lands on AI side (Z: -6.40m to 0), X on opposite side
+        let validServiceBox = false;
+        if (this.server === 'player') {
+          const inZ = (this.ball.pos.z >= -this.SERVICE_Z && this.ball.pos.z <= 0);
+          const inX = (this.servingSide === 1) ?
+                      (this.ball.pos.x >= -this.HALF_W && this.ball.pos.x <= 0) :
+                      (this.ball.pos.x >= 0 && this.ball.pos.x <= this.HALF_W);
+          validServiceBox = inZ && inX;
+        } else {
+          const inZ = (this.ball.pos.z >= 0 && this.ball.pos.z <= this.SERVICE_Z);
+          const inX = (this.servingSide === 1) ?
+                      (this.ball.pos.x >= 0 && this.ball.pos.x <= this.HALF_W) :
+                      (this.ball.pos.x >= -this.HALF_W && this.ball.pos.x <= 0);
+          validServiceBox = inZ && inX;
+        }
+
+        if (!validServiceBox) {
+          this.handleServiceFault('Fuera del cuadro de saque');
+          return;
+        }
+      }
+
+      // Rule B: RALLY IN-PLAY BOUNDARIES (Singles Court: |X| <= 4.115m, |Z| <= 11.885m)
+      const inSinglesX = Math.abs(this.ball.pos.x) <= this.HALF_W;
+      const inSinglesZ = Math.abs(this.ball.pos.z) <= this.HALF_L;
+
+      if (!inSinglesX || !inSinglesZ) {
         const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
         this.awardPoint(winner, '¡Pelota Fuera (OUT)!');
         return;
       }
 
-      this.ball.hitGroundInCourt = true;
-      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
-
-      // Own court bounce fault rule:
-      // If the ball hits the ground on the hitter's own side of the net on the first bounce
+      // Own court bounce fault:
       if (this.ball.lastHitter && this.ball.lastHitter === currentSide && this.ball.bounceCount === 0) {
         const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
         this.awardPoint(winner, 'Bote en campo propio (Falta)');
         return;
       }
 
+      this.ball.hitGroundInCourt = true;
       this.ball.bounceCount++;
 
+      // Double bounce rule
       if (this.ball.bounceCount >= 2) {
         const winner = (currentSide === 'player') ? 'ai' : 'player';
         this.awardPoint(winner, 'Doble bote en pista');
@@ -2133,66 +2141,10 @@ class PadelGameEngine {
       }
     }
 
-    // 2. Back Glass Wall Collisions (Z = +/-10m)
-    if (this.ball.pos.z >= this.HALF_L - this.ballRadius) {
-      this.ball.pos.z = this.HALF_L - this.ballRadius;
-      this.ball.vel.z = -this.ball.vel.z * 0.82;
-      this.audio.playGlass(Math.abs(this.ball.vel.z));
-      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
-      this.particles.burst(this.ball.pos, 12, 0x9be8ff, 3.0);
-
-      if (!this.ball.hitGroundInCourt && this.ball.lastHitter === 'ai') {
-        this.awardPoint('player', 'Cristal directo (OUT)');
-        return;
-      }
-    } else if (this.ball.pos.z <= -this.HALF_L + this.ballRadius) {
-      this.ball.pos.z = -this.HALF_L + this.ballRadius;
-      this.ball.vel.z = -this.ball.vel.z * 0.82;
-      this.audio.playGlass(Math.abs(this.ball.vel.z));
-      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
-      this.particles.burst(this.ball.pos, 12, 0x9be8ff, 3.0);
-
-      if (!this.ball.hitGroundInCourt && this.ball.lastHitter === 'player') {
-        this.awardPoint('ai', 'Cristal directo (OUT)');
-        return;
-      }
-    }
-
-    // 3. Side Walls (X = +/-5m)
-    if (Math.abs(this.ball.pos.x) >= this.HALF_W - this.ballRadius) {
-      const sign = Math.sign(this.ball.pos.x);
-      this.ball.pos.x = sign * (this.HALF_W - this.ballRadius);
-      this.ball.vel.x = -this.ball.vel.x * 0.80;
-      this.audio.playGlass(Math.abs(this.ball.vel.x));
-      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
-      this.particles.burst(this.ball.pos, 8, 0x9be8ff, 2.5);
-
-      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
-      if (!this.ball.hitGroundInCourt && this.ball.lastHitter && this.ball.lastHitter !== currentSide) {
-        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, 'Pared lateral directa (OUT)');
-        return;
-      }
-    }
-
-    // 4. Continuous Collision Detection (CCD) Net Check (Z crosses 0 while Y < NET_H)
-    const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
-    if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
-      this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
-      this.ball.vel.z = -this.ball.vel.z * 0.25;
-      this.ball.vel.y *= 0.4;
-      this.audio.playBounce(0.4);
-      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-
-      const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-      this.awardPoint(winner, 'Pelota atrapada en la red');
-      return;
-    }
-
     // Synchronize Ball & Shadow
     this.ball.mesh.position.copy(this.ball.pos);
     this.ball.shadow.position.set(this.ball.pos.x, 0.015, this.ball.pos.z);
-    const sScale = Math.max(0.4, 1.0 - (this.ball.pos.y / 5.5));
+    const sScale = Math.max(0.4, 1.0 - (this.ball.pos.y / 6.0));
     this.ball.shadow.scale.set(sScale, sScale, sScale);
 
     // Landing Ring Projection
@@ -2213,18 +2165,18 @@ class PadelGameEngine {
 
     if (this.pointActive) {
       if (this.ball.vel.z < 0) {
-        // Ball approaching AI court: anticipate landing intercept
-        const targetZ = -6.8;
+        // Ball approaching AI side: intercept landing position
+        const targetZ = -10.5;
         const timeToZ = Math.max(0.05, (this.ball.pos.z - targetZ) / Math.max(Math.abs(this.ball.vel.z), 1));
         const futureX = THREE.MathUtils.clamp(
           this.ball.pos.x + this.ball.vel.x * timeToZ,
-          -this.HALF_W + 0.9,
-          this.HALF_W - 0.9
+          -this.HALF_W + 0.4,
+          this.HALF_W - 0.4
         );
         this.ai.targetPos.set(futureX, 0, targetZ);
       } else {
-        // Ball on player side: AI recovers to center baseline
-        this.ai.targetPos.set(0, 0, -7.5);
+        // AI recovers to center baseline
+        this.ai.targetPos.set(0, 0, -11.5);
       }
 
       const delta = this._v1.subVectors(this.ai.targetPos, this.ai.pos);
@@ -2237,16 +2189,16 @@ class PadelGameEngine {
         this.ai.runCycle *= 0.8;
       }
 
-      // AI Return Strike (Precise Natural Hitbox)
+      // AI Return Strike
       if (this.ai.limbs && this.ai.limbs.racket) {
         this.ai.limbs.racket.getWorldPosition(this._rHead);
         const distToAIRacket = this._rHead.distanceTo(this.ball.pos);
         const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
 
-        if ((distToAIRacket <= 1.45 || distToAIBody <= 1.85) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+        if ((distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
-          const aiPower = 0.70 + Math.random() * 0.30;
+          const aiPower = 0.72 + Math.random() * 0.28;
           this.executeHitWithHitbox('ai', aiPower, 0, true);
         }
       }
@@ -2274,8 +2226,8 @@ class PadelGameEngine {
       this.player.pos.addScaledVector(dir, curSpeed * dt);
       this.player.runCycle += dt * 14;
 
-      this.player.pos.x = THREE.MathUtils.clamp(this.player.pos.x, -this.HALF_W + 0.6, this.HALF_W - 0.6);
-      this.player.pos.z = THREE.MathUtils.clamp(this.player.pos.z, 0.8, this.HALF_L - 0.6);
+      this.player.pos.x = THREE.MathUtils.clamp(this.player.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
+      this.player.pos.z = THREE.MathUtils.clamp(this.player.pos.z, 0.9, this.HALF_L + 3.5);
     } else {
       this.player.runCycle *= 0.8;
     }
@@ -2289,7 +2241,7 @@ class PadelGameEngine {
     this.animateCharacter(this.player, dt, false);
   }
 
-  // --- Pro Character Animations (Run Cycle & Explosive Swing) ---
+  // --- Pro Character Animations ---
   animateCharacter(char, dt, isAI) {
     const limbs = char.limbs;
     if (!limbs) return;
@@ -2300,11 +2252,10 @@ class PadelGameEngine {
     limbs.rLeg.rotation.x = -runAngle;
     limbs.lArm.rotation.x = -runAngle * 0.7;
 
-    // Dynamic knee flexion during running
     if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -runAngle * 0.85);
     if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, runAngle * 0.85);
 
-    // Explosive Torso & Arm Swing
+    // Explosive Tennis Swing
     if (char.isSwinging) {
       char.swingProgress += dt * 15;
       const phase = Math.sin(char.swingProgress);
@@ -2338,11 +2289,11 @@ class PadelGameEngine {
   updateCamera(dt) {
     if (this.cameraMode === 'third') {
       if (this.gameMode === 'online_guest') {
-        // Perspective from Guest baseline (looking forward toward host)
+        // Perspective from Guest baseline looking toward host
         this._camTarget.set(
           this.ai.pos.x * 0.35,
-          4.0 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
-          this.ai.pos.z - 5.8
+          4.5 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
+          this.ai.pos.z - 6.2
         );
         this.camera.position.lerp(this._camTarget, dt * 5.5);
         this.camera.lookAt(this.ball.pos.x * 0.3, 1.1, 0);
@@ -2350,44 +2301,62 @@ class PadelGameEngine {
         // Host / Solo Perspective
         this._camTarget.set(
           this.player.pos.x * 0.35,
-          4.0 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
-          this.player.pos.z + 5.8
+          4.5 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
+          this.player.pos.z + 6.2
         );
         this.camera.position.lerp(this._camTarget, dt * 5.5);
         this.camera.lookAt(this.ball.pos.x * 0.3, 1.1, 0);
       }
     } else if (this.cameraMode === 'broadcast') {
-      this._camTarget.set(12.0, 5.8, 0);
+      this._camTarget.set(13.5, 6.5, 0);
       this.camera.position.lerp(this._camTarget, dt * 4.0);
       this.camera.lookAt(this.ball.pos.x * 0.5, 0.9, this.ball.pos.z * 0.5);
     } else if (this.cameraMode === 'top') {
-      this._camTarget.set(0, 23.0, 1.0);
+      this._camTarget.set(0, 26.0, 1.0);
       this.camera.position.lerp(this._camTarget, dt * 4.0);
       this.camera.lookAt(0, 0, 0);
     }
   }
 
-  // --- 2D Realtime Minimap ---
+  // --- 2D Realtime Tennis Minimap ---
   drawMinimap() {
     const c = document.getElementById('minimap');
     if (!c) return;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
 
+    // Deep Marine Background
     ctx.fillStyle = '#061325';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(4, 4, w - 8, h - 8);
+    // Court DecoTurf Blue Area
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(8, 8, w - 16, h - 16);
 
+    // Boundary Lines
     ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(8, 8, w - 16, h - 16);
+
+    // Net line
     ctx.beginPath();
     ctx.moveTo(4, h / 2); ctx.lineTo(w - 4, h / 2);
     ctx.stroke();
 
-    const toX = (x) => 4 + ((x + this.HALF_W) / this.COURT_W) * (w - 8);
-    const toY = (z) => 4 + ((z + this.HALF_L) / this.COURT_L) * (h - 8);
+    // Service lines (6.4m / 11.88m proportion)
+    const sRatio = 6.40 / 11.885;
+    const sY1 = (h / 2) - ((h / 2) - 8) * sRatio;
+    const sY2 = (h / 2) + ((h / 2) - 8) * sRatio;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(8, sY1); ctx.lineTo(w - 8, sY1);
+    ctx.moveTo(8, sY2); ctx.lineTo(w - 8, sY2);
+    ctx.moveTo(w / 2, sY1); ctx.lineTo(w / 2, sY2);
+    ctx.stroke();
+
+    const toX = (x) => 8 + ((x + this.DOUBLES_HALF_W) / this.COURT_W) * (w - 16);
+    const toY = (z) => 8 + ((z + this.HALF_L) / this.COURT_L) * (h - 16);
 
     // Player 1 (Cyan)
     ctx.fillStyle = '#00f0ff';
@@ -2453,6 +2422,10 @@ class PadelGameEngine {
   }
 }
 
+// Global Alias for backwards compatibility
+const PadelGameEngine = TennisGameEngine;
+
 window.addEventListener('DOMContentLoaded', () => {
-  window.padelGame = new PadelGameEngine();
+  window.tennisGame = new TennisGameEngine();
+  window.padelGame = window.tennisGame;
 });

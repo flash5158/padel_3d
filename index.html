@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Padel Master 3D - World Tour Edition</title>
+  <title>Grand Slam Tennis 3D - Pro Tour Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
     <header class="top-bar">
       <div class="brand-badge">
         <span class="live-dot"></span>
-        <span class="brand-text">WORLD PADEL TOUR</span>
+        <span class="brand-text">GRAND SLAM TOUR</span>
       </div>
 
       <div class="scoreboard-widget">
@@ -57,7 +57,7 @@
     <!-- Center Alerts (Point Announcements) -->
     <div id="center-announcement" class="hidden">
       <h1 id="announcement-title">¡PUNTO!</h1>
-      <p id="announcement-sub">Gran bajada de pared</p>
+      <p id="announcement-sub">Gran golpe ganador</p>
     </div>
 
     <!-- Realtime Racket Hitbox Timing Feedback -->
@@ -77,13 +77,13 @@
       </div>
       <div class="shot-hints">
         <span>[ESPACIO / CLICK] Cargar Golpe</span>
-        <span>[L] Globo Defensivo | [E] Smash x3</span>
+        <span>[L] Globo | [E] Smash | [C] Slice</span>
       </div>
     </div>
 
     <!-- Bottom Center: Serve Prompt -->
     <div id="serve-prompt" class="serve-prompt-banner hidden">
-      <span>Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong> para Servir</span>
+      <span>1ER SERVICIO: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong></span>
     </div>
 
     <!-- Bottom Right: Court 2D Minimap & Camera Controls -->
@@ -108,34 +108,34 @@
       <!-- Luxury Brand Badge -->
       <div class="brand-pill">
         <span class="gold-star">✦</span>
-        <span>MASTER TOURNAMENT EDITION</span>
+        <span>GRAND SLAM PRO TOUR EDITION</span>
         <span class="gold-star">✦</span>
       </div>
 
-      <h1 class="game-title">PADEL MASTER 3D</h1>
-      <p class="game-subtitle">Simulador profesional con físicas de rebote en cristal, efectos de rotación y acústica de pista.</p>
+      <h1 class="game-title">TENNIS MASTER 3D</h1>
+      <p class="game-subtitle">Simulador profesional de tenis con pista abierta DecoTurf, raquetas encordadas PBR, 1er y 2do servicio, y multijugador online P2P.</p>
 
       <!-- Minimalist Highlights -->
       <div class="luxury-features">
         <div class="luxury-feat">
           <span class="feat-bullet">01</span>
           <div class="feat-info">
-            <h5>Paredes de Cristal</h5>
-            <p>Física realista de rebotes y bajadas de pared</p>
+            <h5>Pista Abierta Grand Slam</h5>
+            <p>Superficie rápida oficial, red reglamentaria con tensor central y líneas de individuales y dobles.</p>
           </div>
         </div>
         <div class="luxury-feat">
           <span class="feat-bullet">02</span>
           <div class="feat-info">
-            <h5>Hitbox Sweet-Spot</h5>
-            <p>Detección continua con desvío angular según timing</p>
+            <h5>Raquetas Encordadas PBR</h5>
+            <p>Cordaje tensado de alta precisión con empuñadura de dos manos y sweet-spot dinámico.</p>
           </div>
         </div>
         <div class="luxury-feat">
           <span class="feat-bullet">03</span>
           <div class="feat-info">
-            <h5>Acústica Sintética</h5>
-            <p>Sonido 3D en tiempo real con Web Audio API</p>
+            <h5>Reglas Oficiales y Acústica</h5>
+            <p>1er y 2do servicio, cantos de OUT, faltas en red, deuce/ventaja y sonido nítido de cuerdas.</p>
           </div>
         </div>
       </div>
@@ -152,10 +152,10 @@
         <div class="controls-pill-grid">
           <div class="control-chip"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Moverse</div>
           <div class="control-chip"><kbd>ESPACIO</kbd> Cargar / Golpear</div>
-          <div class="control-chip"><kbd>L</kbd> Globo | <kbd>E</kbd> Smash | <kbd>SHIFT</kbd> Esprintar</div>
+          <div class="control-chip"><kbd>L</kbd> Globo | <kbd>E</kbd> Smash | <kbd>C</kbd> Slice</div>
         </div>
         <button id="btn-play" class="btn-luxury-start">
-          <span>ENTRAR A LA PISTA</span>
+          <span>ENTRAR A LA PISTA CENTRAL</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
         <div class="start-hint">O presiona <kbd>ESPACIO</kbd> o <kbd>ENTER</kbd> para comenzar</div>
@@ -166,19 +166,19 @@
         <div class="online-glass-card">
           <div class="online-section">
             <h4>CREAR SALA</h4>
-            <p>Crea una partida P2P directa y comparte el código con tu amigo.</p>
+            <p>Crea una partida de tenis P2P directa y comparte el código con tu rival.</p>
             <div class="room-code-box">
               <span id="room-code-display">Generando...</span>
               <button id="btn-copy-code" class="btn-copy">Copiar Enlace</button>
             </div>
-            <div id="host-status" class="online-status">Esperando conexión de tu amigo...</div>
+            <div id="host-status" class="online-status">Esperando conexión de tu rival...</div>
           </div>
           <div class="online-divider"></div>
           <div class="online-section">
             <h4>UNIRTE A PARTIDA</h4>
             <p>Ingresa el código proporcionado por el anfitrión.</p>
             <div class="join-row">
-              <input type="text" id="join-room-input" placeholder="PADEL-XXXX" maxlength="15">
+              <input type="text" id="join-room-input" placeholder="TENNIS-XXXX" maxlength="15">
               <button id="btn-join-room" class="btn-join">Unirse</button>
             </div>
             <div id="join-status" class="online-status"></div>

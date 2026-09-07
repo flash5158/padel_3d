@@ -1,8 +1,8 @@
-# Padel Master 3D - World Tour Edition 🎾
+# Tennis Master 3D - Grand Slam Edition 🎾
 
-Simulador profesional de pádel en 3D con físicas realistas, rebotes en paredes de cristal, efectos de rotación de pelota, acústica tridimensional con Web Audio API, y multijugador P2P en tiempo real sin servidores centrales.
+Simulador profesional de tenis en 3D con pista abierta DecoTurf, raquetas encordadas con físicas de sweet-spot, 1er y 2do servicio reglamentario, acústica tridimensional con Web Audio API, y multijugador P2P en tiempo real sin servidores centrales.
 
-![Padel Master 3D](https://img.shields.io/badge/Three.js-3D%20Engine-00f0ff?style=for-the-badge)
+![Tennis Master 3D](https://img.shields.io/badge/Three.js-3D%20Engine-00f0ff?style=for-the-badge)
 ![PeerJS](https://img.shields.io/badge/WebRTC-P2P%20Multiplayer-ff2a55?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-e5c07b?style=for-the-badge)
 
@@ -10,22 +10,23 @@ Simulador profesional de pádel en 3D con físicas realistas, rebotes en paredes
 
 ## ✨ Características Principales
 
-- **Físicas y Reglas Oficiales de Pádel**:
-  - Detección precisa de rebotes en moqueta y cristales templados.
-  - Regla reglamentaria de cristal: si la pelota impacta el cristal antes de botar en la pista, es bola fuera (`OUT`). Si bota primero en pista, la bola continúa viva para bajadas de pared.
-  - Penalización automática por bote en campo propio antes de cruzar la red.
-  - Detección de doble bote y pelota atrapada en la red.
+- **Físicas y Reglas Oficiales de Tenis**:
+  - Pista abierta reglamentaria sin paredes con líneas oficiales de individuales ($8.23\,\text{m}$) y dobles ($10.97\,\text{m}$).
+  - Sistema reglamentario de **1er y 2do Servicio**: si el primer saque no entra en el cuadro diagonal de saque, el jugador dispone de un segundo servicio. Dos fallos consecutivos penalizan con **Doble Falta**.
+  - Detección precisa de pelotas fuera de las líneas (`OUT`) con aviso de juez de línea.
+  - Reglas oficiales de red con Continuous Collision Detection (CCD) para evitar tunneling de pelotas rápidas.
+  - Puntuación oficial de tenis: 0, 15, 30, 40, Deuce (Iguales), Ventaja y Juego.
 - **Sistema de Golpeo Avanzado**:
-  - Detección continua de colisión de raqueta con cálculo de *Sweet Spot*.
+  - Raquetas con cordaje tensado PBR y detección continua de colisión con cálculo de *Sweet Spot*.
   - Desvío angular dinámico según el timing y dirección de carrera.
-  - Diferentes tipos de golpe: Drive plano, Globo defensivo (`L`), Smash de potencia (`E`) y servicio reglamentario.
+  - Tipos de golpe de tenis: Drive plano, Golpe cortado / Slice (`C`), Globo defensivo (`L`), Smash de potencia (`E`) y servicio reglamentario.
 - **Modos de Juego**:
-  - 🏆 **Modo Individual**: Partido completo contra IA táctica que lee trayectorias, cubre la red y defiende cristales de fondo.
-  - 🌐 **Multijugador Online (P2P)**: Conexión directa mediante WebRTC (PeerJS) sin necesidad de configurar servidores de juego dedicados. Solo comparte el código de sala con tu amigo.
+  - 🏆 **Modo Individual**: Partido completo contra IA táctica que cubre la pista, calcula intercepciones y ataca en la red.
+  - 🌐 **Multijugador Online (P2P)**: Conexión directa mediante WebRTC (PeerJS) sin necesidad de servidores dedicados. Solo comparte el código de sala o el enlace con tu amigo.
   - 👥 **2 Jugadores Local**: Pantalla compartida en el mismo teclado con controles independientes.
 - **Acústica Sintética y Efectos Visuales**:
-  - Audio sintetizado en tiempo real (impacto de pala, rebote en césped, cristal templado, aplausos y silbato de juez).
-  - Partículas de polvo e impacto, sombras proyectadas y marcador de aterrizaje predictivo.
+  - Sonido nítido de impacto en cuerdas de tripa/poliéster, bote en pista rápida, aplausos del estadio y avisos de juez de silla.
+  - Partículas de impacto, sombras proyectadas y marcador de aterrizaje predictivo.
   - Sistema de 3 cámaras dinámicas: Cámara en 3ª persona de jugador (`1`), Cámara de retransmisión televisiva (`2`) y Cámara cenital táctica (`3`).
 
 ---
@@ -38,8 +39,9 @@ Simulador profesional de pádel en 3D con físicas realistas, rebotes en paredes
 | **Moverse** | `W` `A` `S` `D` |
 | **Esprintar** | `SHIFT` |
 | **Cargar / Golpear** | `ESPACIO` o `Clic Izquierdo` |
-| **Globo Defensivo** | `L` |
-| **Smash de Potencia** | `E` |
+| **Golpe Cortado (Slice)** | `C` |
+| **Globo (Lob)** | `L` |
+| **Smash (Remate)** | `E` |
 | **Cambiar Cámara** | `1`, `2`, `3` |
 
 ### Jugador 2 (Modo Local):
@@ -47,7 +49,7 @@ Simulador profesional de pádel en 3D con físicas realistas, rebotes en paredes
 | :--- | :--- |
 | **Moverse** | Flechas de dirección (`↑`, `←`, `↓`, `→`) |
 | **Servicio / Golpe** | `ENTER` |
-| **Globo Defensivo** | `O` |
+| **Globo** | `O` |
 | **Smash** | `P` |
 
 ---
@@ -58,32 +60,13 @@ Simulador profesional de pádel en 3D con físicas realistas, rebotes en paredes
 Puedes servir los archivos con cualquier servidor HTTP estático (por ejemplo Python):
 
 ```bash
-# Con Python 3:
+# Entra en la carpeta del proyecto y ejecuta:
 python3 -m http.server 8080
-
-# Luego abre en tu navegador:
-http://localhost:8080
 ```
+Luego abre tu navegador en `http://localhost:8080/`.
 
-### Opción 2: Extensión Live Server / Node.js
-Si utilizas VS Code, puedes hacer clic derecho en `index.html` y seleccionar **"Open with Live Server"**, o usar `npx serve .`.
-
----
-
-## 📁 Estructura del Repositorio
-
-```
-padel_3d/
-├── index.html         # Estructura del juego, interfaz de broadcast y modal de inicio
-├── style.css          # Sistema de diseño de lujo (Frosted Glassmorphism, CSS Tokens)
-├── game.js            # Motor 3D Three.js, físicas continuas, reglas oficiales y WebRTC
-├── lib/
-│   ├── three.min.js   # Librería Three.js local
-│   └── peerjs.min.js  # Librería PeerJS para multijugador P2P
-└── README.md          # Documentación del proyecto
-```
-
----
-
-## 📜 Licencia
-Distribuido bajo la Licencia MIT. ¡Siéntete libre de modificarlo, jugar y disfrutar del pádel virtual!
+### Opción 2: Despliegue en GitHub Pages (Para jugar online con amigos en cualquier red)
+1. En tu repositorio de GitHub, ve a **Settings** -> **Pages**.
+2. En **Branch**, selecciona `main` y la carpeta `/(root)`.
+3. Haz clic en **Save**.
+4. ¡Listo! Obtendrás una URL pública segura (con HTTPS) accesible desde cualquier lugar del mundo.
