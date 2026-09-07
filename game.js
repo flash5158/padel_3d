@@ -110,6 +110,27 @@ class PadelAudioPro {
     osc.connect(g); g.connect(this.ctx.destination);
     osc.start(t); osc.stop(t + 0.25);
   }
+  playAirSwing() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dur = 0.20;
+    const bSize = Math.floor(this.ctx.sampleRate * dur);
+    const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / bSize) * Math.PI);
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = b;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(450, t);
+    f.frequency.exponentialRampToValueAtTime(950, t + 0.08);
+    f.frequency.exponentialRampToValueAtTime(280, t + dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    noise.start(t);
+  }
 }
 
 // --- Procedural PBR Texture Generators ---
@@ -129,22 +150,19 @@ const TextureFactory = {
     for (let i = 0; i < 40000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      cCtx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(140,170,0,0.22)';
+      cCtx.fillStyle = Math.random() > 0.5 ? '#b8ea00' : '#d8ff22';
       cCtx.fillRect(x, y, 2, 2);
     }
 
-    // Classic Tennis/Padel Curved White Seam
+    // Regulation White Curved Seams
     cCtx.strokeStyle = '#ffffff';
     cCtx.lineWidth = 14;
-    cCtx.lineCap = 'round';
     cCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y1 = size * 0.25 + Math.sin((x / size) * Math.PI * 2) * (size * 0.18);
-      const y2 = size * 0.75 + Math.sin((x / size) * Math.PI * 2 + Math.PI) * (size * 0.18);
       if (x === 0) { cCtx.moveTo(x, y1); } else { cCtx.lineTo(x, y1); }
     }
     cCtx.stroke();
-
     cCtx.beginPath();
     for (let x = 0; x <= size; x += 4) {
       const y2 = size * 0.75 + Math.sin((x / size) * Math.PI * 2 + Math.PI) * (size * 0.18);
@@ -284,6 +302,88 @@ const TextureFactory = {
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = 8;
+    return tex;
+  },
+
+  // 4. Pro Athlete Athletic Jersey Texture (Sport Mesh, Ergonomic Panels & Number)
+  createJerseyTexture(baseColorHex, accentColorHex, numberStr, isAI) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base Jersey Color
+    ctx.fillStyle = baseColorHex;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Honeycomb Micro-Perforations for Technical Fabric
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    for (let y = 0; y < 512; y += 10) {
+      for (let x = 0; x < 512; x += 10) {
+        const ox = (y % 20 === 0) ? 5 : 0;
+        ctx.fillRect(x + ox, y, 3, 3);
+      }
+    }
+
+    // Dynamic Flank Racing Stripes (Ergonomic side panels)
+    ctx.fillStyle = accentColorHex;
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(70, 0); ctx.lineTo(110, 512); ctx.lineTo(0, 512);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(512, 0); ctx.lineTo(512 - 70, 0); ctx.lineTo(512 - 110, 512); ctx.lineTo(512, 512);
+    ctx.fill();
+
+    // Tournament Sponsor & Crest on Front Chest
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('WORLD TOUR', 256, 110);
+
+    ctx.fillStyle = accentColorHex;
+    ctx.fillRect(196, 125, 120, 6);
+
+    // Big Stencil Player Number on Back
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 130px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(numberStr, 256, 380);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 5. Spiral Overgrip Handle Texture
+  createGripTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 128, 256);
+
+    // Overlapping spiral wrap lines
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 4;
+    for (let y = -64; y < 320; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(128, y + 64);
+      ctx.stroke();
+    }
+
+    // Grip texture micro-dots
+    ctx.fillStyle = '#cbd5e1';
+    for (let i = 0; i < 400; i++) {
+      ctx.fillRect(Math.random() * 128, Math.random() * 256, 2, 2);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 4);
     return tex;
   }
 };
@@ -735,171 +835,354 @@ class PadelGameEngine {
     this.scene.add(np2);
   }
 
-  // --- Pro Athlete 3D Model with Articulated Joints & PBR Racket ---
+  // --- Pro Athlete 3D Model with Sculpted Sportswear, Articulated Joints & PBR Racket ---
   createProAthlete(jerseyColor, shortsColor, accentHex, jerseyNumber, isAI = false) {
     const root = new THREE.Group();
 
-    // 1. Muscular Torso & Athletic Jersey
+    // 1. Athletic Anatomical Torso & Technical Jersey
     const torsoGroup = new THREE.Group();
     torsoGroup.position.y = 0.98;
 
-    const chestGeo = new THREE.CylinderGeometry(0.25, 0.21, 0.60, 16);
+    const jColorStr = isAI ? '#ff2a55' : '#00f0ff';
+    const jAccentStr = isAI ? '#ffdd00' : '#ffffff';
+    const jerseyTex = TextureFactory.createJerseyTexture(jColorStr, jAccentStr, jerseyNumber, isAI);
+
     const jerseyMat = new THREE.MeshStandardMaterial({
-      color: jerseyColor,
-      roughness: 0.55,
+      map: jerseyTex,
+      roughness: 0.42,
       metalness: 0.15
     });
+
+    // Upper Chest / Pecs (V-taper)
+    const chestGeo = new THREE.CylinderGeometry(0.24, 0.20, 0.36, 24);
     const chest = new THREE.Mesh(chestGeo, jerseyMat);
+    chest.position.y = 0.12;
     chest.castShadow = true;
     torsoGroup.add(chest);
 
-    // Number Decal on Back
-    const numCanvas = document.createElement('canvas');
-    numCanvas.width = numCanvas.height = 128;
-    const nctx = numCanvas.getContext('2d');
-    nctx.fillStyle = 'rgba(0,0,0,0)';
-    nctx.fillRect(0, 0, 128, 128);
-    nctx.fillStyle = '#ffffff';
-    nctx.font = 'bold 80px sans-serif';
-    nctx.textAlign = 'center';
-    nctx.fillText(jerseyNumber, 64, 92);
-    const numTex = new THREE.CanvasTexture(numCanvas);
-    const numDecal = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.24, 0.24),
-      new THREE.MeshBasicMaterial({ map: numTex, transparent: true })
-    );
-    numDecal.position.set(0, 0.05, -0.22);
-    numDecal.rotation.y = Math.PI;
-    torsoGroup.add(numDecal);
+    // Tapered Athletic Waist
+    const waistGeo = new THREE.CylinderGeometry(0.20, 0.175, 0.28, 24);
+    const waistMat = new THREE.MeshStandardMaterial({
+      color: shortsColor,
+      roughness: 0.7,
+      metalness: 0.1
+    });
+    const waist = new THREE.Mesh(waistGeo, waistMat);
+    waist.position.y = -0.16;
+    waist.castShadow = true;
+    torsoGroup.add(waist);
+
+    // Anatomical Neck & Ribbed Collar
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: 0xefc4a4,
+      roughness: 0.55,
+      metalness: 0.05
+    });
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.090, 0.14, 16), skinMat);
+    neck.position.y = 0.36;
+    torsoGroup.add(neck);
+
+    const collarMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xffdd00 : 0xffffff, roughness: 0.5 });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.016, 8, 24), collarMat);
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = 0.31;
+    torsoGroup.add(collar);
 
     root.add(torsoGroup);
 
-    // 2. Sculpted Athletic Head with Cap/Headband
+    // 2. Sculpted Athletic Head with Fade/Cap & Polarized Sports Eyewear
     const headGroup = new THREE.Group();
-    headGroup.position.y = 1.45;
+    headGroup.position.y = 1.48;
 
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0xf5cfb2, roughness: 0.65 });
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), skinMat);
+    const headGeo = new THREE.SphereGeometry(0.138, 24, 24);
+    const head = new THREE.Mesh(headGeo, skinMat);
     head.castShadow = true;
     headGroup.add(head);
 
-    // Pro Visor / Cap
-    const capGeo = new THREE.SphereGeometry(0.146, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const capMat = new THREE.MeshStandardMaterial({ color: isAI ? 0x0f172a : 0xffffff, roughness: 0.7 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = 0.02;
+    // Nose & Brow definition
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.06, 8), skinMat);
+    nose.position.set(0, -0.01, 0.14);
+    nose.rotation.x = Math.PI / 2;
+    headGroup.add(nose);
+
+    // Athletic Cap / Pro Visor
+    const capMat = new THREE.MeshStandardMaterial({
+      color: isAI ? 0x0f172a : 0xffffff,
+      roughness: 0.45,
+      metalness: 0.2
+    });
+    const cap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.144, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2),
+      capMat
+    );
+    cap.position.y = 0.025;
     headGroup.add(cap);
 
-    const visorVis = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.14), capMat);
-    visorVis.position.set(0, 0.04, 0.14);
-    visorVis.rotation.x = 0.15;
-    headGroup.add(visorVis);
+    // Aerodynamic Curved Visor Brim
+    const brimGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3);
+    const brim = new THREE.Mesh(brimGeo, capMat);
+    brim.position.set(0, 0.045, 0.10);
+    brim.rotation.x = 0.18;
+    headGroup.add(brim);
+
+    // Polarized Wrap-Around Sports Sunglasses
+    const lensMat = new THREE.MeshPhysicalMaterial({
+      color: isAI ? 0xff0055 : 0x00f0ff,
+      metalness: 0.95,
+      roughness: 0.05,
+      transmission: 0.2,
+      reflectivity: 1.0,
+      clearcoat: 1.0
+    });
+    const glasses = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.038, 0.12), lensMat);
+    glasses.position.set(0, 0.01, 0.10);
+    headGroup.add(glasses);
 
     root.add(headGroup);
 
-    // 3. Compression Shorts & Hips
-    const shortsGeo = new THREE.CylinderGeometry(0.22, 0.23, 0.32, 16);
-    const shortsMat = new THREE.MeshStandardMaterial({ color: shortsColor, roughness: 0.8 });
-    const shorts = new THREE.Mesh(shortsGeo, shortsMat);
-    shorts.position.y = 0.66;
-    shorts.castShadow = true;
-    root.add(shorts);
+    // 3. Compression Shorts & Athletic Pelvis
+    const shortsGeo = new THREE.CylinderGeometry(0.21, 0.22, 0.26, 24);
+    const shortsMesh = new THREE.Mesh(shortsGeo, waistMat);
+    shortsMesh.position.y = 0.68;
+    shortsMesh.castShadow = true;
+    root.add(shortsMesh);
 
-    // 4. Legs & Pro Padel Sneakers
-    const legGeo = new THREE.CylinderGeometry(0.068, 0.062, 0.54, 10);
-    const shoeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
-    const soleMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, roughness: 0.5 });
+    // 4. Detailed Pro Padel Sneakers (Multi-layer Outsole, Cushion & Laces)
+    const createSneaker = (isLeft) => {
+      const shoeGroup = new THREE.Group();
+
+      // Outsole Rubber Tread
+      const treadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+      const tread = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.024, 0.30), treadMat);
+      tread.position.set(0, -0.53, 0.04);
+      shoeGroup.add(tread);
+
+      // Midsole Air Cushioning Layer
+      const midMat = new THREE.MeshStandardMaterial({
+        color: isAI ? 0xff2a55 : 0x00f0ff,
+        roughness: 0.35,
+        metalness: 0.4
+      });
+      const midsole = new THREE.Mesh(new THREE.BoxGeometry(0.128, 0.036, 0.29), midMat);
+      midsole.position.set(0, -0.505, 0.04);
+      shoeGroup.add(midsole);
+
+      // Upper Technical Mesh with Curved Toe Rocker
+      const upperMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.08, 0.26), upperMat);
+      upper.position.set(0, -0.45, 0.03);
+      upper.castShadow = true;
+      shoeGroup.add(upper);
+
+      // Toe Rocker
+      const toeCap = new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 12), upperMat);
+      toeCap.scale.set(1.0, 0.55, 1.1);
+      toeCap.position.set(0, -0.47, 0.16);
+      shoeGroup.add(toeCap);
+
+      // Shoe Tongue & Laces
+      const laces = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.12),
+        new THREE.MeshStandardMaterial({ color: isAI ? 0xff2a55 : 0x0077ff }));
+      laces.position.set(0, -0.40, 0.06);
+      laces.rotation.x = -0.3;
+      shoeGroup.add(laces);
+
+      return shoeGroup;
+    };
+
+    // 5. Two-Segment Articulated Legs
+    const thighGeo = new THREE.CylinderGeometry(0.076, 0.062, 0.32, 16);
+    const calfGeo = new THREE.CylinderGeometry(0.060, 0.046, 0.32, 16);
+    const kneeGeo = new THREE.SphereGeometry(0.058, 14, 14);
+    const tapeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.7 });
 
     // Left Leg
     const lLegGroup = new THREE.Group();
-    lLegGroup.position.set(-0.13, 0.54, 0);
-    const lLeg = new THREE.Mesh(legGeo, skinMat);
-    lLeg.position.y = -0.27;
-    lLeg.castShadow = true;
-    lLegGroup.add(lLeg);
+    lLegGroup.position.set(-0.13, 0.58, 0);
 
-    const lShoe = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.10, 0.28), shoeMat);
-    lShoe.position.set(0, -0.49, 0.04);
-    lShoe.castShadow = true;
+    const lThigh = new THREE.Mesh(thighGeo, skinMat);
+    lThigh.position.y = -0.16;
+    lThigh.castShadow = true;
+    lLegGroup.add(lThigh);
+
+    const lKnee = new THREE.Mesh(kneeGeo, tapeMat);
+    lKnee.position.y = -0.32;
+    lLegGroup.add(lKnee);
+
+    const lCalf = new THREE.Mesh(calfGeo, skinMat);
+    lCalf.position.y = -0.48;
+    lCalf.castShadow = true;
+    lLegGroup.add(lCalf);
+
+    const lShoe = createSneaker(true);
     lLegGroup.add(lShoe);
     root.add(lLegGroup);
 
     // Right Leg
     const rLegGroup = new THREE.Group();
-    rLegGroup.position.set(0.13, 0.54, 0);
-    const rLeg = new THREE.Mesh(legGeo, skinMat);
-    rLeg.position.y = -0.27;
-    rLeg.castShadow = true;
-    rLegGroup.add(rLeg);
+    rLegGroup.position.set(0.13, 0.58, 0);
 
-    const rShoe = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.10, 0.28), shoeMat);
-    rShoe.position.set(0, -0.49, 0.04);
-    rShoe.castShadow = true;
+    const rThigh = new THREE.Mesh(thighGeo, skinMat);
+    rThigh.position.y = -0.16;
+    rThigh.castShadow = true;
+    rLegGroup.add(rThigh);
+
+    const rKnee = new THREE.Mesh(kneeGeo, tapeMat);
+    rKnee.position.y = -0.32;
+    rLegGroup.add(rKnee);
+
+    const rCalf = new THREE.Mesh(calfGeo, skinMat);
+    rCalf.position.y = -0.48;
+    rCalf.castShadow = true;
+    rLegGroup.add(rCalf);
+
+    const rShoe = createSneaker(false);
     rLegGroup.add(rShoe);
     root.add(rLegGroup);
 
-    // 5. Arms & Detailed Padel Racket
-    const armGeo = new THREE.CylinderGeometry(0.052, 0.046, 0.50, 10);
+    // 6. Sculpted Shoulders & Arms
+    const deltoidGeo = new THREE.SphereGeometry(0.084, 16, 14);
+    const bicepGeo = new THREE.CylinderGeometry(0.052, 0.046, 0.26, 16);
+    const elbowGeo = new THREE.SphereGeometry(0.046, 12, 12);
+    const forearmGeo = new THREE.CylinderGeometry(0.045, 0.038, 0.25, 16);
 
-    // Left Arm (Counterweight balance)
+    // Left Arm (Counter-balance)
     const lArmGroup = new THREE.Group();
-    lArmGroup.position.set(-0.29, 1.18, 0);
-    const lArm = new THREE.Mesh(armGeo, skinMat);
-    lArm.position.y = -0.25;
-    lArmGroup.add(lArm);
+    lArmGroup.position.set(-0.31, 1.22, 0);
+
+    const lDeltoid = new THREE.Mesh(deltoidGeo, jerseyMat);
+    lArmGroup.add(lDeltoid);
+
+    const lBicep = new THREE.Mesh(bicepGeo, skinMat);
+    lBicep.position.y = -0.16;
+    lBicep.castShadow = true;
+    lArmGroup.add(lBicep);
+
+    const lElbow = new THREE.Mesh(elbowGeo, skinMat);
+    lElbow.position.y = -0.29;
+    lArmGroup.add(lElbow);
+
+    const lForearm = new THREE.Mesh(forearmGeo, skinMat);
+    lForearm.position.y = -0.42;
+    lForearm.castShadow = true;
+    lArmGroup.add(lForearm);
+
+    // Left Hand
+    const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.06), skinMat);
+    lHand.position.y = -0.56;
+    lArmGroup.add(lHand);
+
     root.add(lArmGroup);
 
-    // Right Arm (Hitter)
+    // Right Arm (Hitter / Striking Hand)
     const rArmGroup = new THREE.Group();
-    rArmGroup.position.set(0.29, 1.18, 0);
-    const rArm = new THREE.Mesh(armGeo, skinMat);
-    rArm.position.y = -0.25;
-    rArmGroup.add(rArm);
+    rArmGroup.position.set(0.31, 1.22, 0);
 
-    // Sweatband
-    const wristband = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.054, 0.08, 12),
-      new THREE.MeshStandardMaterial({ color: 0x00f0ff }));
-    wristband.position.y = -0.44;
+    const rDeltoid = new THREE.Mesh(deltoidGeo, jerseyMat);
+    rArmGroup.add(rDeltoid);
+
+    const rBicep = new THREE.Mesh(bicepGeo, skinMat);
+    rBicep.position.y = -0.16;
+    rBicep.castShadow = true;
+    rArmGroup.add(rBicep);
+
+    const rElbow = new THREE.Mesh(elbowGeo, skinMat);
+    rElbow.position.y = -0.29;
+    rArmGroup.add(rElbow);
+
+    const rForearm = new THREE.Mesh(forearmGeo, skinMat);
+    rForearm.position.y = -0.42;
+    rForearm.castShadow = true;
+    rArmGroup.add(rForearm);
+
+    // Pro Terrycloth Wrist Sweatband
+    const sweatbandMat = new THREE.MeshStandardMaterial({
+      color: isAI ? 0xff2a55 : 0x00f0ff,
+      roughness: 0.85
+    });
+    const wristband = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.052, 0.08, 16), sweatbandMat);
+    wristband.position.y = -0.48;
     rArmGroup.add(wristband);
 
-    // Pro Padel Racket with Carbon Twill & Drilled Face Texture
-    const racketGroup = new THREE.Group();
-    racketGroup.position.set(0, -0.48, 0.18);
+    // Sculpted Gripping Hand
+    const rHand = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.08, 0.065), skinMat);
+    rHand.position.y = -0.56;
+    rArmGroup.add(rHand);
 
+    // 7. Next-Gen Pro Padel Racket with Twin-Bridge Airflow Throat
+    const racketGroup = new THREE.Group();
+    racketGroup.position.set(0, -0.62, 0.18);
+
+    // Overgrip Spiral Wrapped Handle
+    const gripTex = TextureFactory.createGripTexture();
+    const handleMat = new THREE.MeshStandardMaterial({
+      map: gripTex,
+      roughness: 0.5,
+      metalness: 0.1
+    });
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.24, 16), handleMat);
+    handle.position.y = 0.12;
+    racketGroup.add(handle);
+
+    // Flared Butt Cap
+    const capEnd = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.026, 0.03, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 }));
+    capEnd.position.y = 0.005;
+    racketGroup.add(capEnd);
+
+    // Safety Wrist Lanyard Cord
+    const lanyardMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+    const lanyard = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.006, 6, 16), lanyardMat);
+    lanyard.position.set(0, 0.02, -0.04);
+    lanyard.rotation.x = Math.PI / 3;
+    racketGroup.add(lanyard);
+
+    // Aerodynamic Twin-Bridge Throat (Vented Pylons)
+    const throatMat = new THREE.MeshStandardMaterial({ color: 0x090d16, metalness: 0.9, roughness: 0.2 });
+    const pylonGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.14, 10);
+    const pylonL = new THREE.Mesh(pylonGeo, throatMat);
+    pylonL.position.set(-0.042, 0.28, 0);
+    pylonL.rotation.z = -0.32;
+    racketGroup.add(pylonL);
+
+    const pylonR = new THREE.Mesh(pylonGeo, throatMat);
+    pylonR.position.set(0.042, 0.28, 0);
+    pylonR.rotation.z = 0.32;
+    racketGroup.add(pylonR);
+
+    // Perforated Carbon Face (PBR Decal)
     const faceTex = TextureFactory.createRacketFaceTexture(accentHex);
     const faceMat = new THREE.MeshStandardMaterial({
       map: faceTex,
-      roughness: 0.25,
-      metalness: 0.8
+      roughness: 0.22,
+      metalness: 0.85
     });
 
     const faceGeo = new THREE.CylinderGeometry(0.22, 0.20, 0.038, 32);
     faceGeo.scale(1.0, 1.0, 1.25);
     const face = new THREE.Mesh(faceGeo, faceMat);
     face.rotation.x = Math.PI / 2;
-    face.position.y = 0.40;
+    face.position.y = 0.44;
     face.castShadow = true;
     racketGroup.add(face);
 
-    // Aerodynamic Carbon Frame Bezel
-    const rimMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.15 });
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.024, 8, 32), rimMat);
+    // Aerodynamic Chamfered Carbon Bezel
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: 0x090d16,
+      metalness: 0.95,
+      roughness: 0.12
+    });
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.024, 10, 36), rimMat);
     rim.scale.set(1.0, 1.25, 1.0);
-    rim.position.y = 0.40;
+    rim.position.y = 0.44;
     racketGroup.add(rim);
-
-    // Handle with Spiral Grip
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.028, 0.26, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45 }));
-    handle.position.y = 0.12;
-    racketGroup.add(handle);
 
     rArmGroup.add(racketGroup);
     root.add(rArmGroup);
 
-    // Realistic Contact Shadow
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 20),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 }));
+    // Dynamic Contact Shadow
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.55, 24),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 }));
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.y = 0.015;
     root.add(shadow);
@@ -908,6 +1191,8 @@ class PadelGameEngine {
     athlete.limbs = {
       lLeg: lLegGroup,
       rLeg: rLegGroup,
+      lCalf: lCalf,
+      rCalf: rCalf,
       lArm: lArmGroup,
       rArm: rArmGroup,
       racket: racketGroup,
@@ -1241,13 +1526,21 @@ class PadelGameEngine {
       if (!this.pointActive && this.server === 'ai') {
         this.executeAIServe();
       } else {
-        const dist = this.ai.pos.distanceTo(this.ball.pos);
-        if (dist < 2.6 && this.ball.pos.z < -0.2 && this.ball.lastHitter !== 'ai') {
+        const p2RHead = new THREE.Vector3();
+        this.ai.limbs.racket.getWorldPosition(p2RHead);
+        const distToP2Racket = p2RHead.distanceTo(this.ball.pos);
+        const distToP2Body = this.ai.pos.distanceTo(this.ball.pos);
+
+        // Exact Hitbox: 0.98m racket reach or 1.20m body reach
+        if ((distToP2Racket <= 0.98 || distToP2Body <= 1.20) && this.ball.pos.z < -0.3 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
           this.executeHitWithHitbox('ai', 0.85, 0, true);
         } else {
           this.startSwingAnimation(this.ai, 'forehand');
+          if (distToP2Body < 2.5 && this.ball.lastHitter !== 'ai') {
+            this.audio.playAirSwing();
+          }
         }
       }
     }
@@ -1437,37 +1730,56 @@ class PadelGameEngine {
     this.player.limbs.racket.getWorldPosition(rHead);
     this.player.racketHitbox.pos.copy(rHead);
 
-    // Distance & Timing Check to Sweet Spot
+    // Exact Distance & Strike Reach Envelope
     const distToHead = rHead.distanceTo(this.ball.pos);
     const distToBody = this.player.pos.distanceTo(this.ball.pos);
+    const timeOffset = (this.ball.pos.z - this.player.pos.z); // negative = in front, positive = behind
+    const heightDelta = Math.abs(this.ball.pos.y - rHead.y);
 
-    // CCD Sweep check: Can hit within 2.6m reach if ball is on player's side
-    if (distToBody < 2.6 && this.ball.pos.z > -0.2 && this.ball.lastHitter !== 'player') {
+    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
+    // Exact Hitbox: 0.95m base, 1.15m sprint, 1.35m overhead smash
+    const maxReach = isSmash ? 1.35 : (this.keys['shift'] ? 1.15 : 0.95);
+
+    // Realistic Strike Zone: Must be within racket reach and not passed behind player's back
+    const inStrikeZone = (distToHead <= maxReach || (distToBody <= 1.25 && distToHead <= 1.2)) &&
+                         this.ball.pos.z > -0.35 &&
+                         timeOffset < 0.55 &&
+                         this.ball.pos.y >= 0.12 &&
+                         this.ball.lastHitter !== 'player';
+
+    if (inStrikeZone) {
       const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
       this.startSwingAnimation(this.player, swingType);
 
-      // Timing & Sweet Spot Analysis
-      const timeOffset = (this.ball.pos.z - this.player.pos.z); // negative = in front, positive = behind
+      // Precision Sweet Spot Analysis
       let isSweetSpot = false;
       let timingLabel = 'BUEN GOLPE';
       let timingClass = 'perfect';
 
-      if (Math.abs(timeOffset + 0.3) < 0.45 && distToHead < 1.4) {
+      if (distToHead <= 0.42 && heightDelta <= 0.35 && Math.abs(timeOffset + 0.25) <= 0.35) {
         isSweetSpot = true;
         timingLabel = 'SWEET SPOT • ¡IMPACTO PERFECTO!';
         timingClass = 'perfect';
-      } else if (timeOffset < -0.7) {
-        timingLabel = 'GOLPE ANTICIPADO (CROSS)';
+      } else if (timeOffset < -0.45) {
+        timingLabel = 'GOLPE ANTICIPADO (CRUZADO)';
         timingClass = 'early';
-      } else {
+      } else if (timeOffset > 0.20) {
         timingLabel = 'GOLPE RETRASADO (FORZADO)';
         timingClass = 'late';
+      } else {
+        timingLabel = 'IMPACTO DESCENTRADO';
+        timingClass = 'early';
       }
 
       this.showTimingFeedback(timingLabel, timingClass);
       this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
     } else {
+      // Missed swing / Air swing
       this.startSwingAnimation(this.player, 'forehand');
+      if (distToBody < 2.5 && this.ball.lastHitter !== 'player') {
+        this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
+        this.audio.playAirSwing();
+      }
     }
   }
 
@@ -1764,9 +2076,13 @@ class PadelGameEngine {
         this.ai.runCycle *= 0.8;
       }
 
-      // AI Return Strike
-      const distToBall = this.ai.pos.distanceTo(this.ball.pos);
-      if (distToBall < 2.5 && this.ball.pos.z < -1.0 && this.ball.lastHitter !== 'ai') {
+      // AI Return Strike (Precise Hitbox)
+      const aiRHead = new THREE.Vector3();
+      this.ai.limbs.racket.getWorldPosition(aiRHead);
+      const distToAIRacket = aiRHead.distanceTo(this.ball.pos);
+      const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
+
+      if ((distToAIRacket <= 0.98 || distToAIBody <= 1.20) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
         const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
         this.startSwingAnimation(this.ai, swingType);
         const aiPower = 0.70 + Math.random() * 0.30;
@@ -1821,6 +2137,10 @@ class PadelGameEngine {
     limbs.lLeg.rotation.x = runAngle;
     limbs.rLeg.rotation.x = -runAngle;
     limbs.lArm.rotation.x = -runAngle * 0.7;
+
+    // Dynamic knee flexion during running
+    if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -runAngle * 0.85);
+    if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, runAngle * 0.85);
 
     // Explosive Torso & Arm Swing
     if (char.isSwinging) {
