@@ -542,6 +542,16 @@ class PadelGameEngine {
     };
 
     this.keys = {};
+
+    // Performance Scratch Vectors (Zero Garbage Collection)
+    this._v1 = new THREE.Vector3();
+    this._v2 = new THREE.Vector3();
+    this._camTarget = new THREE.Vector3();
+    this._rHead = new THREE.Vector3();
+    this._minimapTick = 0;
+    this._pendingSound = null;
+    this._pendingAnn = null;
+
     this.initThree();
     this.particles = new ParticleSystem(this.scene);
     this.buildArena();
@@ -573,7 +583,7 @@ class PadelGameEngine {
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1259,37 +1269,67 @@ class PadelGameEngine {
       if (e.key === '3') this.setCameraMode('top');
 
       if (e.code === 'Space') {
-        if (!this.pointActive && this.server === 'player') {
-          this.executeServe();
-        } else {
-          this.isChargingPower = true;
-        }
+        this.handleActionPress();
       }
     });
 
     window.addEventListener('keyup', (e) => {
       this.keys[e.key.toLowerCase()] = false;
-      if (e.code === 'Space' && this.isChargingPower) {
-        this.triggerPlayerShot();
+      if (e.code === 'Space') {
+        this.handleActionRelease();
       }
     });
 
     window.addEventListener('mousedown', (e) => {
       if (e.target.closest('.overlay-modal') || e.target.closest('.cam-btn')) return;
-      this.audio.init();
-
-      if (!this.pointActive && this.server === 'player') {
-        this.executeServe();
-      } else {
-        this.isChargingPower = true;
-      }
+      this.handleActionPress();
     });
 
     window.addEventListener('mouseup', () => {
-      if (this.isChargingPower) {
-        this.triggerPlayerShot();
-      }
+      this.handleActionRelease();
     });
+  }
+
+  handleActionPress() {
+    this.audio.init();
+    if (this.gameMode === 'online_guest') {
+      if (!this.pointActive && this.server === 'ai') {
+        if (this.conn && this.conn.open) {
+          this.conn.send({ type: 'guest_serve' });
+        }
+      } else {
+        this.triggerGuestShot();
+      }
+      return;
+    }
+
+    if (!this.pointActive && this.server === 'player') {
+      this.executeServe();
+    } else {
+      this.isChargingPower = true;
+    }
+  }
+
+  handleActionRelease() {
+    if (this.gameMode === 'online_guest') return;
+    if (this.isChargingPower) {
+      this.triggerPlayerShot();
+    }
+  }
+
+  triggerGuestShot() {
+    if (this.conn && this.conn.open) {
+      this.conn.send({
+        type: 'p2_input',
+        x: this.ai.pos.x,
+        z: this.ai.pos.z,
+        rc: this.ai.runCycle,
+        sw: true,
+        st: (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand',
+        shot: { power: 0.88, shotType: this.shotType }
+      });
+      this.startSwingAnimation(this.ai, (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand');
+    }
   }
 
   initUI() {
@@ -1391,6 +1431,19 @@ class PadelGameEngine {
     }
   }
 
+  getPeerConfig() {
+    return {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
+    };
+  }
+
   setupOnlineHost() {
     if (this.peer || typeof Peer === 'undefined') return;
     this.roomCode = `PADEL-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -1398,7 +1451,7 @@ class PadelGameEngine {
     if (display) display.innerText = this.roomCode;
 
     try {
-      this.peer = new Peer(this.roomCode, { debug: 1 });
+      this.peer = new Peer(this.roomCode, this.getPeerConfig());
 
       this.peer.on('open', () => {
         const status = document.getElementById('host-status');
@@ -1436,10 +1489,10 @@ class PadelGameEngine {
 
     try {
       if (this.peer) this.peer.destroy();
-      this.peer = new Peer({ debug: 1 });
+      this.peer = new Peer(this.getPeerConfig());
 
       this.peer.on('open', () => {
-        this.conn = this.peer.connect(code, { reliable: false });
+        this.conn = this.peer.connect(code, { reliable: true });
 
         this.conn.on('open', () => {
           this.gameMode = 'online_guest';
@@ -1483,6 +1536,41 @@ class PadelGameEngine {
         this.rally = data.rally;
         this.pointActive = data.pa;
         this.updateHUD();
+
+        if (data.ann) {
+          this.showAnnouncement(data.ann.title, data.ann.sub);
+        }
+
+        if (data.snd) {
+          if (data.snd === 'hit') this.audio.playHit(0.9, false, false);
+          else if (data.snd === 'glass') this.audio.playGlass(6);
+          else if (data.snd === 'bounce') this.audio.playBounce(0.5);
+          else if (data.snd === 'whistle') this.audio.playWhistle();
+          else if (data.snd === 'crowd') this.audio.playCrowd();
+        }
+
+        const promptEl = document.getElementById('serve-prompt');
+        if (this.pointActive) {
+          if (promptEl) promptEl.classList.add('hidden');
+        } else if (data.srv) {
+          this.server = data.srv;
+          this.servingSide = data.side || this.servingSide;
+          if (this.server === 'ai') {
+            if (promptEl) {
+              promptEl.classList.remove('hidden');
+              promptEl.innerHTML = '<span>Tu Saque: Presiona <strong>[ESPACIO / CLIC]</strong></span>';
+            }
+            document.getElementById('serve-player').innerText = '';
+            document.getElementById('serve-ai').innerText = '🎾';
+          } else {
+            if (promptEl) {
+              promptEl.classList.remove('hidden');
+              promptEl.innerHTML = '<span>Esperando Saque del Rival...</span>';
+            }
+            document.getElementById('serve-player').innerText = '🎾';
+            document.getElementById('serve-ai').innerText = '';
+          }
+        }
       } else if (data.type === 'p2_input' && this.gameMode === 'online_host') {
         // Host receives Guest controls
         this.ai.pos.set(data.x, 0, data.z);
@@ -1491,7 +1579,19 @@ class PadelGameEngine {
           this.startSwingAnimation(this.ai, data.st || 'forehand');
         }
         if (data.shot) {
-          this.executeHitWithHitbox('ai', data.shot.power, 0, true);
+          this.ai.limbs.racket.getWorldPosition(this._rHead);
+          const distToRacket = this._rHead.distanceTo(this.ball.pos);
+          const distToBody = this.ai.pos.distanceTo(this.ball.pos);
+
+          if ((distToRacket <= 1.45 || distToBody <= 1.85) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai') {
+            const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
+            this.startSwingAnimation(this.ai, swingType);
+            this.executeHitWithHitbox('ai', data.shot.power || 0.85, 0, true);
+          }
+        }
+      } else if (data.type === 'guest_serve' && this.gameMode === 'online_host') {
+        if (!this.pointActive && this.server === 'ai') {
+          this.executeAIServe();
         }
       }
     });
@@ -1502,7 +1602,7 @@ class PadelGameEngine {
   }
 
   updatePlayer2Local(dt) {
-    const dir = new THREE.Vector3();
+    const dir = this._v1.set(0, 0, 0);
     if (this.keys['arrowup']) dir.z -= 1;
     if (this.keys['arrowdown']) dir.z += 1;
     if (this.keys['arrowleft']) dir.x -= 1;
@@ -1526,19 +1626,18 @@ class PadelGameEngine {
       if (!this.pointActive && this.server === 'ai') {
         this.executeAIServe();
       } else {
-        const p2RHead = new THREE.Vector3();
-        this.ai.limbs.racket.getWorldPosition(p2RHead);
-        const distToP2Racket = p2RHead.distanceTo(this.ball.pos);
+        this.ai.limbs.racket.getWorldPosition(this._rHead);
+        const distToP2Racket = this._rHead.distanceTo(this.ball.pos);
         const distToP2Body = this.ai.pos.distanceTo(this.ball.pos);
 
-        // Exact Hitbox: 0.98m racket reach or 1.20m body reach
-        if ((distToP2Racket <= 0.98 || distToP2Body <= 1.20) && this.ball.pos.z < -0.3 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+        // Exact Hitbox: 1.45m racket reach or 1.85m body reach
+        if ((distToP2Racket <= 1.45 || distToP2Body <= 1.85) && this.ball.pos.z < -0.3 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.10) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
           this.executeHitWithHitbox('ai', 0.85, 0, true);
         } else {
           this.startSwingAnimation(this.ai, 'forehand');
-          if (distToP2Body < 2.5 && this.ball.lastHitter !== 'ai') {
+          if (distToP2Body < 3.2 && this.ball.lastHitter !== 'ai') {
             this.audio.playAirSwing();
           }
         }
@@ -1550,11 +1649,11 @@ class PadelGameEngine {
   }
 
   updatePlayer2Guest(dt) {
-    const dir = new THREE.Vector3();
+    const dir = this._v1.set(0, 0, 0);
     if (this.keys['w'] || this.keys['arrowup']) dir.z += 1; // inverted for guest perspective
     if (this.keys['s'] || this.keys['arrowdown']) dir.z -= 1;
     if (this.keys['a'] || this.keys['arrowleft']) dir.x += 1;
-    if (this.keys['d'] || this.keys['arrowright']) dir.x -= 1;
+    if (this.keys['d'] || this.keys['arrowright']) dir.x += 1;
 
     const curSpeed = this.ai.speed;
     if (dir.lengthSq() > 0) {
@@ -1605,7 +1704,7 @@ class PadelGameEngine {
     this.netTimer += dt;
     if (this.netTimer >= 0.033 && this.conn && this.conn.open) {
       this.netTimer = 0;
-      this.conn.send({
+      const packet = {
         type: 'sync',
         b: {
           x: this.ball.pos.x, y: this.ball.pos.y, z: this.ball.pos.z,
@@ -1621,8 +1720,21 @@ class PadelGameEngine {
           gp: this.gamesPlayer, ga: this.gamesAI
         },
         rally: this.rally,
-        pa: this.pointActive
-      });
+        pa: this.pointActive,
+        srv: this.server,
+        side: this.servingSide
+      };
+
+      if (this._pendingAnn) {
+        packet.ann = this._pendingAnn;
+        this._pendingAnn = null;
+      }
+      if (this._pendingSound) {
+        packet.snd = this._pendingSound;
+        this._pendingSound = null;
+      }
+
+      this.conn.send(packet);
     }
 
     this.ai.model.position.copy(this.ai.pos);
@@ -1648,12 +1760,17 @@ class PadelGameEngine {
     this.rally = 0;
     this.updateHUD();
 
+    const promptEl = document.getElementById('serve-prompt');
+
     if (server === 'player') {
       const serveX = this.servingSide * 2.2;
       this.player.pos.set(serveX, 0, 7.8);
       this.ball.pos.set(serveX + 0.32, 0.9, 7.4);
       this.ai.pos.set(-this.servingSide * 2.2, 0, -7.5);
-      document.getElementById('serve-prompt').classList.remove('hidden');
+      if (promptEl) {
+        promptEl.classList.remove('hidden');
+        promptEl.innerHTML = '<span>Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong> para Servir</span>';
+      }
       document.getElementById('serve-player').innerText = '🎾';
       document.getElementById('serve-ai').innerText = '';
     } else {
@@ -1661,21 +1778,40 @@ class PadelGameEngine {
       this.ai.pos.set(serveX, 0, -7.8);
       this.ball.pos.set(serveX - 0.32, 0.9, -7.4);
       this.player.pos.set(this.servingSide * 2.2, 0, 7.5);
-      document.getElementById('serve-prompt').classList.add('hidden');
       document.getElementById('serve-player').innerText = '';
       document.getElementById('serve-ai').innerText = '🎾';
 
-      setTimeout(() => {
-        if (!this.pointActive && this.server === 'ai') {
-          this.executeAIServe();
+      if (this.gameMode === 'local') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = '<span>J2: Presiona <strong>[ENTER]</strong> para Servir</span>';
         }
-      }, 1400);
+      } else if (this.gameMode === 'online_guest') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = '<span>Tu Saque: Presiona <strong>[ESPACIO / CLIC]</strong></span>';
+        }
+      } else if (this.gameMode === 'online_host') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = '<span>Esperando Saque del Invitado...</span>';
+        }
+      } else {
+        // Solo vs AI
+        if (promptEl) promptEl.classList.add('hidden');
+        setTimeout(() => {
+          if (!this.pointActive && this.server === 'ai') {
+            this.executeAIServe();
+          }
+        }, 1400);
+      }
     }
   }
 
   executeServe() {
     this.pointActive = true;
-    document.getElementById('serve-prompt').classList.add('hidden');
+    const promptEl = document.getElementById('serve-prompt');
+    if (promptEl) promptEl.classList.add('hidden');
     this.ball.lastHitter = 'player';
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
@@ -1691,6 +1827,7 @@ class PadelGameEngine {
     this.ball.vel.set(vx, vy, vz);
     this.ball.spin.set(8.0, 0, 0); // topspin
     this.audio.playHit(0.9, false, true);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.player, 'forehand');
     this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
     this.showAnnouncement('¡SERVICIO!', 'Pelota en juego');
@@ -1699,6 +1836,8 @@ class PadelGameEngine {
 
   executeAIServe() {
     this.pointActive = true;
+    const promptEl = document.getElementById('serve-prompt');
+    if (promptEl) promptEl.classList.add('hidden');
     this.ball.lastHitter = 'ai';
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
@@ -1714,6 +1853,7 @@ class PadelGameEngine {
     this.ball.vel.set(vx, vy, vz);
     this.ball.spin.set(-8.0, 0, 0);
     this.audio.playHit(0.9, false, true);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.ai, 'forehand');
     this.particles.burst(this.ball.pos, 20, 0xff2a55, 3.5);
   }
@@ -1721,49 +1861,46 @@ class PadelGameEngine {
   // --- Continuous Collision Detection (CCD) Racket Hitbox Engine ---
   triggerPlayerShot() {
     this.isChargingPower = false;
-    const power = Math.max(0.4, this.power);
+    const power = Math.max(0.45, this.power);
     this.power = 0.5;
     document.getElementById('power-bar').style.width = '0%';
 
     // Racket Head Hitbox World Position
-    const rHead = new THREE.Vector3();
-    this.player.limbs.racket.getWorldPosition(rHead);
-    this.player.racketHitbox.pos.copy(rHead);
+    this.player.limbs.racket.getWorldPosition(this._rHead);
+    this.player.racketHitbox.pos.copy(this._rHead);
 
-    // Exact Distance & Strike Reach Envelope
-    const distToHead = rHead.distanceTo(this.ball.pos);
+    // Natural Strike Reach Envelope:
     const distToBody = this.player.pos.distanceTo(this.ball.pos);
+    const distToHead = this._rHead.distanceTo(this.ball.pos);
     const timeOffset = (this.ball.pos.z - this.player.pos.z); // negative = in front, positive = behind
-    const heightDelta = Math.abs(this.ball.pos.y - rHead.y);
+    const heightDelta = Math.abs(this.ball.pos.y - 1.05);
 
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
-    // Exact Hitbox: 0.95m base, 1.15m sprint, 1.35m overhead smash
-    const maxReach = isSmash ? 1.35 : (this.keys['shift'] ? 1.15 : 0.95);
+    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.5);
+    const maxReach = isSmash ? 2.1 : (this.keys['shift'] ? 1.95 : 1.80);
 
-    // Realistic Strike Zone: Must be within racket reach and not passed behind player's back
-    const inStrikeZone = (distToHead <= maxReach || (distToBody <= 1.25 && distToHead <= 1.2)) &&
+    const inStrikeZone = (distToBody <= maxReach || distToHead <= 1.45) &&
                          this.ball.pos.z > -0.35 &&
-                         timeOffset < 0.55 &&
-                         this.ball.pos.y >= 0.12 &&
+                         timeOffset < 0.65 &&
+                         this.ball.pos.y >= 0.10 &&
                          this.ball.lastHitter !== 'player';
 
     if (inStrikeZone) {
       const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
       this.startSwingAnimation(this.player, swingType);
 
-      // Precision Sweet Spot Analysis
+      // Sweet Spot Analysis
       let isSweetSpot = false;
       let timingLabel = 'BUEN GOLPE';
       let timingClass = 'perfect';
 
-      if (distToHead <= 0.42 && heightDelta <= 0.35 && Math.abs(timeOffset + 0.25) <= 0.35) {
+      if ((distToHead <= 0.58 || (distToBody >= 0.7 && distToBody <= 1.35)) && heightDelta <= 0.65 && Math.abs(timeOffset + 0.25) <= 0.45) {
         isSweetSpot = true;
         timingLabel = 'SWEET SPOT • ¡IMPACTO PERFECTO!';
         timingClass = 'perfect';
       } else if (timeOffset < -0.45) {
         timingLabel = 'GOLPE ANTICIPADO (CRUZADO)';
         timingClass = 'early';
-      } else if (timeOffset > 0.20) {
+      } else if (timeOffset > 0.25) {
         timingLabel = 'GOLPE RETRASADO (FORZADO)';
         timingClass = 'late';
       } else {
@@ -1776,7 +1913,7 @@ class PadelGameEngine {
     } else {
       // Missed swing / Air swing
       this.startSwingAnimation(this.player, 'forehand');
-      if (distToBody < 2.5 && this.ball.lastHitter !== 'player') {
+      if (distToBody < 3.2 && this.ball.lastHitter !== 'player') {
         this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
         this.audio.playAirSwing();
       }
@@ -1799,14 +1936,15 @@ class PadelGameEngine {
     const isLob = (this.shotType === 'GLOBO');
 
     // Directional aim calculation based on timing
-    let targetX = (Math.random() - 0.5) * 6.0;
+    let targetX = (Math.random() - 0.5) * 5.0;
 
     // Early contact pulls cross-court, late contact pushes down the line
     if (hitter === 'player') {
-      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.5;
-      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.5;
-      else if (timingOffset < -0.4) targetX *= -1.2; // Cross-court deflection
+      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.2;
+      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.2;
+      else if (timingOffset < -0.4) targetX *= -1.2;
     }
+    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.85, this.HALF_W - 0.85);
 
     let targetZ = (hitter === 'player') ? (-7.2 - Math.random() * 1.8) : (7.2 + Math.random() * 1.8);
     let flightTime = 1.08;
@@ -1842,6 +1980,7 @@ class PadelGameEngine {
     this.ball.spin.set(spinRate, (Math.random() - 0.5) * 6.0, 0);
 
     this.audio.playHit(power, isSmash, isSweetSpot);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
 
     this.shotType = 'DRIVE';
     document.getElementById('current-shot').innerText = 'DRIVE';
@@ -1862,24 +2001,29 @@ class PadelGameEngine {
     if (!this.pointActive) return;
     this.pointActive = false;
     this.audio.playWhistle();
+    if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
+
+    const isMulti = (this.gameMode === 'local' || this.gameMode === 'online_host' || this.gameMode === 'online_guest');
+    const p1Label = isMulti ? 'JUGADOR 1 (AZUL)' : 'TI';
+    const p2Label = isMulti ? 'JUGADOR 2 (ROJO)' : 'EL RIVAL';
 
     if (winner === 'player') {
       this.scorePlayer++;
       this.audio.playCrowd();
-      this.showAnnouncement('¡PUNTO PARA TI!', reason);
+      this.showAnnouncement(`¡PUNTO PARA ${p1Label}!`, reason);
     } else {
       this.scoreAI++;
-      this.showAnnouncement('¡PUNTO PARA EL RIVAL!', reason);
+      this.showAnnouncement(`¡PUNTO PARA ${p2Label}!`, reason);
     }
 
     if (this.scorePlayer >= 4 && this.scorePlayer - this.scoreAI >= 1) {
       this.gamesPlayer++;
       this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement('¡JUEGO PARA TI!', 'Consigues el juego');
+      this.showAnnouncement(`¡JUEGO PARA ${p1Label}!`, 'Consigue el juego');
     } else if (this.scoreAI >= 4 && this.scoreAI - this.scorePlayer >= 1) {
       this.gamesAI++;
       this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement('¡JUEGO PARA EL RIVAL!', 'El rival gana el juego');
+      this.showAnnouncement(`¡JUEGO PARA ${p2Label}!`, 'Consigue el juego');
     }
 
     // Freeze ball during celebration to prevent race conditions
@@ -1914,11 +2058,18 @@ class PadelGameEngine {
 
   showAnnouncement(title, sub) {
     const el = document.getElementById('center-announcement');
-    document.getElementById('announcement-title').innerText = title;
-    document.getElementById('announcement-sub').innerText = sub;
-    el.classList.remove('hidden');
-    clearTimeout(this.annTimeout);
-    this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2000);
+    if (el) {
+      const t = document.getElementById('announcement-title');
+      const s = document.getElementById('announcement-sub');
+      if (t) t.innerText = title;
+      if (s) s.innerText = sub;
+      el.classList.remove('hidden');
+      clearTimeout(this.annTimeout);
+      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2000);
+    }
+    if (this.gameMode === 'online_host') {
+      this._pendingAnn = { title, sub };
+    }
   }
 
   // --- Physics Loop with Continuous Collision Detection ---
@@ -1948,6 +2099,7 @@ class PadelGameEngine {
       this.ball.pos.y = this.ballRadius;
       this.ball.vel.y = -this.ball.vel.y * 0.74; // Restitution
       this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
+      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
 
       // Dust puff particles on turf impact
       this.particles.burst(this.ball.pos, 8, 0x88ccff, 2.0);
@@ -1986,6 +2138,7 @@ class PadelGameEngine {
       this.ball.pos.z = this.HALF_L - this.ballRadius;
       this.ball.vel.z = -this.ball.vel.z * 0.82;
       this.audio.playGlass(Math.abs(this.ball.vel.z));
+      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
       this.particles.burst(this.ball.pos, 12, 0x9be8ff, 3.0);
 
       if (!this.ball.hitGroundInCourt && this.ball.lastHitter === 'ai') {
@@ -1996,6 +2149,7 @@ class PadelGameEngine {
       this.ball.pos.z = -this.HALF_L + this.ballRadius;
       this.ball.vel.z = -this.ball.vel.z * 0.82;
       this.audio.playGlass(Math.abs(this.ball.vel.z));
+      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
       this.particles.burst(this.ball.pos, 12, 0x9be8ff, 3.0);
 
       if (!this.ball.hitGroundInCourt && this.ball.lastHitter === 'player') {
@@ -2005,23 +2159,30 @@ class PadelGameEngine {
     }
 
     // 3. Side Walls (X = +/-5m)
-    if (this.ball.pos.x >= this.HALF_W - this.ballRadius) {
-      this.ball.pos.x = this.HALF_W - this.ballRadius;
+    if (Math.abs(this.ball.pos.x) >= this.HALF_W - this.ballRadius) {
+      const sign = Math.sign(this.ball.pos.x);
+      this.ball.pos.x = sign * (this.HALF_W - this.ballRadius);
       this.ball.vel.x = -this.ball.vel.x * 0.80;
       this.audio.playGlass(Math.abs(this.ball.vel.x));
+      if (this.gameMode === 'online_host') this._pendingSound = 'glass';
       this.particles.burst(this.ball.pos, 8, 0x9be8ff, 2.5);
-    } else if (this.ball.pos.x <= -this.HALF_W + this.ballRadius) {
-      this.ball.pos.x = -this.HALF_W + this.ballRadius;
-      this.ball.vel.x = -this.ball.vel.x * 0.80;
-      this.audio.playGlass(Math.abs(this.ball.vel.x));
-      this.particles.burst(this.ball.pos, 8, 0x9be8ff, 2.5);
+
+      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
+      if (!this.ball.hitGroundInCourt && this.ball.lastHitter && this.ball.lastHitter !== currentSide) {
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, 'Pared lateral directa (OUT)');
+        return;
+      }
     }
 
-    // 4. Net Collision (Z = 0, Y <= 0.88m)
-    if (Math.abs(this.ball.pos.z) < 0.14 && this.ball.pos.y < this.NET_H) {
-      this.ball.vel.z = -this.ball.vel.z * 0.22;
+    // 4. Continuous Collision Detection (CCD) Net Check (Z crosses 0 while Y < NET_H)
+    const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
+    if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
+      this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+      this.ball.vel.z = -this.ball.vel.z * 0.25;
       this.ball.vel.y *= 0.4;
       this.audio.playBounce(0.4);
+      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
 
       const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
       this.awardPoint(winner, 'Pelota atrapada en la red');
@@ -2066,7 +2227,7 @@ class PadelGameEngine {
         this.ai.targetPos.set(0, 0, -7.5);
       }
 
-      const delta = new THREE.Vector3().subVectors(this.ai.targetPos, this.ai.pos);
+      const delta = this._v1.subVectors(this.ai.targetPos, this.ai.pos);
       const dist = delta.length();
       if (dist > 0.1) {
         delta.normalize();
@@ -2076,17 +2237,18 @@ class PadelGameEngine {
         this.ai.runCycle *= 0.8;
       }
 
-      // AI Return Strike (Precise Hitbox)
-      const aiRHead = new THREE.Vector3();
-      this.ai.limbs.racket.getWorldPosition(aiRHead);
-      const distToAIRacket = aiRHead.distanceTo(this.ball.pos);
-      const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
+      // AI Return Strike (Precise Natural Hitbox)
+      if (this.ai.limbs && this.ai.limbs.racket) {
+        this.ai.limbs.racket.getWorldPosition(this._rHead);
+        const distToAIRacket = this._rHead.distanceTo(this.ball.pos);
+        const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
 
-      if ((distToAIRacket <= 0.98 || distToAIBody <= 1.20) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
-        const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
-        this.startSwingAnimation(this.ai, swingType);
-        const aiPower = 0.70 + Math.random() * 0.30;
-        this.executeHitWithHitbox('ai', aiPower, 0, true);
+        if ((distToAIRacket <= 1.45 || distToAIBody <= 1.85) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+          const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
+          this.startSwingAnimation(this.ai, swingType);
+          const aiPower = 0.70 + Math.random() * 0.30;
+          this.executeHitWithHitbox('ai', aiPower, 0, true);
+        }
       }
     }
 
@@ -2098,7 +2260,7 @@ class PadelGameEngine {
   updatePlayer(dt) {
     if (!this.isPlaying) return;
 
-    const dir = new THREE.Vector3();
+    const dir = this._v1.set(0, 0, 0);
     if (this.keys['w'] || this.keys['arrowup']) dir.z -= 1;
     if (this.keys['s'] || this.keys['arrowdown']) dir.z += 1;
     if (this.keys['a'] || this.keys['arrowleft']) dir.x -= 1;
@@ -2177,28 +2339,30 @@ class PadelGameEngine {
     if (this.cameraMode === 'third') {
       if (this.gameMode === 'online_guest') {
         // Perspective from Guest baseline (looking forward toward host)
-        const targetPos = new THREE.Vector3(
+        this._camTarget.set(
           this.ai.pos.x * 0.35,
           4.0 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
           this.ai.pos.z - 5.8
         );
-        this.camera.position.lerp(targetPos, dt * 5.5);
+        this.camera.position.lerp(this._camTarget, dt * 5.5);
         this.camera.lookAt(this.ball.pos.x * 0.3, 1.1, 0);
       } else {
         // Host / Solo Perspective
-        const targetPos = new THREE.Vector3(
+        this._camTarget.set(
           this.player.pos.x * 0.35,
           4.0 + Math.max(0, (this.ball.pos.y - 1.2) * 0.25),
           this.player.pos.z + 5.8
         );
-        this.camera.position.lerp(targetPos, dt * 5.5);
+        this.camera.position.lerp(this._camTarget, dt * 5.5);
         this.camera.lookAt(this.ball.pos.x * 0.3, 1.1, 0);
       }
     } else if (this.cameraMode === 'broadcast') {
-      this.camera.position.lerp(new THREE.Vector3(12.0, 5.8, 0), dt * 4.0);
+      this._camTarget.set(12.0, 5.8, 0);
+      this.camera.position.lerp(this._camTarget, dt * 4.0);
       this.camera.lookAt(this.ball.pos.x * 0.5, 0.9, this.ball.pos.z * 0.5);
     } else if (this.cameraMode === 'top') {
-      this.camera.position.lerp(new THREE.Vector3(0, 23.0, 1.0), dt * 4.0);
+      this._camTarget.set(0, 23.0, 1.0);
+      this.camera.position.lerp(this._camTarget, dt * 4.0);
       this.camera.lookAt(0, 0, 0);
     }
   }
@@ -2261,7 +2425,15 @@ class PadelGameEngine {
       this.updatePhysics(dt);
     } else if (this.gameMode === 'online_guest') {
       this.updatePlayer2Guest(dt);
-      // Physics are authoritative from host, guest interpolates
+      // Smooth ball velocity extrapolation between host sync packets for locked 60fps
+      if (this.ball && this.ball.vel && this.ball.mesh) {
+        this.ball.pos.addScaledVector(this.ball.vel, dt);
+        this.ball.mesh.position.copy(this.ball.pos);
+        if (this.ball.shadow) {
+          this.ball.shadow.position.x = this.ball.pos.x;
+          this.ball.shadow.position.z = this.ball.pos.z;
+        }
+      }
     } else {
       // Solo vs AI
       this.updatePlayer(dt);
@@ -2270,7 +2442,12 @@ class PadelGameEngine {
     }
 
     this.updateCamera(dt);
-    this.drawMinimap();
+
+    // Throttle minimap canvas draws to every 3 frames for zero lag
+    this._minimapTick = (this._minimapTick || 0) + 1;
+    if (this._minimapTick % 3 === 0) {
+      this.drawMinimap();
+    }
 
     this.renderer.render(this.scene, this.camera);
   }
