@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Padel Master 3D - World Tour Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- In-Game Broadcast HUD Overlay -->
+  <div id="hud">
+    <!-- Top Bar: Official Broadcast Scoreboard -->
+    <header class="top-bar">
+      <div class="brand-badge">
+        <span class="live-dot"></span>
+        <span class="brand-text">WORLD PADEL TOUR</span>
+      </div>
+
+      <div class="scoreboard-widget">
+        <!-- Player 1 -->
+        <div class="team-row" id="team-player">
+          <div class="serve-indicator" id="serve-player">🎾</div>
+          <div class="team-name">TÚ (PRO)</div>
+          <div class="set-score" id="sets-player">0</div>
+          <div class="game-score" id="games-player">0</div>
+          <div class="points-badge" id="pts-player">0</div>
+        </div>
+        <!-- Player 2 (AI / Rival) -->
+        <div class="team-row" id="team-ai">
+          <div class="serve-indicator" id="serve-ai"></div>
+          <div class="team-name">RIVAL (PRO)</div>
+          <div class="set-score" id="sets-ai">0</div>
+          <div class="game-score" id="games-ai">0</div>
+          <div class="points-badge" id="pts-ai">0</div>
+        </div>
+      </div>
+
+      <!-- Quick Telemetry: Rally Count & Ball Speed -->
+      <div class="telemetry-widget">
+        <div class="telemetry-item">
+          <span class="telemetry-label">RALLY</span>
+          <span class="telemetry-val" id="rally-count">0</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-label">VELOCIDAD</span>
+          <span class="telemetry-val" id="ball-speed">0 <small>km/h</small></span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Center Alerts (Point Announcements) -->
+    <div id="center-announcement" class="hidden">
+      <h1 id="announcement-title">¡PUNTO!</h1>
+      <p id="announcement-sub">Gran bajada de pared</p>
+    </div>
+
+    <!-- Realtime Racket Hitbox Timing Feedback -->
+    <div id="timing-feedback" class="timing-badge hidden">
+      <span id="timing-text">SWEET SPOT • 100%</span>
+    </div>
+
+    <!-- Bottom Left: Shot Gauge & Power Meter -->
+    <div class="bottom-left-panel">
+      <div class="shot-selector">
+        <span class="shot-label">GOLPE ACTIVO</span>
+        <span class="shot-type" id="current-shot">DRIVE</span>
+      </div>
+      <div class="power-meter-container">
+        <div class="power-bar-fill" id="power-bar"></div>
+        <span class="power-text">POTENCIA</span>
+      </div>
+      <div class="shot-hints">
+        <span>[ESPACIO / CLICK] Cargar Golpe</span>
+        <span>[L] Globo Defensivo | [E] Smash x3</span>
+      </div>
+    </div>
+
+    <!-- Bottom Center: Serve Prompt -->
+    <div id="serve-prompt" class="serve-prompt-banner hidden">
+      <span>Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong> para Servir</span>
+    </div>
+
+    <!-- Bottom Right: Court 2D Minimap & Camera Controls -->
+    <div class="bottom-right-panel">
+      <div class="minimap-card">
+        <canvas id="minimap" width="80" height="160"></canvas>
+      </div>
+
+      <div class="camera-controls">
+        <button class="cam-btn active" data-cam="third">📹 JUGADOR [1]</button>
+        <button class="cam-btn" data-cam="broadcast">📺 BROADCAST [2]</button>
+        <button class="cam-btn" data-cam="top">🎯 CENITAL [3]</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ultra-Elegant Start Screen Modal -->
+  <div id="start-screen" class="overlay-modal">
+    <div class="modal-card">
+      <div class="modal-ambient-glow"></div>
+      
+      <!-- Luxury Brand Badge -->
+      <div class="brand-pill">
+        <span class="gold-star">✦</span>
+        <span>MASTER TOURNAMENT EDITION</span>
+        <span class="gold-star">✦</span>
+      </div>
+
+      <h1 class="game-title">PADEL MASTER 3D</h1>
+      <p class="game-subtitle">Simulador profesional con físicas de rebote en cristal, efectos de rotación y acústica de pista.</p>
+
+      <!-- Minimalist Highlights -->
+      <div class="luxury-features">
+        <div class="luxury-feat">
+          <span class="feat-bullet">01</span>
+          <div class="feat-info">
+            <h5>Paredes de Cristal</h5>
+            <p>Física realista de rebotes y bajadas de pared</p>
+          </div>
+        </div>
+        <div class="luxury-feat">
+          <span class="feat-bullet">02</span>
+          <div class="feat-info">
+            <h5>Hitbox Sweet-Spot</h5>
+            <p>Detección continua con desvío angular según timing</p>
+          </div>
+        </div>
+        <div class="luxury-feat">
+          <span class="feat-bullet">03</span>
+          <div class="feat-info">
+            <h5>Acústica Sintética</h5>
+            <p>Sonido 3D en tiempo real con Web Audio API</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode Switcher Tabs -->
+      <div class="mode-tabs">
+        <button class="mode-tab-btn active" id="tab-mode-ai" data-mode="ai">🏆 Modo Individual</button>
+        <button class="mode-tab-btn" id="tab-mode-online" data-mode="online">🌐 Multijugador Online (P2P)</button>
+        <button class="mode-tab-btn" id="tab-mode-local" data-mode="local">👥 2 Jugadores Local</button>
+      </div>
+
+      <!-- Mode Content: AI -->
+      <div id="mode-panel-ai" class="mode-panel">
+        <div class="controls-pill-grid">
+          <div class="control-chip"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Moverse</div>
+          <div class="control-chip"><kbd>ESPACIO</kbd> Cargar / Golpear</div>
+          <div class="control-chip"><kbd>L</kbd> Globo | <kbd>E</kbd> Smash | <kbd>SHIFT</kbd> Esprintar</div>
+        </div>
+        <button id="btn-play" class="btn-luxury-start">
+          <span>ENTRAR A LA PISTA</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+        <div class="start-hint">O presiona <kbd>ESPACIO</kbd> o <kbd>ENTER</kbd> para comenzar</div>
+      </div>
+
+      <!-- Mode Content: Online P2P -->
+      <div id="mode-panel-online" class="mode-panel hidden">
+        <div class="online-glass-card">
+          <div class="online-section">
+            <h4>CREAR SALA</h4>
+            <p>Crea una partida P2P directa y comparte el código con tu amigo.</p>
+            <div class="room-code-box">
+              <span id="room-code-display">Generando...</span>
+              <button id="btn-copy-code" class="btn-copy">Copiar Enlace</button>
+            </div>
+            <div id="host-status" class="online-status">Esperando conexión de tu amigo...</div>
+          </div>
+          <div class="online-divider"></div>
+          <div class="online-section">
+            <h4>UNIRTE A PARTIDA</h4>
+            <p>Ingresa el código proporcionado por el anfitrión.</p>
+            <div class="join-row">
+              <input type="text" id="join-room-input" placeholder="PADEL-XXXX" maxlength="15">
+              <button id="btn-join-room" class="btn-join">Unirse</button>
+            </div>
+            <div id="join-status" class="online-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mode Content: Local 2-Player -->
+      <div id="mode-panel-local" class="mode-panel hidden">
+        <div class="local-duo-grid">
+          <div class="duo-card p1-accent">
+            <span class="duo-tag">JUGADOR 1 (AZUL)</span>
+            <div class="duo-keys">
+              <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Desplazamiento</span>
+              <span><kbd>ESPACIO</kbd> Saque / Golpe</span>
+              <span><kbd>L</kbd> Globo | <kbd>E</kbd> Smash</span>
+            </div>
+          </div>
+          <div class="duo-card p2-accent">
+            <span class="duo-tag">JUGADOR 2 (ROJO)</span>
+            <div class="duo-keys">
+              <span><kbd>↑</kbd><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd> Desplazamiento</span>
+              <span><kbd>ENTER</kbd> Saque / Golpe</span>
+              <span><kbd>O</kbd> Globo | <kbd>P</kbd> Smash</span>
+            </div>
+          </div>
+        </div>
+        <button id="btn-play-local" class="btn-luxury-start" style="margin-top: 16px;">
+          <span>INICIAR PARTIDO 2J</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Libraries & Game Engine -->
+  <script src="lib/three.min.js"></script>
+  <script src="lib/peerjs.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
