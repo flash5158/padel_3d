@@ -1156,11 +1156,11 @@ class TennisGameEngine {
   // --- Inputs ---
   initInputs() {
     window.addEventListener('keydown', (e) => {
+      // Don't intercept game shortcuts or record keys if typing in input field
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
       this.keys[e.key.toLowerCase()] = true;
       this.audio.init();
-
-      // Don't intercept game shortcuts if typing in room input
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
 
       if (!this.isPlaying && (e.code === 'Space' || e.code === 'Enter')) {
         document.getElementById('start-screen').classList.add('fade-out');
@@ -1272,18 +1272,20 @@ class TennisGameEngine {
     const panelLocal = document.getElementById('mode-panel-local');
 
     const setModeTab = (mode) => {
-      this.gameMode = mode;
       if (tabAI) [tabAI, tabOnline, tabLocal].forEach(t => t.classList.remove('active'));
       if (panelAI) [panelAI, panelOnline, panelLocal].forEach(p => p.classList.add('hidden'));
 
       if (mode === 'ai') {
+        this.gameMode = 'ai';
         if (tabAI) tabAI.classList.add('active');
         if (panelAI) panelAI.classList.remove('hidden');
       } else if (mode === 'online') {
+        this.gameMode = 'online_host';
         if (tabOnline) tabOnline.classList.add('active');
         if (panelOnline) panelOnline.classList.remove('hidden');
         this.setupOnlineHost();
       } else if (mode === 'local') {
+        this.gameMode = 'local';
         if (tabLocal) tabLocal.classList.add('active');
         if (panelLocal) panelLocal.classList.remove('hidden');
       }
@@ -1323,14 +1325,23 @@ class TennisGameEngine {
       });
     }
 
-    // Join Room Button
+    // Join Room Button & Enter Key Handling
     const btnJoin = document.getElementById('btn-join-room');
     const joinInput = document.getElementById('join-room-input');
     if (btnJoin && joinInput) {
-      btnJoin.addEventListener('click', () => {
+      const executeJoin = () => {
         const code = joinInput.value.trim().toUpperCase();
         if (code) {
+          joinInput.blur();
+          this.keys = {};
           this.connectToPeer(code);
+        }
+      };
+      btnJoin.addEventListener('click', executeJoin);
+      joinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          executeJoin();
         }
       });
     }
@@ -1339,10 +1350,12 @@ class TennisGameEngine {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam) {
-      setModeTab('online');
-      setTimeout(() => {
-        this.connectToPeer(roomParam.toUpperCase());
-      }, 500);
+      if (tabAI) [tabAI, tabOnline, tabLocal].forEach(t => t.classList.remove('active'));
+      if (panelAI) [panelAI, panelOnline, panelLocal].forEach(p => p.classList.add('hidden'));
+      if (tabOnline) tabOnline.classList.add('active');
+      if (panelOnline) panelOnline.classList.remove('hidden');
+      if (joinInput) joinInput.value = roomParam.toUpperCase();
+      this.connectToPeer(roomParam.toUpperCase());
     }
   }
 
@@ -1386,6 +1399,9 @@ class TennisGameEngine {
           document.getElementById('start-screen').classList.add('fade-out');
           this.isPlaying = true;
           this.showAnnouncement('¡RIVAL ONLINE CONECTADO!', 'Host (Azul) vs Invitado (Rojo)');
+          if (document.activeElement) document.activeElement.blur();
+          this.keys = {};
+          window.focus();
         }, 1000);
       });
 
@@ -1419,6 +1435,9 @@ class TennisGameEngine {
             document.getElementById('start-screen').classList.add('fade-out');
             this.isPlaying = true;
             this.showAnnouncement('¡CONECTADO A LA PISTA!', 'Invitado (Rojo) vs Host (Azul)');
+            if (document.activeElement) document.activeElement.blur();
+            this.keys = {};
+            window.focus();
           }, 800);
         });
 
@@ -1440,9 +1459,14 @@ class TennisGameEngine {
         this.ball.pos.set(data.b.x, data.b.y, data.b.z);
         this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
         this.player.pos.set(data.p1.x, 0, data.p1.z);
-        this.player.isSwinging = data.p1.sw;
-        this.player.swingType = data.p1.st;
+        if (data.p1.sw && !this.player.isSwinging) {
+          this.startSwingAnimation(this.player, data.p1.st || 'forehand');
+        }
         this.player.runCycle = data.p1.rc;
+
+        if (!this.pointActive && data.p2) {
+          this.ai.pos.set(data.p2.x, 0, data.p2.z);
+        }
 
         this.scorePlayer = data.sc.sp;
         this.scoreAI = data.sc.sa;
@@ -1498,7 +1522,7 @@ class TennisGameEngine {
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
 
-          if ((distToRacket <= 1.45 || distToBody <= 1.95) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai') {
+          if ((distToRacket <= 1.85 || distToBody <= 2.4) && this.ball.pos.z < 0.2 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
             this.executeHitWithHitbox('ai', data.shot.power || 0.85, 0, true);
@@ -1586,16 +1610,12 @@ class TennisGameEngine {
     if (this.keys[' '] || this.keys['enter']) {
       this.keys[' '] = false;
       this.keys['enter'] = false;
-      if (this.conn && this.conn.open) {
-        this.conn.send({
-          type: 'p2_input',
-          x: this.ai.pos.x,
-          z: this.ai.pos.z,
-          rc: this.ai.runCycle,
-          sw: true,
-          st: (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand',
-          shot: { power: 0.85, shotType: this.shotType }
-        });
+      if (!this.pointActive && this.server === 'ai') {
+        if (this.conn && this.conn.open) {
+          this.conn.send({ type: 'guest_serve' });
+        }
+      } else {
+        this.triggerGuestShot();
       }
     }
 
@@ -1630,6 +1650,9 @@ class TennisGameEngine {
           x: this.player.pos.x, z: this.player.pos.z,
           sw: this.player.isSwinging, st: this.player.swingType,
           rc: this.player.runCycle
+        },
+        p2: {
+          x: this.ai.pos.x, z: this.ai.pos.z
         },
         sc: {
           sp: this.scorePlayer, sa: this.scoreAI,
@@ -2403,6 +2426,9 @@ class TennisGameEngine {
           this.ball.shadow.position.z = this.ball.pos.z;
         }
       }
+      // Render and animate host's athlete model on guest's screen
+      this.player.model.position.copy(this.player.pos);
+      this.animateCharacter(this.player, dt, false);
     } else {
       // Solo vs AI
       this.updatePlayer(dt);
