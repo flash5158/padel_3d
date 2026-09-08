@@ -956,3 +956,115 @@ kbd {
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* ── Gender Toggle Buttons (Lobby) ─────────────────────── */
+.gender-toggle-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.gender-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: rgba(8, 16, 30, 0.70);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: #94a3b8;
+  font-family: var(--font-tech);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: auto;
+}
+
+.gender-btn:hover {
+  border-color: var(--champagne-gold);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 16px rgba(229, 192, 123, 0.28);
+}
+
+.gender-btn.active {
+  background: linear-gradient(135deg, rgba(0, 180, 255, 0.18), rgba(0, 240, 255, 0.08));
+  border-color: var(--primary-cyan);
+  color: var(--primary-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.28);
+}
+
+.gender-btn .gender-icon {
+  font-size: 20px;
+  display: block;
+}
+
+.gender-btn .gender-text {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+/* Player Custom Section */
+.player-custom-section {
+  margin: 16px 0;
+}
+
+.custom-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.nickname-box label,
+.gender-box label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #64748b;
+  margin-bottom: 5px;
+}
+
+.input-glow-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+#player-nickname {
+  width: 100%;
+  background: rgba(8, 16, 30, 0.80);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 8px 12px 8px 32px;
+  color: #f8fafc;
+  font-family: var(--font-tech);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  pointer-events: auto;
+}
+
+#player-nickname:focus {
+  border-color: var(--primary-cyan);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.22);
+}
+
+#player-nickname::placeholder {
+  color: #475569;
+  font-weight: 400;
+}
