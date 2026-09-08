@@ -748,6 +748,423 @@ const TextureFactory = {
     ctx.fill();
 
     return new THREE.CanvasTexture(canvas);
+  },
+
+  // 11. Ultra-Realistic Athletic Skin Texture with Micro-Pores & Muscle Highlights
+  createAthleteSkinTexture(isAI) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base athletic skin tone (warm sun-kissed peach/tan)
+    const baseColor = isAI ? '#d69e7e' : '#f0c7ab';
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Subsurface scattering tone gradient
+    const subGrad = ctx.createLinearGradient(0, 0, 512, 512);
+    subGrad.addColorStop(0, isAI ? 'rgba(215, 120, 80, 0.18)' : 'rgba(255, 160, 130, 0.22)');
+    subGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0)');
+    subGrad.addColorStop(1, isAI ? 'rgba(140, 70, 45, 0.25)' : 'rgba(180, 100, 75, 0.18)');
+    ctx.fillStyle = subGrad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Micro skin pore stippling
+    for (let i = 0; i < 40000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5);
+    }
+
+    // Subtle athletic muscle striations & tone creases
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.08)';
+    ctx.lineWidth = 3;
+    for (let y = 60; y < 480; y += 75) {
+      ctx.beginPath();
+      ctx.moveTo(80, y);
+      ctx.quadraticCurveTo(256, y + 25, 432, y);
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  },
+
+  // 12. Detailed Athletic Face Texture (Realistic Eyes, Eyebrows, Lips & Shading)
+  createAthleteFaceTexture(isAI) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base skin
+    ctx.fillStyle = isAI ? '#d69e7e' : '#f0c7ab';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Forehead shadow under visor
+    const visorShadow = ctx.createLinearGradient(0, 0, 0, 180);
+    visorShadow.addColorStop(0, 'rgba(0, 0, 0, 0.40)');
+    visorShadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = visorShadow;
+    ctx.fillRect(0, 0, 512, 180);
+
+    // Athletic Eyes (Intense focus)
+    const drawEye = (x, isRight) => {
+      ctx.save();
+      ctx.translate(x, 220);
+
+      // Eye socket shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 48, 26, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye White (Sclera)
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 36, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Iris (Vibrant athletic color: Cyan for player, Amber/Crimson for AI)
+      const irisGrad = ctx.createRadialGradient(0, 0, 3, 0, 0, 18);
+      if (isAI) {
+        irisGrad.addColorStop(0, '#ff9900');
+        irisGrad.addColorStop(0.7, '#dc2626');
+        irisGrad.addColorStop(1, '#7f1d1d');
+      } else {
+        irisGrad.addColorStop(0, '#7dd3fc');
+        irisGrad.addColorStop(0.7, '#0284c7');
+        irisGrad.addColorStop(1, '#0369a1');
+      }
+      ctx.fillStyle = irisGrad;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pupil
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Specular highlight
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-4, -4, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eyelids & Eyelashes
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.ellipse(0, -2, 37, 18, 0, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+
+      // Athletic Eyebrow
+      ctx.fillStyle = isAI ? '#2d1810' : '#1e1b18';
+      ctx.beginPath();
+      const flip = isRight ? -1 : 1;
+      ctx.moveTo(-44 * flip, -34);
+      ctx.quadraticCurveTo(0, -48, 44 * flip, -38);
+      ctx.quadraticCurveTo(0, -38, -44 * flip, -34);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    drawEye(170, false);
+    drawEye(342, true);
+
+    // Sculpted Nose Bridge & Nostrils
+    ctx.strokeStyle = 'rgba(120, 60, 30, 0.22)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(246, 200); ctx.lineTo(246, 290);
+    ctx.lineTo(238, 305); ctx.lineTo(256, 312); ctx.lineTo(274, 305);
+    ctx.stroke();
+
+    // Nostril shadow
+    ctx.fillStyle = 'rgba(70, 30, 15, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(244, 308, 6, 4, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(268, 308, 6, 4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Natural Athletic Lips with Cupid's Bow
+    ctx.fillStyle = isAI ? '#b45a46' : '#d4796a';
+    ctx.beginPath();
+    ctx.moveTo(215, 365);
+    ctx.quadraticCurveTo(240, 355, 256, 358);
+    ctx.quadraticCurveTo(272, 355, 297, 365);
+    ctx.quadraticCurveTo(256, 385, 215, 365);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(80, 25, 20, 0.4)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(218, 365); ctx.lineTo(294, 365);
+    ctx.stroke();
+
+    // Subtle Chin and Cheekbone Contours
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.10)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(256, 420, 35, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 13. High-Definition Technical Athletic Shorts Texture
+  createAthleteShortsTexture(colorHex, accentHex) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base Fabric
+    ctx.fillStyle = colorHex;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Micro Diamond Ripstop Weave
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.10)';
+    for (let y = 0; y < 512; y += 6) {
+      for (let x = 0; x < 512; x += 6) {
+        ctx.fillRect(x + ((y % 12 === 0) ? 3 : 0), y, 2, 2);
+      }
+    }
+
+    // Ventilation Side Mesh Panels
+    ctx.fillStyle = accentHex;
+    ctx.fillRect(0, 0, 48, 512);
+    ctx.fillRect(512 - 48, 0, 48, 512);
+
+    // Hem Double-Stitching Lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 485); ctx.lineTo(512, 485);
+    ctx.moveTo(0, 492); ctx.lineTo(512, 492);
+    ctx.stroke();
+
+    // Brand Logo on Left Hem
+    ctx.fillStyle = accentHex;
+    ctx.beginPath();
+    ctx.moveTo(80, 450); ctx.lineTo(120, 430); ctx.lineTo(110, 470);
+    ctx.fill();
+
+    return new THREE.CanvasTexture(canvas);
+  },
+
+  // 14. 360° Grand Slam Arena Sky Dome Texture
+  createStadiumSkyTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Deep Midnight Arena Atmosphere Gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, '#030814');
+    grad.addColorStop(0.65, '#0a1932');
+    grad.addColorStop(1, '#152b4d');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Giant Illuminated Arena Roof Circular Truss
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+    ctx.lineWidth = 14;
+    ctx.beginPath();
+    ctx.arc(512, 100, 380, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Cross Spaceframe Steel Girders
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 3;
+    for (let x = 0; x < 1024; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(1024 - x, 320);
+      ctx.stroke();
+    }
+
+    // 6 Gantry Floodlight Banks with Glow Flares
+    const lights = [120, 280, 440, 584, 744, 904];
+    lights.forEach(lx => {
+      const fGrad = ctx.createRadialGradient(lx, 140, 5, lx, 140, 80);
+      fGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      fGrad.addColorStop(0.3, 'rgba(0, 240, 255, 0.45)');
+      fGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = fGrad;
+      ctx.beginPath();
+      ctx.arc(lx, 140, 80, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Distant Upper Deck Seating Rings Silhouette
+    ctx.fillStyle = 'rgba(5, 12, 24, 0.75)';
+    ctx.fillRect(0, 420, 1024, 92);
+    for (let i = 0; i < 1024; i += 12) {
+      ctx.fillStyle = (i % 24 === 0) ? '#0284c7' : '#0369a1';
+      ctx.fillRect(i, 435, 8, 25);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 15. 360° Tropical Beach Sunset Sky Dome Texture
+  createBeachSkyTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Vibrant Sunset Gradient (Twilight Violet to Radiant Coral Gold)
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, '#1c0b2b');   // Deep indigo-violet zenith
+    grad.addColorStop(0.35, '#4a154b'); // Magenta twilight
+    grad.addColorStop(0.65, '#c0392b'); // Crimson sunset
+    grad.addColorStop(0.85, '#e67e22'); // Amber orange
+    grad.addColorStop(1.0, '#f39c12');  // Golden horizon
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Radiant Sun Disc & Atmospheric Solar Flare
+    const sunX = 512, sunY = 380;
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 260);
+    sunGlow.addColorStop(0, '#ffffff');
+    sunGlow.addColorStop(0.12, '#fff275');
+    sunGlow.addColorStop(0.40, 'rgba(255, 130, 40, 0.55)');
+    sunGlow.addColorStop(0.80, 'rgba(230, 50, 80, 0.20)');
+    sunGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 260, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Drifting Golden Sunset Cumulus Clouds
+    ctx.fillStyle = 'rgba(255, 170, 100, 0.25)';
+    const clouds = [
+      { x: 180, y: 260, w: 220, h: 40 },
+      { x: 720, y: 280, w: 280, h: 45 },
+      { x: 420, y: 320, w: 190, h: 32 },
+      { x: 80,  y: 350, w: 160, h: 28 }
+    ];
+    clouds.forEach(c => {
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Distant Volcanic Island Silhouette along Horizon
+    ctx.fillStyle = '#1b1226';
+    ctx.beginPath();
+    ctx.moveTo(0, 512);
+    ctx.lineTo(0, 460);
+    ctx.quadraticCurveTo(120, 420, 240, 465);
+    ctx.quadraticCurveTo(400, 480, 550, 470);
+    ctx.quadraticCurveTo(700, 410, 860, 465);
+    ctx.lineTo(1024, 460);
+    ctx.lineTo(1024, 512);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 16. 360° Kyoto Zen Mountain Twilight Sky Dome Texture
+  createZenSkyTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024; canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Mystical Twilight Purple to Indigo Gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, '#090514');
+    grad.addColorStop(0.4, '#190e30');
+    grad.addColorStop(0.75, '#2e194a');
+    grad.addColorStop(1, '#4a2566');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Glowing Full Moon (Tsukimi)
+    const moonX = 320, moonY = 160;
+    const moonHalo = ctx.createRadialGradient(moonX, moonY, 20, moonX, moonY, 140);
+    moonHalo.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+    moonHalo.addColorStop(0.25, 'rgba(255, 245, 215, 0.65)');
+    moonHalo.addColorStop(0.65, 'rgba(215, 185, 245, 0.22)');
+    moonHalo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = moonHalo;
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, 140, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fffdf0';
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, 38, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Twinkling Evening Starfield
+    for (let i = 0; i < 180; i++) {
+      const sx = Math.random() * 1024;
+      const sy = Math.random() * 320;
+      const size = Math.random() * 1.8 + 0.5;
+      ctx.fillStyle = Math.random() > 0.3 ? '#ffffff' : '#ffd580';
+      ctx.beginPath();
+      ctx.arc(sx, sy, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Mountain Ridges (Mount Hiei & Arashiyama Silhouette)
+    ctx.fillStyle = '#10081c';
+    ctx.beginPath();
+    ctx.moveTo(0, 512);
+    ctx.lineTo(0, 420);
+    ctx.quadraticCurveTo(150, 340, 320, 400);
+    ctx.quadraticCurveTo(480, 430, 620, 350);
+    ctx.quadraticCurveTo(800, 310, 1024, 410);
+    ctx.lineTo(1024, 512);
+    ctx.fill();
+
+    // Silhouetted Weeping Sakura Branches on Corners
+    ctx.strokeStyle = '#08030e';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.bezierCurveTo(80, 50, 140, 30, 210, 90);
+    ctx.moveTo(1024, 0); ctx.bezierCurveTo(940, 60, 880, 40, 820, 110);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 17. Surrounding Concrete Concourse Floor Texture (Stadium)
+  createStadiumFloorTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Concrete Tiles Grid
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 4;
+    const step = 64;
+    for (let x = 0; x <= 512; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 512); ctx.stroke();
+    }
+    for (let y = 0; y <= 512; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(512, y); ctx.stroke();
+    }
+
+    // Concrete Stipple Noise
+    for (let i = 0; i < 25000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 8);
+    return tex;
   }
 };
 
@@ -1202,6 +1619,56 @@ class TennisGameEngine {
     this.sun.intensity = 1.35;
     this.sun.position.set(16, 28, 12);
 
+    // 360° Grand Slam Arena Sky Dome
+    const skyTex = TextureFactory.createStadiumSkyTexture();
+    const skyGeo = new THREE.SphereGeometry(75, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    skyGeo.scale(-1, 1, 1);
+    const skyMat = new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide });
+    const skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    skyMesh.position.set(0, -2, 0);
+    this.environmentGroup.add(skyMesh);
+
+    // Surrounding Concrete Concourse Floor
+    const floorTex = TextureFactory.createStadiumFloorTexture();
+    const floorGeo = new THREE.PlaneGeometry(90, 90);
+    const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.8, metalness: 0.1 });
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.y = -0.05;
+    floorMesh.receiveShadow = true;
+    this.environmentGroup.add(floorMesh);
+
+    // Suspended 4-Sided Video Jumbotron Cube
+    const jumbotron = new THREE.Group();
+    jumbotron.position.set(0, 14.5, 0);
+    const jBox = new THREE.Mesh(
+      new THREE.BoxGeometry(7.5, 4.5, 7.5),
+      new THREE.MeshStandardMaterial({ color: 0x070d18, metalness: 0.9, roughness: 0.2 })
+    );
+    const jCanvas = document.createElement('canvas');
+    jCanvas.width = 512; jCanvas.height = 256;
+    const jctx = jCanvas.getContext('2d');
+    jctx.fillStyle = '#020617'; jctx.fillRect(0, 0, 512, 256);
+    jctx.fillStyle = '#00f0ff'; jctx.font = 'bold 34px sans-serif';
+    jctx.fillText('GRAND SLAM PRO TOUR', 30, 60);
+    jctx.fillStyle = '#f59e0b'; jctx.font = 'bold 50px sans-serif';
+    jctx.fillText('LIVE MATCH • 4K', 30, 130);
+    jctx.fillStyle = '#94a3b8'; jctx.font = '26px sans-serif';
+    jctx.fillText('CENTRE COURT • ROLEX TIME', 30, 195);
+    const jScreenTex = new THREE.CanvasTexture(jCanvas);
+    const jScreenMat = new THREE.MeshBasicMaterial({ map: jScreenTex });
+    [-1, 1].forEach(side => {
+      const screenZ = new THREE.Mesh(new THREE.PlaneGeometry(7.1, 4.1), jScreenMat);
+      screenZ.position.set(0, 0, side * 3.76);
+      if (side < 0) screenZ.rotation.y = Math.PI;
+      const screenX = new THREE.Mesh(new THREE.PlaneGeometry(7.1, 4.1), jScreenMat);
+      screenX.position.set(side * 3.76, 0, 0);
+      screenX.rotation.y = side * Math.PI / 2;
+      jumbotron.add(screenZ, screenX);
+    });
+    jumbotron.add(jBox);
+    this.environmentGroup.add(jumbotron);
+
     const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
     const seatBlue = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 });
     const seatRed = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
@@ -1344,8 +1811,31 @@ class TennisGameEngine {
     this.sun.intensity = 1.45;
     this.sun.position.set(24, 18, -32);
 
+    // 360° Tropical Beach Sunset Sky Dome
+    const beachSkyTex = TextureFactory.createBeachSkyTexture();
+    const beachSkyGeo = new THREE.SphereGeometry(85, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    beachSkyGeo.scale(-1, 1, 1);
+    const beachSkyMat = new THREE.MeshBasicMaterial({ map: beachSkyTex, side: THREE.BackSide });
+    const beachSky = new THREE.Mesh(beachSkyGeo, beachSkyMat);
+    beachSky.position.set(0, -2, 0);
+    this.environmentGroup.add(beachSky);
+
+    // Surrounding Golden Sand Dunes Terrain
+    const sandGeo = new THREE.PlaneGeometry(120, 120);
+    const sandTex = TextureFactory.createBeachSandTexture();
+    const sandMat = new THREE.MeshStandardMaterial({
+      map: sandTex,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+    const sandDune = new THREE.Mesh(sandGeo, sandMat);
+    sandDune.rotation.x = -Math.PI / 2;
+    sandDune.position.y = -0.04;
+    sandDune.receiveShadow = true;
+    this.environmentGroup.add(sandDune);
+
     // Expansive Turquoise Ocean Plane with Animated Waves
-    const oceanGeo = new THREE.PlaneGeometry(130, 90, 48, 48);
+    const oceanGeo = new THREE.PlaneGeometry(160, 110, 54, 54);
     const oceanMat = new THREE.MeshStandardMaterial({
       color: 0x008b8b,
       roughness: 0.18,
@@ -1472,6 +1962,29 @@ class TennisGameEngine {
     this.sun.color.setHex(0xb197fc);
     this.sun.intensity = 1.25;
     this.sun.position.set(-18, 22, -24);
+
+    // 360° Kyoto Zen Mountain Twilight Sky Dome
+    const zenSkyTex = TextureFactory.createZenSkyTexture();
+    const zenSkyGeo = new THREE.SphereGeometry(85, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    zenSkyGeo.scale(-1, 1, 1);
+    const zenSkyMat = new THREE.MeshBasicMaterial({ map: zenSkyTex, side: THREE.BackSide });
+    const zenSky = new THREE.Mesh(zenSkyGeo, zenSkyMat);
+    zenSky.position.set(0, -2, 0);
+    this.environmentGroup.add(zenSky);
+
+    // Surrounding Raked Zen Stone Gravel Garden Terrain
+    const zenGeo = new THREE.PlaneGeometry(100, 100);
+    const zenTex = TextureFactory.createZenStoneTexture();
+    const zenMat = new THREE.MeshStandardMaterial({
+      map: zenTex,
+      roughness: 0.90,
+      metalness: 0.10
+    });
+    const zenGravel = new THREE.Mesh(zenGeo, zenMat);
+    zenGravel.rotation.x = -Math.PI / 2;
+    zenGravel.position.y = -0.04;
+    zenGravel.receiveShadow = true;
+    this.environmentGroup.add(zenGravel);
 
     const toriiMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.35, metalness: 0.15 });
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.25, metalness: 0.85 });
@@ -1627,11 +2140,12 @@ class TennisGameEngine {
     btn2.position.set(0, 0.19, 0.25); btn2.rotation.x = Math.PI / 2;
     torsoGroup.add(collar, placket, btn1, btn2);
 
-    // Athletic Shorts with Side Ventilation Piping
+    // Technical Athletic Shorts with Ventilation Mesh Texture
+    const shortsTex = TextureFactory.createAthleteShortsTexture(shortsColor, accentHex);
     const waistGeo = new THREE.CylinderGeometry(0.20, 0.175, 0.28, 24);
     const waistMat = new THREE.MeshStandardMaterial({
-      color: shortsColor,
-      roughness: 0.65,
+      map: shortsTex,
+      roughness: 0.58,
       metalness: 0.08
     });
     const waist = new THREE.Mesh(waistGeo, waistMat);
@@ -1639,10 +2153,11 @@ class TennisGameEngine {
     waist.castShadow = true;
     torsoGroup.add(waist);
 
-    // Warm Athletic Subsurface Skin
+    // Warm Athletic Subsurface Skin with Micro-Pore & Tone Texture
+    const skinTex = TextureFactory.createAthleteSkinTexture(isAI);
     const skinMat = new THREE.MeshStandardMaterial({
-      color: isAI ? 0xdfb496 : 0xf2cbac,
-      roughness: 0.52,
+      map: skinTex,
+      roughness: 0.46,
       metalness: 0.04
     });
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.090, 0.14, 16), skinMat);
@@ -1651,16 +2166,35 @@ class TennisGameEngine {
 
     root.add(torsoGroup);
 
-    // 2. Sculpted Athletic Head, Hair, Cap & Polarized Sunglasses
+    // 2. Sculpted Athletic Head with High-Res Face Texture, Ears & Styled Hair
     const headGroup = new THREE.Group();
     headGroup.position.y = 1.48;
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.138, 24, 24), skinMat);
+    const faceTex = TextureFactory.createAthleteFaceTexture(isAI);
+    const faceMat = new THREE.MeshStandardMaterial({
+      map: faceTex,
+      roughness: 0.42,
+      metalness: 0.04
+    });
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.142, 32, 32), faceMat);
     head.castShadow = true;
 
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.06, 8), skinMat);
-    nose.position.set(0, -0.01, 0.14);
+    // Sculpted Nose
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.06, 8), skinMat);
+    nose.position.set(0, -0.015, 0.144);
     nose.rotation.x = Math.PI / 2;
+
+    // Anatomical Ears
+    const earGeo = new THREE.TorusGeometry(0.028, 0.009, 8, 16, Math.PI);
+    const lEar = new THREE.Mesh(earGeo, skinMat);
+    lEar.position.set(-0.142, 0.01, 0.01); lEar.rotation.y = -Math.PI / 2;
+    const rEar = new THREE.Mesh(earGeo, skinMat);
+    rEar.position.set(0.142, 0.01, 0.01); rEar.rotation.y = Math.PI / 2;
+
+    // Stylized Athletic Hair under Visor
+    const hairMat = new THREE.MeshStandardMaterial({ color: isAI ? 0x1a120b : 0x241710, roughness: 0.7 });
+    const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.145, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.7), hairMat);
+    hairBack.position.set(0, 0.02, -0.015);
 
     // Pro Visor / Backward Cap with Sweatband
     const capMat = new THREE.MeshStandardMaterial({
@@ -1668,19 +2202,19 @@ class TennisGameEngine {
       roughness: 0.40,
       metalness: 0.15
     });
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.144, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
-    cap.position.y = 0.025;
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.147, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    cap.position.y = 0.028;
 
     const sweatBandMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xff2a55 : 0x0284c7, roughness: 0.8 });
-    const sweatband = new THREE.Mesh(new THREE.TorusGeometry(0.140, 0.016, 8, 24), sweatBandMat);
+    const sweatband = new THREE.Mesh(new THREE.TorusGeometry(0.143, 0.016, 8, 24), sweatBandMat);
     sweatband.rotation.x = Math.PI / 2;
-    sweatband.position.y = 0.02;
+    sweatband.position.y = 0.022;
 
     const brim = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3),
+      new THREE.CylinderGeometry(0.165, 0.165, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3),
       capMat
     );
-    brim.position.set(0, 0.045, 0.10);
+    brim.position.set(0, 0.048, 0.10);
     brim.rotation.x = 0.18;
 
     // Polarized Sport Sunglasses with Mirror Clearcoat
@@ -1695,7 +2229,7 @@ class TennisGameEngine {
     const glasses = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.038, 0.12), lensMat);
     glasses.position.set(0, 0.01, 0.10);
 
-    headGroup.add(head, nose, cap, sweatband, brim, glasses);
+    headGroup.add(head, nose, lEar, rEar, hairBack, cap, sweatband, brim, glasses);
     root.add(headGroup);
 
     // 3. Articulated Muscular Legs & Pro Tennis Sneakers
@@ -1791,6 +2325,13 @@ class TennisGameEngine {
     lArmGroup.add(watchBand, watchScreen);
     root.add(lArmGroup);
 
+    // Left Hand
+    const lHandGroup = new THREE.Group();
+    lHandGroup.position.y = -0.61;
+    const lPalm = new THREE.Mesh(new THREE.BoxGeometry(0.046, 0.052, 0.024), skinMat);
+    lHandGroup.add(lPalm);
+    lArmGroup.add(lHandGroup);
+
     // Right Arm (Dominant Playing Arm with Compression Sleeve & Wrist Sweatband)
     const rArmGroup = new THREE.Group();
     rArmGroup.position.set(0.28, 1.25, 0);
@@ -1817,14 +2358,31 @@ class TennisGameEngine {
     rSweatband.position.y = -0.56;
     rArmGroup.add(rSweatband);
 
-    // Hand Gripping Racket
-    const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 12), skinMat);
-    rHand.position.y = -0.61;
-    rArmGroup.add(rHand);
+    // Articulated Hand Firmly Gripping Racket Handle
+    const rHandGroup = new THREE.Group();
+    rHandGroup.position.y = -0.61;
+
+    const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.054, 0.026), skinMat);
+    rHandGroup.add(rPalm);
+
+    // 4 Curled Wrapped Fingers
+    for (let f = 0; f < 4; f++) {
+      const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.046, 8), skinMat);
+      finger.rotation.z = Math.PI / 2;
+      finger.position.set(0, -0.018 + f * 0.012, 0.020);
+      rHandGroup.add(finger);
+    }
+    // Opposing Angled Thumb Locking Grip
+    const rThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.038, 8), skinMat);
+    rThumb.position.set(-0.022, 0.008, 0.014);
+    rThumb.rotation.set(-0.4, 0, 0.35);
+    rHandGroup.add(rThumb);
+
+    rArmGroup.add(rHandGroup);
 
     // 5. Authentic Carbon-Fiber Aerodynamic Strung Tennis Racket
     const racketGroup = new THREE.Group();
-    racketGroup.position.set(0, -0.61, 0.18);
+    racketGroup.position.set(0, -0.61, 0.16);
 
     // Perforated Overgrip Handle with Babolat/Wilson Finishing Collar Tape
     const gripTex = TextureFactory.createPerforatedGripTexture();
@@ -1926,6 +2484,10 @@ class TennisGameEngine {
       rCalf: rightLegData.kneeGroup,
       lArm: lArmGroup,
       rArm: rArmGroup,
+      rFore: rFore,
+      lFore: lFore,
+      rHand: rHandGroup,
+      lHand: lHandGroup,
       racket: racketGroup
     };
 
@@ -2596,7 +3158,7 @@ class TennisGameEngine {
     }
   }
 
-  // Execute Overhead Tennis Serve
+  // Execute Overhead Tennis Serve with Realistic Biomechanics & Guaranteed Clearance
   executeServe() {
     this.pointActive = true;
     const promptEl = document.getElementById('serve-prompt');
@@ -2605,24 +3167,43 @@ class TennisGameEngine {
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
 
-    // Must land in opponent's diagonal service box (Z: -6.40m to 0, X: opposite side)
-    const targetX = -this.servingSide * (0.8 + Math.random() * 2.6);
-    const targetZ = -1.2 - Math.random() * 4.4; // Inside service box
+    // Directional Aim within the diagonal legal service box:
+    // Box boundaries: Z in [-6.40m, 0], X on opposite diagonal side
+    // When this.servingSide === 1: Opponent box is X in [-4.115, 0]. Default center is -2.10m.
+    // When this.servingSide === -1: Opponent box is X in [0, 4.115]. Default center is +2.10m.
+    let targetX = -this.servingSide * 2.10;
+    if (this.keys['a'] || this.keys['arrowleft']) {
+      targetX = -this.servingSide * 3.15; // Aim wide towards sideline
+    } else if (this.keys['d'] || this.keys['arrowright']) {
+      targetX = -this.servingSide * 1.05; // Aim down the 'T' center line
+    }
 
-    const flightTime = 0.95;
+    // Landing depth safely centered in service box (Z = -3.9m to -4.2m)
+    const targetZ = -4.1;
+    const flightTime = 0.64; // Professional 185 km/h serve speed
+
+    // Overhead contact point (apex of serve toss)
+    this.ball.pos.y = 2.45;
+    this.ball.pos.x = this.player.pos.x + 0.22;
+    this.ball.pos.z = 11.4;
+
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.2;
+
+    // Guaranteed Net Clearance (Net is 0.914m; we enforce y_net >= 1.35m)
+    const timeToNet = (0 - this.ball.pos.z) / vz;
+    const vy = (1.35 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
 
     this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(12.0, 0, 0); // Flat / Topspin serve
+    this.ball.spin.set(16.0, 0, 0); // Heavy forward topspin kick pulling ball down
+
     this.audio.playHit(1.0, true, true);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.startSwingAnimation(this.player, 'forehand');
-    this.particles.burst(this.ball.pos, 22, 0x00f0ff, 3.8);
+    this.startSwingAnimation(this.player, 'serve');
+    this.particles.burst(this.ball.pos, 28, 0x00f0ff, 4.5);
 
     const sLabel = (this.serveFaultCount === 0) ? '1ER SAQUE' : '2DO SAQUE';
-    this.showAnnouncement(`¡${sLabel}!`, 'Pelota en juego');
+    this.showAnnouncement(`¡${sLabel}!`, 'Saque limpio y potente');
     this.showTimingFeedback('SWEET SPOT • SERVICIO', 'perfect');
   }
 
@@ -2634,21 +3215,32 @@ class TennisGameEngine {
     this.ball.bounceCount = 0;
     this.ball.hitGroundInCourt = false;
 
-    // Diagonal service box on player side (Z: 0 to 6.40m)
-    const targetX = this.servingSide * (0.8 + Math.random() * 2.6);
-    const targetZ = 1.2 + Math.random() * 4.4;
+    // Diagonal service box on player side (Z in [0, 6.40m])
+    const sideChoice = Math.random();
+    let targetX = this.servingSide * 2.10;
+    if (sideChoice < 0.35) targetX = this.servingSide * 3.15; // wide
+    else if (sideChoice > 0.70) targetX = this.servingSide * 1.05; // down the T
 
-    const flightTime = 0.95;
+    const targetZ = 4.1;
+    const flightTime = 0.68;
+
+    this.ball.pos.y = 2.45;
+    this.ball.pos.x = this.ai.pos.x - 0.22;
+    this.ball.pos.z = -11.4;
+
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + 1.2;
+
+    const timeToNet = (0 - this.ball.pos.z) / vz;
+    const vy = (1.35 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
 
     this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(-12.0, 0, 0);
+    this.ball.spin.set(-16.0, 0, 0);
+
     this.audio.playHit(1.0, true, true);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.startSwingAnimation(this.ai, 'forehand');
-    this.particles.burst(this.ball.pos, 22, 0xff2a55, 3.8);
+    this.startSwingAnimation(this.ai, 'serve');
+    this.particles.burst(this.ball.pos, 28, 0xff2a55, 4.5);
   }
 
   // --- Hitbox & Shot Execution ---
@@ -2974,17 +3566,19 @@ class TennisGameEngine {
         // Must land inside the diagonal service box
         // Player serve: lands on AI side (Z: -6.40m to 0), X on opposite side
         let validServiceBox = false;
+        // Official Tennis Rule: A ball touching any part of the boundary line is IN
+        const lineTol = 0.22;
         if (this.server === 'player') {
-          const inZ = (this.ball.pos.z >= -this.SERVICE_Z && this.ball.pos.z <= 0);
+          const inZ = (this.ball.pos.z >= -this.SERVICE_Z - lineTol && this.ball.pos.z <= lineTol);
           const inX = (this.servingSide === 1) ?
-                      (this.ball.pos.x >= -this.HALF_W && this.ball.pos.x <= 0) :
-                      (this.ball.pos.x >= 0 && this.ball.pos.x <= this.HALF_W);
+                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol) :
+                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol);
           validServiceBox = inZ && inX;
         } else {
-          const inZ = (this.ball.pos.z >= 0 && this.ball.pos.z <= this.SERVICE_Z);
+          const inZ = (this.ball.pos.z >= -lineTol && this.ball.pos.z <= this.SERVICE_Z + lineTol);
           const inX = (this.servingSide === 1) ?
-                      (this.ball.pos.x >= 0 && this.ball.pos.x <= this.HALF_W) :
-                      (this.ball.pos.x >= -this.HALF_W && this.ball.pos.x <= 0);
+                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol) :
+                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol);
           validServiceBox = inZ && inX;
         }
 
@@ -3122,45 +3716,125 @@ class TennisGameEngine {
     this.animateCharacter(this.player, dt, false);
   }
 
-  // --- Pro Character Animations ---
+  // --- Pro Character Animations (Kinetic Chain Multi-Joint Biomechanics) ---
   animateCharacter(char, dt, isAI) {
     const limbs = char.limbs;
     if (!limbs) return;
 
-    // Running leg/arm stride
-    const runAngle = Math.sin(char.runCycle) * 0.68;
-    limbs.lLeg.rotation.x = runAngle;
-    limbs.rLeg.rotation.x = -runAngle;
-    limbs.lArm.rotation.x = -runAngle * 0.7;
+    const time = this.clock ? this.clock.getElapsedTime() : 0;
+    const isMoving = Math.abs(Math.sin(char.runCycle)) > 0.05;
 
-    if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -runAngle * 0.85);
-    if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, runAngle * 0.85);
+    // 1. Lower Body (Running Stride vs Athletic Ready Bounce)
+    if (isMoving) {
+      const runAngle = Math.sin(char.runCycle) * 0.72;
+      limbs.lLeg.rotation.x = runAngle;
+      limbs.rLeg.rotation.x = -runAngle;
+      if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -runAngle * 0.95);
+      if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, runAngle * 0.95);
+      limbs.lArm.rotation.x = -runAngle * 0.8;
+    } else {
+      // Pro Athletic Split-Step Ready Stance
+      const readyBounce = Math.sin(time * 6.5) * 0.03;
+      limbs.lLeg.rotation.set(0.12, 0, -0.08);
+      limbs.rLeg.rotation.set(0.12, 0, 0.08);
+      if (limbs.lCalf) limbs.lCalf.rotation.x = 0.18 + readyBounce;
+      if (limbs.rCalf) limbs.rCalf.rotation.x = 0.18 + readyBounce;
+    }
 
-    // Explosive Tennis Swing
+    // 2. Upper Body & Kinetic Chain Stroke Execution
     if (char.isSwinging) {
-      char.swingProgress += dt * 15;
-      const phase = Math.sin(char.swingProgress);
+      char.swingProgress += dt * 11.0;
+      const t = Math.min(char.swingProgress / Math.PI, 1.0);
 
-      if (char.swingType === 'forehand') {
-        limbs.rArm.rotation.z = -phase * 1.9;
-        limbs.rArm.rotation.y = phase * 1.2;
-        limbs.torso.rotation.y = -phase * 0.50;
+      if (char.swingType === 'serve') {
+        // Authentic Overhead Tennis Serve: Trophy Pose -> Apex Jump Snap -> Deceleration Follow-Through
+        if (t <= 0.40) {
+          const p = t / 0.40;
+          // Left arm points high tossing ball
+          limbs.lArm.rotation.set(-2.6 * p, 0, 0.25 * p);
+          // Right arm drops racket into trophy scratch pose behind neck
+          limbs.rArm.rotation.set(1.4 * p, -0.6 * p, -1.2 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * p, 0, 0);
+          limbs.torso.rotation.set(-0.25 * p, 0.35 * p, 0);
+        } else if (t <= 0.75) {
+          const p = (t - 0.40) / 0.35;
+          // High explosive apex overhead extension
+          limbs.lArm.rotation.set(-2.6 * (1 - p), 0, 0);
+          limbs.rArm.rotation.set(1.4 - 3.8 * p, -0.6 + 0.9 * p, -1.2 + 1.4 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * (1 - p), 0, 0);
+          limbs.torso.rotation.set(-0.25 + 0.55 * p, 0.35 - 0.45 * p, 0);
+        } else {
+          const p = (t - 0.75) / 0.25;
+          // Follow-through down across opposite hip
+          limbs.rArm.rotation.set(-2.4 + 3.2 * p, 0.3 - 0.5 * p, 0.2 - 1.6 * p);
+          limbs.torso.rotation.set(0.30 * (1 - p), -0.10 * (1 - p), 0);
+        }
+      } else if (char.swingType === 'backhand') {
+        // Two-Handed Backhand Drive
+        if (t <= 0.35) {
+          const p = t / 0.35;
+          limbs.torso.rotation.y = 0.85 * p;
+          limbs.rArm.rotation.set(0.4 * p, -0.8 * p, 1.4 * p);
+          limbs.lArm.rotation.set(0.3 * p, -0.6 * p, 1.1 * p);
+        } else if (t <= 0.70) {
+          const p = (t - 0.35) / 0.35;
+          limbs.torso.rotation.y = 0.85 - 1.55 * p;
+          limbs.rArm.rotation.set(0.4 - 0.9 * p, -0.8 + 1.6 * p, 1.4 - 2.8 * p);
+          limbs.lArm.rotation.set(0.3 - 0.8 * p, -0.6 + 1.4 * p, 1.1 - 2.4 * p);
+        } else {
+          const p = (t - 0.70) / 0.30;
+          limbs.torso.rotation.y = -0.70 * (1 - p);
+          limbs.rArm.rotation.set(-0.5 * (1 - p), 0.8 * (1 - p), -1.4 * (1 - p));
+          limbs.lArm.rotation.set(-0.5 * (1 - p), 0.8 * (1 - p), -1.3 * (1 - p));
+        }
       } else {
-        limbs.rArm.rotation.z = phase * 1.6;
-        limbs.rArm.rotation.y = -phase * 1.25;
-        limbs.torso.rotation.y = phase * 0.50;
+        // Modern Aerodynamic Topspin Forehand (Windshield-Wiper Finish)
+        if (t <= 0.35) {
+          const p = t / 0.35;
+          // Unit turn: Torso coils 55°, racket drops into lag position behind right hip
+          limbs.torso.rotation.y = -0.90 * p;
+          limbs.rArm.rotation.set(0.35 * p, 0.75 * p, -1.55 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.45 * p, 0, 0);
+          limbs.lArm.rotation.set(-0.6 * p, 0.2 * p, 0.75 * p);
+        } else if (t <= 0.70) {
+          const p = (t - 0.35) / 0.35;
+          // Forward kinetic uncoil through contact zone
+          limbs.torso.rotation.y = -0.90 + 1.45 * p;
+          limbs.rArm.rotation.set(0.35 - 0.8 * p, 0.75 - 1.6 * p, -1.55 + 3.1 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.45 + 0.8 * p, 0, 0);
+          limbs.lArm.rotation.set(-0.6 + 0.8 * p, 0.2 - 0.3 * p, 0.75 - 1.2 * p);
+        } else {
+          const p = (t - 0.70) / 0.30;
+          // Deceleration wrap over left shoulder
+          limbs.torso.rotation.y = 0.55 * (1 - p);
+          limbs.rArm.rotation.set(-0.45 * (1 - p), -0.85 * (1 - p), 1.55 * (1 - p));
+          if (limbs.rFore) limbs.rFore.rotation.set(1.25 * (1 - p), 0, 0);
+          limbs.lArm.rotation.set(0.2 * (1 - p), -0.1 * (1 - p), -0.45 * (1 - p));
+        }
       }
 
       if (char.swingProgress >= Math.PI) {
         char.isSwinging = false;
         limbs.rArm.rotation.set(0, 0, 0);
+        limbs.lArm.rotation.set(0, 0, 0);
         limbs.torso.rotation.set(0, 0, 0);
+        if (limbs.rFore) limbs.rFore.rotation.set(0, 0, 0);
+        if (limbs.lFore) limbs.lFore.rotation.set(0, 0, 0);
       }
     } else {
-      limbs.rArm.rotation.x = runAngle * 0.4;
-      limbs.rArm.rotation.z = isAI ? 0.2 : -0.2;
-      limbs.rArm.rotation.y = 0;
-      limbs.torso.rotation.y = 0;
+      // Neutral Athletic Posture: Hands holding racket in front at chest height
+      if (!isMoving) {
+        limbs.torso.rotation.set(0.12, 0, 0);
+        limbs.rArm.rotation.set(-0.55, 0.30, -0.42);
+        limbs.lArm.rotation.set(-0.50, -0.32, 0.40);
+        if (limbs.rFore) limbs.rFore.rotation.set(0.55, 0, 0);
+        if (limbs.lFore) limbs.lFore.rotation.set(0.55, 0, 0);
+      } else {
+        limbs.torso.rotation.set(0.05, 0, 0);
+        limbs.rArm.rotation.set(Math.sin(char.runCycle) * 0.45, 0, isAI ? 0.2 : -0.2);
+        if (limbs.rFore) limbs.rFore.rotation.set(0.25, 0, 0);
+        if (limbs.lFore) limbs.lFore.rotation.set(0.25, 0, 0);
+      }
     }
 
     char.model.rotation.y = isAI ? 0 : Math.PI;
