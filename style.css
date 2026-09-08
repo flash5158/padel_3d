@@ -411,19 +411,29 @@ body, html {
   transform: scale(1.05);
 }
 
+/* Top-Right Tactical Radar Container: Positioned directly below the ball speedometer (.telemetry-widget) */
+.top-right-radar-container {
+  position: fixed;
+  top: 76px;
+  right: 32px;
+  z-index: 45;
+  pointer-events: auto;
+}
+
 /* --- Realtime Speed Gun Radar Popup --- */
 .radar-gun-card {
   position: fixed;
-  bottom: 84px;
-  right: 24px;
+  top: 250px;
+  right: 32px;
+  bottom: auto;
   background: linear-gradient(135deg, rgba(8, 14, 28, 0.94), rgba(2, 6, 16, 0.98));
   backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 240, 255, 0.35);
   border-left: 4px solid #d8ff00;
   border-radius: 12px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 240, 255, 0.2);
-  z-index: 50;
+  z-index: 44;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2064,61 +2074,211 @@ kbd {
     width: 100%;
   }
 
-  /* Reposition Minimap to Top-Right on Mobile: sleek, compact, collapsible */
-  #minimap-card {
-    position: fixed !important;
-    top: 66px !important;
-    right: 8px !important;
-    z-index: 820 !important;
+  /* Clean Top Bar Scoreboard on narrow screens: Perfectly centered, never stretched */
+  .top-bar {
+    padding: 6px 8px !important;
+    justify-content: center !important;
+    position: relative !important;
+  }
+
+  .brand-badge {
+    display: none !important; /* Hide bulky EA logo to prevent shoving scoreboard off-screen */
+  }
+
+  .scoreboard-widget {
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: 220px !important;
     transform: none !important;
-    padding: 4px 6px;
-    border-radius: 10px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .team-row {
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+  }
+
+  .team-name {
+    font-size: 11px !important;
+    max-width: 82px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .serve-indicator {
+    width: 14px !important;
+    font-size: 10px !important;
+  }
+
+  .set-score, .game-score {
+    width: 18px !important;
+    font-size: 11px !important;
+  }
+
+  .points-badge {
+    width: 28px !important;
+    height: 18px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+  }
+
+  /* Compact Telemetry (Speedometer & Rally) in Top-Right Corner */
+  .telemetry-widget {
+    display: flex !important;
+    position: fixed !important;
+    top: 6px !important;
+    right: 8px !important;
+    padding: 3px 6px !important;
+    gap: 6px !important;
+    background: rgba(4, 12, 24, 0.88) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(0, 240, 255, 0.3) !important;
+    z-index: 50 !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+  }
+
+  .telemetry-item {
+    flex-direction: row !important;
+    gap: 3px !important;
+    align-items: baseline !important;
+  }
+
+  .telemetry-label {
+    font-size: 8px !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .telemetry-val {
+    font-size: 11px !important;
+  }
+
+  .telemetry-val small {
+    font-size: 8px !important;
+  }
+
+  /* Reposition Minimap directly below Ball Speedometer on Mobile: sleek, compact, non-obstructive */
+  .top-right-radar-container {
+    position: fixed !important;
+    top: 36px !important;
+    right: 8px !important;
+    z-index: 49 !important;
+    pointer-events: auto !important;
+  }
+
+  #minimap-card {
+    position: static !important;
+    transform: none !important;
+    padding: 3px 5px !important;
+    border-radius: 8px !important;
+    background: rgba(4, 12, 24, 0.72) !important;
+    border: 1px solid rgba(0, 240, 255, 0.3) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
   }
 
   #minimap-card #minimap {
-    width: 60px !important;
-    height: 120px !important;
+    width: 52px !important;
+    height: 104px !important;
   }
 
   #minimap-card.collapsed {
-    padding: 4px 8px;
-    border-radius: 16px;
+    padding: 3px 6px !important;
+    border-radius: 12px !important;
   }
 
-  /* Keep desktop bottom right container from blocking touches */
+  .minimap-title {
+    font-size: 8px !important;
+  }
+
+  .minimap-toggle-btn {
+    font-size: 10px !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Clean HUD Container for Mobile: No horizontal overflow */
+  #hud {
+    padding: 6px 8px !important;
+    overflow: hidden !important;
+  }
+
+  /* Compact HUD & Camera Dock at Top-Left: Sleek horizontal micro-buttons, never obscuring the court */
   .bottom-right-panel {
-    position: fixed;
-    bottom: auto;
-    top: 64px;
-    left: 10px;
-    right: auto;
-    z-index: 800;
-    flex-direction: column;
-    align-items: flex-start;
+    position: fixed !important;
+    bottom: auto !important;
+    top: 6px !important;
+    left: 8px !important;
+    right: auto !important;
+    z-index: 50 !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    align-items: flex-start !important;
   }
 
   .hud-control-row {
-    flex-direction: column;
-    gap: 4px;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 3px !important;
   }
 
   .map-quick-btn, .music-quick-btn, .ctrl-quick-btn {
-    padding: 5px 8px !important;
+    padding: 3px 6px !important;
     font-size: 10px !important;
-    border-radius: 8px !important;
+    border-radius: 6px !important;
+    background: rgba(4, 12, 24, 0.82) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
   }
 
-  /* Compact Power Meter at Bottom-Center, clear of both left and right thumbs */
-  .bottom-left-panel {
+  #current-map-name, #hud-music-text, #hud-ctrl-text {
+    display: none !important;
+  }
+
+  .camera-controls {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 3px !important;
+  }
+
+  .cam-btn {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    border-radius: 6px !important;
+    background: rgba(4, 12, 24, 0.82) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .cam-text {
+    display: none !important;
+  }
+
+  /* Serve Prompt Banner placed cleanly below scoreboard */
+  .serve-prompt-banner {
     position: fixed !important;
-    bottom: 6px !important;
+    top: 66px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
-    width: 150px !important;
-    z-index: 810 !important;
-    opacity: 0.90 !important;
-    pointer-events: none;
+    bottom: auto !important;
+    font-size: 9.5px !important;
+    padding: 3px 8px !important;
+    white-space: nowrap !important;
+    max-width: 90vw !important;
+    z-index: 40 !important;
+    border-radius: 8px !important;
+    background: rgba(4, 12, 24, 0.88) !important;
+    border: 1px solid rgba(0, 240, 255, 0.35) !important;
+  }
+
+  /* Compact Power Meter at Bottom-Center, clear of safe area */
+  .bottom-left-panel {
+    position: fixed !important;
+    bottom: 14px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 130px !important;
+    z-index: 42 !important;
+    opacity: 0.85 !important;
+    pointer-events: none !important;
   }
 
   .shot-hints {
@@ -2126,70 +2286,101 @@ kbd {
   }
 
   .shot-selector {
-    padding: 2px 8px !important;
+    padding: 2px 6px !important;
   }
 
   .shot-label {
-    font-size: 9px !important;
+    font-size: 8px !important;
   }
 
   .shot-type {
-    font-size: 11px !important;
+    font-size: 10px !important;
   }
 
   .power-meter-container {
-    height: 6px !important;
+    height: 5px !important;
   }
 
-  /* Serve Prompt Banner raised on mobile to avoid finger obstruction */
-  .serve-prompt-banner {
-    bottom: 78px !important;
-    font-size: 11px !important;
-    padding: 6px 14px !important;
-    max-width: 90vw;
-  }
-
-  /* Clean Top Bar Scoreboard on narrow screens */
-  .top-bar {
-    padding: 6px 8px !important;
-    align-items: center;
-  }
-
-  .brand-badge {
-    padding: 4px 8px !important;
-  }
-
-  .brand-text {
-    font-size: 10px !important;
-    letter-spacing: 0.5px !important;
-  }
-
-  .scoreboard-widget {
-    transform: scale(0.82);
-    transform-origin: top center;
-  }
-
-  .telemetry-widget {
-    display: none !important;
-  }
-
-  /* Scaling Action Cluster for smaller mobile screens */
+  /* Ergonomic Translucent Touch Action Cluster */
   .touch-action-cluster {
-    bottom: 12px;
-    right: 12px;
-    transform: scale(0.92);
-    transform-origin: bottom right;
+    bottom: 14px !important;
+    right: 12px !important;
+    width: 155px !important;
+    height: 155px !important;
+    transform: none !important;
+    opacity: 0.75 !important;
+    transition: opacity 0.18s ease !important;
+  }
+
+  .touch-action-cluster:active,
+  .touch-action-cluster:focus-within {
+    opacity: 0.96 !important;
+  }
+
+  .touch-hit-btn.primary-hit {
+    width: 68px !important;
+    height: 68px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+  }
+
+  .touch-hit-icon {
+    font-size: 22px !important;
+  }
+
+  .touch-hit-text {
+    font-size: 9px !important;
+  }
+
+  .touch-sub-btn {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .touch-sub-btn .t-icon {
+    font-size: 15px !important;
+  }
+
+  .touch-sub-btn .t-label {
+    font-size: 7.5px !important;
+  }
+
+  .touch-globo-btn {
+    right: 76px !important;
+    bottom: 64px !important;
+  }
+
+  .touch-smash-btn {
+    right: 76px !important;
+    bottom: 12px !important;
+  }
+
+  .touch-slice-btn {
+    right: 12px !important;
+    bottom: 76px !important;
+  }
+
+  .touch-sprint-btn {
+    right: 124px !important;
+    bottom: 20px !important;
   }
 
   .touch-joystick-zone {
-    width: 48vw;
-    height: 50vh;
+    width: 45vw !important;
+    height: 45vh !important;
   }
 
   .joystick-base {
-    bottom: 16px;
-    left: 16px;
-    transform: scale(0.92);
-    transform-origin: bottom left;
+    bottom: 18px !important;
+    left: 14px !important;
+    width: 96px !important;
+    height: 96px !important;
+    transform: none !important;
+    opacity: 0.65 !important;
+    transition: opacity 0.18s ease !important;
+  }
+
+  .joystick-base:active {
+    opacity: 0.92 !important;
   }
 }

@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Syne:wght@700;800&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <!-- 3D WebGL Canvas Container -->
@@ -66,6 +66,22 @@
       </div>
     </header>
 
+    <!-- Top-Right: Court 2D Tactical Minimap (Positioned Directly Below Ball Speedometer) -->
+    <div class="top-right-radar-container" id="top-right-radar">
+      <div class="minimap-card" id="minimap-card">
+        <div class="minimap-header" id="minimap-header" title="Alternar Radar [R]">
+          <div class="minimap-header-left">
+            <span class="minimap-live-dot"></span>
+            <span class="minimap-title">RADAR</span>
+          </div>
+          <button class="minimap-toggle-btn" id="btn-toggle-minimap" title="Minimizar / Mostrar Radar [R]" aria-label="Toggle Minimap">
+            <span id="minimap-toggle-icon">−</span>
+          </button>
+        </div>
+        <canvas id="minimap" width="160" height="320"></canvas>
+      </div>
+    </div>
+
     <!-- Center Alerts (Point Announcements) -->
     <div id="center-announcement" class="hidden">
       <h1 id="announcement-title">¡PUNTO!</h1>
@@ -98,21 +114,8 @@
       <span>1ER SERVICIO: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong> • Apunta con <strong>[A] / [D]</strong></span>
     </div>
 
-    <!-- Bottom Right: Court 2D Minimap & Camera Controls -->
+    <!-- Bottom Right: Camera & Quick Game Controls -->
     <div class="bottom-right-panel">
-      <div class="minimap-card" id="minimap-card">
-        <div class="minimap-header" id="minimap-header" title="Alternar Radar [R]">
-          <div class="minimap-header-left">
-            <span class="minimap-live-dot"></span>
-            <span class="minimap-title">RADAR</span>
-          </div>
-          <button class="minimap-toggle-btn" id="btn-toggle-minimap" title="Minimizar / Mostrar Radar [R]" aria-label="Toggle Minimap">
-            <span id="minimap-toggle-icon">−</span>
-          </button>
-        </div>
-        <canvas id="minimap" width="168" height="336"></canvas>
-      </div>
-
       <div class="hud-control-row">
         <button class="map-quick-btn" id="btn-switch-map" title="Cambiar Escenario">
           <span id="current-map-icon">🏟️</span>
@@ -129,15 +132,21 @@
       </div>
 
       <div class="camera-controls">
-        <button class="cam-btn active" data-cam="third">📹 JUGADOR [1]</button>
-        <button class="cam-btn" data-cam="broadcast">📺 BROADCAST [2]</button>
-        <button class="cam-btn" data-cam="top">🎯 CENITAL [3]</button>
+        <button class="cam-btn active" data-cam="third" title="Cámara Jugador">📹<span class="cam-text"> JUGADOR [1]</span></button>
+        <button class="cam-btn" data-cam="broadcast" title="Cámara Broadcast">📺<span class="cam-text"> BROADCAST [2]</span></button>
+        <button class="cam-btn" data-cam="top" title="Cámara Cenital">🎯<span class="cam-text"> CENITAL [3]</span></button>
       </div>
     </div>
   </div>
 
   <!-- Ultra-Elegant Start Screen Modal -->
   <div id="start-screen" class="overlay-modal">
+    <script>
+      if (new URLSearchParams(window.location.search).get('autostart')) {
+        document.getElementById('start-screen').classList.add('fade-out');
+        document.getElementById('start-screen').classList.add('hidden');
+      }
+    </script>
     <div class="modal-card">
       <div class="modal-ambient-glow"></div>
       
@@ -502,6 +511,6 @@
   <!-- Libraries & Game Engine -->
   <script src="lib/three.min.js"></script>
   <script src="lib/peerjs.min.js"></script>
-  <script src="game.js"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

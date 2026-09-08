@@ -659,7 +659,7 @@ const TextureFactory = {
     const ctx = canvas.getContext('2d');
 
     // Outer Court: Deep Tournament US Open Forest Green
-    ctx.fillStyle = '#0a3d2c';
+    ctx.fillStyle = '#052e1b';
     ctx.fillRect(0, 0, 1024, 2048);
 
     // Mown strip contrast bands in perimeter
@@ -674,7 +674,7 @@ const TextureFactory = {
     const toCanvasX = (x) => 512 + x * scaleX;
     const toCanvasY = (z) => 1024 + z * scaleY;
 
-    // Inner Court Rectangle (DecoTurf Electric Royal Blue)
+    // Inner Court Rectangle (Authentic US Open DecoTurf Navy Blue)
     const doublesW = 5.485;
     const courtHalfL = 11.885;
 
@@ -683,7 +683,7 @@ const TextureFactory = {
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    ctx.fillStyle = '#144ec2';
+    ctx.fillStyle = '#102a54';
     ctx.fillRect(xL, yT, xR - xL, yB - yT);
 
     // Micro Acrylic Surface Grit Texture (high density stipple)
@@ -713,7 +713,7 @@ const TextureFactory = {
     });
 
     // Official EA SPORTS & Tournament Stencil Markings
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
     ctx.font = '900 34px sans-serif';
     ctx.textAlign = 'center';
     // North baseline text
@@ -726,13 +726,13 @@ const TextureFactory = {
     ctx.fillText('• EA SPORTS™ GRAND SLAM PRO TOUR •', 512, yB + 62);
 
     // Center Court EA SPORTS Crest
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.arc(512, 1024, 155, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.font = '900 42px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('EA SPORTS™', 512, 1012);
@@ -849,8 +849,8 @@ const TextureFactory = {
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
 
-    // Base rough acrylic surface (~0.76 roughness -> 195 gray)
-    ctx.fillStyle = 'rgb(195, 195, 195)';
+    // Base rough acrylic surface (~0.94 roughness -> 240 gray)
+    ctx.fillStyle = 'rgb(240, 240, 240)';
     ctx.fillRect(0, 0, 512, 1024);
 
     const scaleX = 512 / 16.0;
@@ -865,8 +865,8 @@ const TextureFactory = {
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    // Lines are smooth satin chalk paint (~0.35 roughness -> 90 gray)
-    ctx.strokeStyle = 'rgb(90, 90, 90)';
+    // Lines are painted with fine grit chalk paint (~0.84 roughness -> 215 gray)
+    ctx.strokeStyle = 'rgb(215, 215, 215)';
     ctx.lineWidth = 4;
     ctx.strokeRect(xL, yT, xR - xL, yB - yT);
 
@@ -887,8 +887,8 @@ const TextureFactory = {
     ctx.moveTo(256, yS1); ctx.lineTo(256, yS2);
     ctx.stroke();
 
-    // Baseline rubber skid marks (smoother polished sheen)
-    ctx.strokeStyle = 'rgb(65, 65, 65)';
+    // Baseline rubber skid marks (slight friction mark ~0.75 roughness -> 190 gray)
+    ctx.strokeStyle = 'rgb(190, 190, 190)';
     ctx.lineWidth = 6;
     [-1, 1].forEach(side => {
       const baseZ = side < 0 ? yT + 12 : yB - 12;
@@ -2750,9 +2750,9 @@ class TennisGameEngine {
     this.sun.shadow.bias = -0.0006;
     this.scene.add(this.sun);
 
-    // High-Impact Athletic Rim Light (Cool Cyan-White backlight for athletes)
-    this.rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.85);
-    this.rimLight.position.set(0, 10, -20);
+    // Athletic Rim Light (Balanced backlight without court floor glare)
+    this.rimLight = new THREE.DirectionalLight(0xe2e8f0, 0.30);
+    this.rimLight.position.set(0, 24, -8);
     this.scene.add(this.rimLight);
 
     // Groups for Court and Environment
@@ -2952,9 +2952,9 @@ class TennisGameEngine {
         this.rimLight.intensity = 0.25;
         this.rimLight.position.set(0, 20, -22);
       } else {
-        this.rimLight.color.setHex(0x38bdf8);
-        this.rimLight.intensity = 0.85;
-        this.rimLight.position.set(0, 14, -22);
+        this.rimLight.color.setHex(0xe2e8f0);
+        this.rimLight.intensity = 0.30;
+        this.rimLight.position.set(0, 24, -8);
       }
     }
 
@@ -2983,13 +2983,13 @@ class TennisGameEngine {
         if (u.uBloomIntensity) u.uBloomIntensity.value = 0.85;
         if (u.uVignetteStrength) u.uVignetteStrength.value = 0.28;
       } else {
-        // Stadium Pro
-        if (u.uExposure) u.uExposure.value = 1.04;
-        if (u.uContrast) u.uContrast.value = 1.16;
-        if (u.uSaturation) u.uSaturation.value = 1.14;
-        if (u.uBloomThreshold) u.uBloomThreshold.value = 0.84;
-        if (u.uBloomIntensity) u.uBloomIntensity.value = 1.10;
-        if (u.uVignetteStrength) u.uVignetteStrength.value = 0.30;
+        // Stadium Pro - Perfectly balanced broadcast lighting (no blown-out floor)
+        if (u.uExposure) u.uExposure.value = 0.98;
+        if (u.uContrast) u.uContrast.value = 1.08;
+        if (u.uSaturation) u.uSaturation.value = 1.08;
+        if (u.uBloomThreshold) u.uBloomThreshold.value = 0.92;
+        if (u.uBloomIntensity) u.uBloomIntensity.value = 0.45;
+        if (u.uVignetteStrength) u.uVignetteStrength.value = 0.26;
       }
     }
 
@@ -3054,8 +3054,8 @@ class TennisGameEngine {
       normalMap: courtNormal,
       normalScale: courtNormal ? new THREE.Vector2(0.40, 0.40) : null,
       roughnessMap: courtRoughness,
-      roughness: mapId === 'beach' ? 0.90 : (mapId === 'zen' ? 0.58 : (mapId === 'whitehouse' ? 0.78 : 0.72)),
-      metalness: mapId === 'zen' ? 0.14 : (mapId === 'whitehouse' ? 0.08 : 0.05)
+      roughness: mapId === 'beach' ? 0.90 : (mapId === 'zen' ? 0.58 : (mapId === 'whitehouse' ? 0.78 : 0.95)),
+      metalness: mapId === 'zen' ? 0.14 : (mapId === 'whitehouse' ? 0.08 : 0.0)
     });
     const court = new THREE.Mesh(courtGeo, courtMat);
     court.rotation.x = -Math.PI / 2;
@@ -3483,9 +3483,9 @@ class TennisGameEngine {
     this.scene.background = new THREE.Color(0x060e1d);
     this.scene.fog = new THREE.FogExp2(0x060e1d, 0.008);
     this.ambient.color.setHex(0x94a3b8);
-    this.ambient.intensity = 0.48;
+    this.ambient.intensity = 0.38;
     this.sun.color.setHex(0xffffff);
-    this.sun.intensity = 1.15;
+    this.sun.intensity = 0.95;
     this.sun.position.set(16, 28, 12);
 
     // 360° Grand Slam Arena Sky Dome
@@ -3583,6 +3583,41 @@ class TennisGameEngine {
       }
     });
 
+    // North (AI baseline) & South (Player baseline) Enclosing Grandstands
+    [-1, 1].forEach(end => {
+      const zBase = end * 19.5;
+      for (let row = 0; row < 7; row++) {
+        const step = new THREE.Mesh(new THREE.BoxGeometry(34, 0.70, 1.5), standMat);
+        step.position.set(0, row * 0.70 + 0.35, zBase + end * (row * 1.45));
+        step.receiveShadow = true;
+        this.environmentGroup.add(step);
+
+        for (let s = -14; s <= 14; s += 1.0) {
+          const sChoice = Math.abs(Math.round(s + row)) % 3;
+          const sMat = (sChoice === 0) ? seatBlue : (sChoice === 1 ? seatRed : seatGold);
+          const seat = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.48, 0.60), sMat);
+          seat.position.set(s, row * 0.70 + 0.76, zBase + end * (row * 1.45));
+          this.environmentGroup.add(seat);
+
+          if (Math.sin(s * 2.8 + row * 1.9) > -0.2) {
+            const body = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.19, 0.23, 0.70, 8),
+              new THREE.MeshStandardMaterial({ color: (Math.round(s) * row) % 2 === 0 ? 0x38bdf8 : 0xf43f5e, roughness: 0.9 })
+            );
+            body.position.set(s, row * 0.70 + 1.22, zBase + end * (row * 1.45));
+
+            const head = new THREE.Mesh(
+              new THREE.SphereGeometry(0.14, 8, 8),
+              new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.7 })
+            );
+            head.position.set(s, row * 0.70 + 1.68, zBase + end * (row * 1.45));
+
+            this.environmentGroup.add(body, head);
+          }
+        }
+      }
+    });
+
     // Elevated Umpire High Chair
     const umpireGroup = new THREE.Group();
     umpireGroup.position.set(6.8, 0, 0);
@@ -3644,7 +3679,16 @@ class TennisGameEngine {
     const ledRight = new THREE.Mesh(ledGeo, ledMat);
     ledRight.position.set(9.2, 0.50, 0);
     ledRight.rotation.y = -Math.PI / 2;
-    this.environmentGroup.add(ledLeft, ledRight);
+
+    const ledEndGeo = new THREE.PlaneGeometry(24, 1.0);
+    const ledNorth = new THREE.Mesh(ledEndGeo, ledMat);
+    ledNorth.position.set(0, 0.50, -17.2);
+    ledNorth.rotation.y = 0;
+    const ledSouth = new THREE.Mesh(ledEndGeo, ledMat);
+    ledSouth.position.set(0, 0.50, 17.2);
+    ledSouth.rotation.y = Math.PI;
+
+    this.environmentGroup.add(ledLeft, ledRight, ledNorth, ledSouth);
 
     // Lens Flare Glare Billboard Texture for Floodlights
     const flareCanvas = document.createElement('canvas');
@@ -3660,13 +3704,13 @@ class TennisGameEngine {
     const flareTex = new THREE.CanvasTexture(flareCanvas);
     const flareMat = new THREE.SpriteMaterial({ map: flareTex, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.85 });
 
-    // 4 Corner Floodlight Towers with Volumetric Cones & Glare Flares
+    // 4 Corner Floodlight Towers with Glare Flares
     const lightTowers = [
       { x: -13.0, z: -18.0 }, { x: 13.0, z: -18.0 },
       { x: -13.0, z: 18.0 }, { x: 13.0, z: 18.0 }
     ];
     lightTowers.forEach(t => {
-      const spot = new THREE.SpotLight(0xffffff, 0.75, 48, Math.PI / 3.4, 0.45);
+      const spot = new THREE.SpotLight(0xffffff, 0.38, 48, Math.PI / 3.4, 0.45);
       spot.position.set(t.x, 15, t.z);
       spot.target.position.set(0, 0, (t.z > 0 ? 4 : -4));
       this.environmentGroup.add(spot, spot.target);
@@ -3680,14 +3724,7 @@ class TennisGameEngine {
       flare.position.set(t.x * 0.92, 15.3, t.z * 0.92);
       flare.scale.set(6.5, 6.5, 1.0);
 
-      const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(4.2, 17, 16, 1, true),
-        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false })
-      );
-      cone.position.set(t.x * 0.7, 7.5, t.z * 0.7);
-      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -15, -t.z).normalize());
-
-      this.environmentGroup.add(truss, bank, flare, cone);
+      this.environmentGroup.add(truss, bank, flare);
     });
 
     this.initCrowdFlashes();
@@ -5476,6 +5513,16 @@ class TennisGameEngine {
       // Prevent setupOnlineHost from running (don't create a host peer)
       // Connect directly as guest
       this.connectToPeer(roomParam.toUpperCase());
+    }
+
+    if (urlParams.get('controls')) {
+      this.setControlMode(urlParams.get('controls'));
+    }
+
+    if (urlParams.get('autostart')) {
+      const targetMap = urlParams.get('map') || 'stadium';
+      this.setMap(targetMap, false);
+      this.applyProfileAndStart('ai');
     }
   }
 
