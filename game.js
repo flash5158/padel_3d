@@ -327,7 +327,7 @@ const TextureFactory = {
     canvas.height = 2048;
     const ctx = canvas.getContext('2d');
 
-    // Outer Court: Deep Tournament Green / Marine
+    // Outer Court: Deep Tournament US Open Forest Green
     ctx.fillStyle = '#0e4a36';
     ctx.fillRect(0, 0, 1024, 2048);
 
@@ -337,7 +337,7 @@ const TextureFactory = {
     const toCanvasX = (x) => 512 + x * scaleX;
     const toCanvasY = (z) => 1024 + z * scaleY;
 
-    // Inner Court Rectangle (DecoTurf Electric Blue)
+    // Inner Court Rectangle (DecoTurf Australian Open Pacific Blue)
     const doublesW = 5.485; // half width (10.97m total)
     const courtHalfL = 11.885; // half length (23.77m total)
 
@@ -346,24 +346,44 @@ const TextureFactory = {
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    ctx.fillStyle = '#1a56db'; // Grand Slam Electric Blue
+    ctx.fillStyle = '#164dbf'; // Official DecoTurf Electric Royal Blue
     ctx.fillRect(xL, yT, xR - xL, yB - yT);
 
-    // Fine court surface grain
-    for (let i = 0; i < 90000; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)';
+    // Micro Acrylic Surface Grit Texture (high density stipple)
+    for (let i = 0; i < 130000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.07)';
       ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
     }
 
+    // Subtle Expansion Seams in Acrylic Layer
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.lineWidth = 2;
+    for (let y = yT + 120; y < yB; y += 180) {
+      ctx.beginPath(); ctx.moveTo(xL, y); ctx.lineTo(xR, y); ctx.stroke();
+    }
+
+    // Official Baseline Stencil Markings (Grand Slam Tournament)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.font = '900 36px sans-serif';
+    ctx.textAlign = 'center';
+    // North baseline text
+    ctx.save();
+    ctx.translate(512, yT - 48);
+    ctx.rotate(Math.PI);
+    ctx.fillText('• ATP TOUR 500 • WORLD FINALS •', 0, 0);
+    ctx.restore();
+    // South baseline text
+    ctx.fillText('• ATP TOUR 500 • WORLD FINALS •', 512, yB + 64);
+
     // Grand Slam Tournament Center Crest (Subtle watermark)
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(512, 1024, 160, 0, Math.PI * 2);
+    ctx.arc(512, 1024, 150, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.22)';
-    ctx.font = '900 48px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '900 44px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('GRAND SLAM TOUR', 512, 1038);
 
@@ -486,29 +506,37 @@ const TextureFactory = {
     canvas.height = 2048;
     const ctx = canvas.getContext('2d');
 
-    // Warm Tropical Sand Base
-    ctx.fillStyle = '#d9a766';
+    // Warm Tropical Sand Base (Rich golden sun-warmed tone)
+    ctx.fillStyle = '#db9c56';
     ctx.fillRect(0, 0, 1024, 2048);
 
-    // Fine Sand Granule Noise
-    for (let i = 0; i < 110000; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,245,210,0.18)' : 'rgba(140,85,30,0.14)';
+    // Fine Multi-Tone Sand Granule Noise
+    for (let i = 0; i < 130000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,248,220,0.22)' : 'rgba(125,70,20,0.18)';
       ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
     }
 
-    // Dune Wind Ripples
-    ctx.strokeStyle = 'rgba(215, 155, 85, 0.25)';
-    ctx.lineWidth = 12;
-    for (let y = 40; y < 2048; y += 48) {
+    // Organic Dual-Harmonic Wind Ripples
+    ctx.lineWidth = 8;
+    for (let y = 30; y < 2048; y += 38) {
+      ctx.strokeStyle = (y % 76 === 0) ? 'rgba(235, 175, 105, 0.35)' : 'rgba(115, 60, 15, 0.12)';
       ctx.beginPath();
-      for (let x = 0; x <= 1024; x += 32) {
-        const dy = Math.sin((x / 1024) * Math.PI * 4 + y * 0.1) * 6;
+      for (let x = 0; x <= 1024; x += 24) {
+        const dy = Math.sin((x / 1024) * Math.PI * 6 + y * 0.08) * 5 + Math.cos((x / 1024) * Math.PI * 2) * 3;
         if (x === 0) ctx.moveTo(x, y + dy); else ctx.lineTo(x, y + dy);
       }
       ctx.stroke();
     }
 
-    // Coordinate Mapping
+    // Crushed Seashell & Coral Specks
+    for (let i = 0; i < 400; i++) {
+      const sx = Math.random() * 1024, sy = Math.random() * 2048;
+      ctx.fillStyle = Math.random() > 0.4 ? 'rgba(255, 255, 255, 0.75)' : 'rgba(255, 180, 160, 0.65)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.random() * 2.5 + 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     const scaleX = 1024 / 16.0;
     const scaleY = 2048 / 30.0;
     const toCanvasX = (x) => 512 + x * scaleX;
@@ -521,25 +549,32 @@ const TextureFactory = {
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    // Weathered Wooden Boundary Border Planks
-    ctx.fillStyle = '#6b4423';
-    ctx.fillRect(xL - 14, yT - 14, (xR - xL) + 28, 14);
-    ctx.fillRect(xL - 14, yB, (xR - xL) + 28, 14);
-    ctx.fillRect(xL - 14, yT, 14, yB - yT);
-    ctx.fillRect(xR, yT, 14, yB - yT);
+    // Weathered Dark Teak Perimeter Border Planks with Brass Bolt Accents
+    ctx.fillStyle = '#5c3518';
+    ctx.fillRect(xL - 18, yT - 18, (xR - xL) + 36, 18);
+    ctx.fillRect(xL - 18, yB, (xR - xL) + 36, 18);
+    ctx.fillRect(xL - 18, yT, 18, yB - yT);
+    ctx.fillRect(xR, yT, 18, yB - yT);
+
+    // Wood Grain on Planks
+    ctx.strokeStyle = 'rgba(30, 15, 5, 0.35)';
+    ctx.lineWidth = 2;
+    for (let g = 0; g < 36; g++) {
+      ctx.strokeRect(xL - 16, yT - 16, (xR - xL) + 32, (yB - yT) + 32);
+    }
 
     // Center Tropical Resort Compass Star Watermark
-    ctx.strokeStyle = 'rgba(255, 235, 180, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 235, 180, 0.40)';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(512, 1024, 150, 0, Math.PI * 2);
+    ctx.arc(512, 1024, 155, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(255, 235, 180, 0.45)';
+    ctx.fillStyle = 'rgba(255, 240, 200, 0.50)';
     ctx.font = '900 42px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('PLAYA PARAÍSO • RESORT', 512, 1038);
 
-    // Braided Marine White Rope Lines
+    // Braided Marine White Rope Lines with Texture
     ctx.strokeStyle = '#fffbf0';
     ctx.lineWidth = 8;
     ctx.lineCap = 'round';
@@ -578,16 +613,18 @@ const TextureFactory = {
     const ctx = canvas.getContext('2d');
 
     // Outer Court: Dark River Cobblestones
-    ctx.fillStyle = '#161922';
+    ctx.fillStyle = '#12151c';
     ctx.fillRect(0, 0, 1024, 2048);
 
-    // Slate Flagstone Tiles
+    // Slate Flagstone Tiles with Beveled Edges
     const tileSize = 64;
     for (let y = 0; y < 2048; y += tileSize) {
       for (let x = 0; x < 1024; x += tileSize) {
-        const shade = Math.floor(24 + (Math.sin(x * 0.05) + Math.cos(y * 0.05)) * 6);
-        ctx.fillStyle = `rgb(${shade}, ${shade + 3}, ${shade + 8})`;
+        const shade = Math.floor(22 + (Math.sin(x * 0.05) + Math.cos(y * 0.05)) * 7);
+        ctx.fillStyle = `rgb(${shade}, ${shade + 3}, ${shade + 9})`;
         ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+        ctx.fillStyle = 'rgba(255,255,255,0.03)';
+        ctx.fillRect(x + 2, y + 2, tileSize - 4, 2);
       }
     }
 
@@ -603,28 +640,44 @@ const TextureFactory = {
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    // Inner Court: Polished Black Imperial Slate
-    ctx.fillStyle = '#1e2430';
+    // Inner Court: Polished Black Imperial Kyoto Slate
+    ctx.fillStyle = '#1a202c';
     ctx.fillRect(xL, yT, xR - xL, yB - yT);
 
-    // Woven Green Tatami Rush Mat Borders along tramlines
+    // Karesansui Raked Gravel Ripple Waves around Court
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.lineWidth = 3;
+    for (let r = 80; r < 580; r += 24) {
+      ctx.beginPath();
+      ctx.arc(512, 1024, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Woven Green Tatami Rush Mat (Igusa) Borders along doubles tramlines
     const singlesW = 4.115;
     const sL = toCanvasX(-singlesW);
     const sR = toCanvasX(singlesW);
 
-    ctx.fillStyle = '#2d4a22';
+    ctx.fillStyle = '#26421d';
     ctx.fillRect(xL, yT, sL - xL, yB - yT);
     ctx.fillRect(sR, yT, xR - sR, yB - yT);
 
+    // Tatami Weave Ribbing
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+    for (let y = yT; y < yB; y += 8) {
+      ctx.fillRect(xL, y, sL - xL, 2);
+      ctx.fillRect(sR, y, xR - sR, 2);
+    }
+
     // Center Golden Sakura Flower Crest
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.45)';
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.55)';
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.arc(512, 1024, 150, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 5 Sakura Petals
-    ctx.fillStyle = 'rgba(255, 182, 193, 0.45)';
+    // 5 Delicate Sakura Petals
+    ctx.fillStyle = 'rgba(255, 182, 193, 0.50)';
     for (let i = 0; i < 5; i++) {
       const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
       const px = 512 + Math.cos(angle) * 70;
@@ -1165,6 +1218,108 @@ const TextureFactory = {
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(8, 8);
     return tex;
+  },
+
+  // 18. High-Detail Feathery Palm Frond Texture with Sunlight Alpha Transparency
+  createPalmLeafTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 512, 1024);
+
+    // Slender Central Rachis (Stem)
+    const stemGrad = ctx.createLinearGradient(256, 1024, 256, 0);
+    stemGrad.addColorStop(0, '#3f6212');
+    stemGrad.addColorStop(0.5, '#65a30d');
+    stemGrad.addColorStop(1, '#84cc16');
+
+    ctx.strokeStyle = stemGrad;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(256, 1024);
+    ctx.lineTo(256, 40);
+    ctx.stroke();
+
+    // Cascading Pinnate Leaflets (Feathery Tropical Foliage)
+    for (let y = 1000; y >= 60; y -= 15) {
+      const prog = (1024 - y) / 1024; // 0 at base, 1 at tip
+      const leafLen = Math.sin(prog * Math.PI) * 225 + 24;
+
+      // Left Leaflet
+      const lGrad = ctx.createLinearGradient(256, y, 256 - leafLen, y - leafLen * 0.42);
+      lGrad.addColorStop(0, '#14532d');
+      lGrad.addColorStop(0.5, '#16a34a');
+      lGrad.addColorStop(0.85, '#4ade80');
+      lGrad.addColorStop(1.0, '#facc15'); // sunlit amber golden tip
+
+      ctx.strokeStyle = lGrad;
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(256, y);
+      ctx.quadraticCurveTo(256 - leafLen * 0.55, y - leafLen * 0.12, 256 - leafLen, y - leafLen * 0.42);
+      ctx.stroke();
+
+      // Right Leaflet
+      const rGrad = ctx.createLinearGradient(256, y, 256 + leafLen, y - leafLen * 0.42);
+      rGrad.addColorStop(0, '#14532d');
+      rGrad.addColorStop(0.5, '#16a34a');
+      rGrad.addColorStop(0.85, '#4ade80');
+      rGrad.addColorStop(1.0, '#facc15');
+
+      ctx.strokeStyle = rGrad;
+      ctx.beginPath();
+      ctx.moveTo(256, y);
+      ctx.quadraticCurveTo(256 + leafLen * 0.55, y - leafLen * 0.12, 256 + leafLen, y - leafLen * 0.42);
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 19. Natural Annular Ringed Coconut Palm Trunk Bark Texture
+  createPalmTrunkTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Weathered Coconut Palm Bark Base Tone
+    ctx.fillStyle = '#452a16';
+    ctx.fillRect(0, 0, 256, 512);
+
+    // Micro Wood Fiber Texture
+    for (let i = 0; i < 35000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(146, 92, 45, 0.28)' : 'rgba(25, 12, 5, 0.38)';
+      ctx.fillRect(Math.random() * 256, Math.random() * 512, 1.5, 3);
+    }
+
+    // Horizontal Annular Coconut Leaf Base Scar Rings
+    for (let y = 0; y < 512; y += 32) {
+      // Ring Shadow Groove
+      ctx.strokeStyle = 'rgba(15, 8, 3, 0.85)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 4);
+      ctx.quadraticCurveTo(128, y + 9, 256, y + 4);
+      ctx.stroke();
+
+      // Ring Highlight Ridge
+      ctx.strokeStyle = 'rgba(195, 145, 95, 0.48)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.quadraticCurveTo(128, y + 5, 256, y);
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 4);
+    return tex;
   }
 };
 
@@ -1344,12 +1499,16 @@ class TennisGameEngine {
       targetMarker: null,
       lastHitter: null,
       bounceCount: 0,
-      hitGroundInCourt: false
+      hitGroundInCourt: false,
+      netTargetPos: new THREE.Vector3(1.8, 1.0, 12.2),
+      netTargetVel: new THREE.Vector3(0, 0, 0),
+      isServeLetCandidate: false
     };
 
     // Humanoid Athletes
     this.player = {
       pos: new THREE.Vector3(1.8, 0, 12.2),
+      netTargetPos: new THREE.Vector3(1.8, 0, 12.2),
       speed: 7.8,
       model: null,
       limbs: {},
@@ -1362,6 +1521,7 @@ class TennisGameEngine {
 
     this.ai = {
       pos: new THREE.Vector3(-1.8, 0, -12.2),
+      netTargetPos: new THREE.Vector3(-1.8, 0, -12.2),
       targetPos: new THREE.Vector3(0, 0, -11.8),
       speed: 8.5,
       model: null,
@@ -1374,6 +1534,7 @@ class TennisGameEngine {
     };
 
     this.keys = {};
+    this.camShake = 0;
 
     // Performance Scratch Vectors (Zero Garbage Collection)
     this._v1 = new THREE.Vector3();
@@ -1865,46 +2026,118 @@ class TennisGameEngine {
       { x: -11, z: 22 },  { x: 11, z: 22 }
     ];
 
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x228b22, roughness: 0.45, side: THREE.DoubleSide });
-    const cocoMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
+    // High-Detail Textured Tropical Palm Materials
+    const palmTrunkTex = TextureFactory.createPalmTrunkTexture();
+    const palmLeafTex = TextureFactory.createPalmLeafTexture();
+
+    const trunkMat = new THREE.MeshStandardMaterial({
+      map: palmTrunkTex,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+
+    const leafMat = new THREE.MeshStandardMaterial({
+      map: palmLeafTex,
+      transparent: true,
+      alphaTest: 0.22,
+      side: THREE.DoubleSide,
+      roughness: 0.42,
+      metalness: 0.02
+    });
+
+    const cocoMat = new THREE.MeshStandardMaterial({
+      color: 0x382012,
+      roughness: 0.85
+    });
+
+    const huskMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2a14,
+      roughness: 0.95
+    });
+
+    // Create realistic arching compound palm frond geometry
+    const createFrondGeometry = (length = 4.8, maxW = 1.35, archCurve = 1.6) => {
+      const segsU = 4, segsV = 12;
+      const geo = new THREE.PlaneGeometry(maxW, length, segsU, segsV);
+      const posAttr = geo.attributes.position;
+      const halfL = length / 2;
+
+      for (let i = 0; i < posAttr.count; i++) {
+        const x = posAttr.getX(i);
+        const y = posAttr.getY(i);
+        const v = (y + halfL) / length; // 0 at base, 1 at tip
+
+        // Taper: slender at base, broadens to max at 40%, tapers to point at tip
+        const widthTaper = Math.sin(v * Math.PI) * 0.95 + (1 - v) * 0.12;
+        const newX = x * widthTaper;
+
+        // Downward gravity drooping arc in Z
+        const newZ = -Math.pow(v, 1.8) * archCurve;
+        // Upward initial launch and graceful downward curl in Y
+        const newY = v * (length * 0.85) - Math.pow(v, 2.2) * (length * 0.45);
+
+        posAttr.setXYZ(i, newX, newY, newZ);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    };
+
+    const upperFrondGeo = createFrondGeometry(5.2, 1.45, 1.7);
+    const lowerFrondGeo = createFrondGeometry(4.4, 1.25, 2.4);
 
     palmPositions.forEach((pos, idx) => {
       const palmGroup = new THREE.Group();
       palmGroup.position.set(pos.x, 0, pos.z);
 
-      // Curved Trunk
+      // Curved Organic Coconut Trunk
       const curve = new THREE.CubicBezierCurve3(
         new THREE.Vector3(0, 0, 0),
-        new THREE.Vector3(0, 3, 0),
-        new THREE.Vector3((idx % 2 === 0 ? 1 : -1) * 1.5, 6, 0.8),
-        new THREE.Vector3((idx % 2 === 0 ? 2 : -2) * 1.8, 8.5, 1.2)
+        new THREE.Vector3(0, 2.8, 0),
+        new THREE.Vector3((idx % 2 === 0 ? 1.2 : -1.2) * 1.5, 5.8, 0.9),
+        new THREE.Vector3((idx % 2 === 0 ? 1.9 : -1.9) * 1.8, 8.6, 1.4)
       );
-      const trunkGeo = new THREE.TubeGeometry(curve, 16, 0.28, 8, false);
+      const trunkGeo = new THREE.TubeGeometry(curve, 18, 0.32, 10, false);
       const trunk = new THREE.Mesh(trunkGeo, trunkMat);
       trunk.castShadow = true;
       palmGroup.add(trunk);
 
-      // Palm Crown with Radiating Fronds
+      // Flared Base at Ground
+      const baseFlare = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.55, 0.85, 10), trunkMat);
+      baseFlare.position.set(0, 0.4, 0);
+      palmGroup.add(baseFlare);
+
+      // Palm Crown with Coconuts and Arching Cascading Fronds
       const crownPos = curve.getPoint(1);
       const crown = new THREE.Group();
       crown.position.copy(crownPos);
 
-      // Coconuts cluster
-      for (let c = 0; c < 4; c++) {
-        const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 8), cocoMat);
-        coconut.position.set(Math.cos(c * 1.5) * 0.3, -0.2, Math.sin(c * 1.5) * 0.3);
+      // Fibrous Crown Husk Base
+      const husk = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.22, 0.55, 8), huskMat);
+      husk.position.set(0, -0.22, 0);
+      crown.add(husk);
+
+      // Coconuts Cluster (6 coconuts in clusters)
+      for (let c = 0; c < 6; c++) {
+        const cAngle = (c * Math.PI * 2) / 6;
+        const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 10), cocoMat);
+        coconut.scale.set(0.9, 1.15, 0.9);
+        coconut.position.set(Math.cos(cAngle) * 0.38, -0.32 + (c % 2) * 0.12, Math.sin(cAngle) * 0.38);
         crown.add(coconut);
       }
 
-      // 8 Fronds
-      for (let f = 0; f < 8; f++) {
-        const frondAngle = (f * Math.PI * 2) / 8;
-        const frond = new THREE.Mesh(new THREE.ConeGeometry(0.7, 3.8, 6), leafMat);
-        frond.position.set(Math.cos(frondAngle) * 1.8, -0.6, Math.sin(frondAngle) * 1.8);
-        frond.rotation.x = Math.sin(frondAngle) * 0.85 + 0.3;
-        frond.rotation.z = -Math.cos(frondAngle) * 0.85;
-        crown.add(frond);
+      // 12 Arching Tropical Fronds: 6 Upper Arching, 6 Lower Cascading
+      const totalFronds = 12;
+      for (let f = 0; f < totalFronds; f++) {
+        const isUpper = (f % 2 === 0);
+        const frondAngle = (f * Math.PI * 2) / totalFronds + (idx * 0.45);
+        const frondMesh = new THREE.Mesh(isUpper ? upperFrondGeo : lowerFrondGeo, leafMat);
+        frondMesh.castShadow = true;
+
+        frondMesh.position.set(Math.cos(frondAngle) * 0.25, isUpper ? 0.15 : -0.05, Math.sin(frondAngle) * 0.25);
+        frondMesh.rotation.y = -frondAngle + Math.PI / 2;
+        frondMesh.rotation.x = isUpper ? 0.38 : 0.72;
+        frondMesh.rotation.z = (Math.random() - 0.5) * 0.15;
+        crown.add(frondMesh);
       }
 
       palmGroup.add(crown);
@@ -2614,6 +2847,14 @@ class TennisGameEngine {
 
   triggerGuestShot() {
     if (this.conn && this.conn.open) {
+      // Tennis Rule 24: Receiver cannot volley the serve before it bounces!
+      if (this.rally === 0 && this.server !== 'ai' && !this.ball.hitGroundInCourt) {
+        this.startSwingAnimation(this.ai, 'forehand');
+        this.showTimingFeedback('¡DEBE BOTAR EN EL CUADRO! (REGLA DE SAQUE)', 'late');
+        this.audio.playAirSwing();
+        return;
+      }
+
       const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
       this.conn.send({
         type: 'p2_input',
@@ -2854,13 +3095,23 @@ class TennisGameEngine {
     this.conn.on('data', (data) => {
       if (data.type === 'sync' && this.gameMode === 'online_guest') {
         // Guest receives authoritative state from host
-        this.ball.pos.set(data.b.x, data.b.y, data.b.z);
-        this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
-        this.player.pos.set(data.p1.x, 0, data.p1.z);
+        // Smooth target interpolation for Player 1 (Host) to prevent teleports
+        this.player.netTargetPos.set(data.p1.x, 0, data.p1.z);
+        this.player.runCycle = data.p1.rc;
         if (data.p1.sw && !this.player.isSwinging) {
           this.startSwingAnimation(this.player, data.p1.st || 'forehand');
         }
-        this.player.runCycle = data.p1.rc;
+
+        // Smooth Ball Interpolation without jitter or teleports
+        const bTarget = this._v1.set(data.b.x, data.b.y, data.b.z);
+        const dist = this.ball.pos.distanceTo(bTarget);
+        if (dist > 3.2 || !this.pointActive) {
+          this.ball.pos.copy(bTarget);
+          this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
+        } else {
+          this.ball.pos.lerp(bTarget, 0.42);
+          this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
+        }
 
         if (!this.pointActive && data.p2) {
           this.ai.pos.set(data.p2.x, 0, data.p2.z);
@@ -2913,13 +3164,17 @@ class TennisGameEngine {
           }
         }
       } else if (data.type === 'p2_input' && this.gameMode === 'online_host') {
-        // Host receives Guest controls
-        this.ai.pos.set(data.x, 0, data.z);
+        // Host receives Guest controls: smooth target interpolation
+        this.ai.netTargetPos.set(data.x, 0, data.z);
         this.ai.runCycle = data.rc;
         if (data.sw && !this.ai.isSwinging) {
           this.startSwingAnimation(this.ai, data.st || 'forehand');
         }
         if (data.shot) {
+          // Tennis Rule 24: Receiver cannot volley the serve before it bounces!
+          if (this.rally === 0 && this.server !== 'ai' && !this.ball.hitGroundInCourt) {
+            return;
+          }
           this.ai.limbs.racket.getWorldPosition(this._rHead);
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
@@ -2971,6 +3226,13 @@ class TennisGameEngine {
       if (!this.pointActive && this.server === 'ai') {
         this.executeAIServe();
       } else {
+        // Tennis Rule 24: Receiver cannot volley the serve before it bounces!
+        if (this.rally === 0 && this.server !== 'ai' && !this.ball.hitGroundInCourt) {
+          this.startSwingAnimation(this.ai, 'forehand');
+          this.audio.playAirSwing();
+          return;
+        }
+
         this.ai.limbs.racket.getWorldPosition(this._rHead);
         const distToP2Racket = this._rHead.distanceTo(this.ball.pos);
         const distToP2Body = this.ai.pos.distanceTo(this.ball.pos);
@@ -3026,7 +3288,7 @@ class TennisGameEngine {
     }
 
     this.netTimer += dt;
-    if (this.netTimer >= 0.033 && this.conn && this.conn.open) {
+    if (this.netTimer >= 0.020 && this.conn && this.conn.open) {
       this.netTimer = 0;
       this.conn.send({
         type: 'p2_input',
@@ -3044,7 +3306,7 @@ class TennisGameEngine {
 
   syncOnlineHost(dt) {
     this.netTimer += dt;
-    if (this.netTimer >= 0.033 && this.conn && this.conn.open) {
+    if (this.netTimer >= 0.020 && this.conn && this.conn.open) {
       this.netTimer = 0;
       const packet = {
         type: 'sync',
@@ -3250,6 +3512,14 @@ class TennisGameEngine {
     this.power = 0.55;
     document.getElementById('power-bar').style.width = '0%';
 
+    // Tennis Rule 24: Receiver CANNOT volley the serve before it bounces in the service box!
+    if (this.rally === 0 && this.server !== 'player' && !this.ball.hitGroundInCourt) {
+      this.startSwingAnimation(this.player, 'forehand');
+      this.showTimingFeedback('¡DEBE BOTAR EN EL CUADRO! (REGLA DE SAQUE)', 'late');
+      this.audio.playAirSwing();
+      return;
+    }
+
     this.player.limbs.racket.getWorldPosition(this._rHead);
     this.player.racketHitbox.pos.copy(this._rHead);
 
@@ -3351,6 +3621,7 @@ class TennisGameEngine {
 
     this.audio.playHit(power, isSmash, isSweetSpot);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
+    this.camShake = isSmash ? 0.35 : (isSweetSpot ? 0.16 : 0.08);
 
     this.shotType = 'DRIVE';
     document.getElementById('current-shot').innerText = 'DRIVE';
@@ -3527,20 +3798,34 @@ class TennisGameEngine {
     // 1. Continuous Collision Detection (CCD) Net Check
     const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
     if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
-      this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
-      this.ball.vel.z = -this.ball.vel.z * 0.22;
-      this.ball.vel.y *= 0.4;
-      this.audio.playBounce(0.4);
-      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-
-      // Check if it's during serve
       if (this.rally === 0) {
-        this.handleServiceFault('Pelota en la red');
+        // Check if ball grazed the top cord tape (within 0.08m of net height)
+        if (this.ball.pos.y >= this.NET_H - 0.08) {
+          this.ball.isServeLetCandidate = true;
+          this.ball.vel.z *= 0.62; // Slows down and continues over net
+          this.ball.vel.y = Math.max(this.ball.vel.y, 1.1);
+          this.audio.playBounce(0.35);
+          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+          return;
+        } else {
+          this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+          this.ball.vel.z = -this.ball.vel.z * 0.22;
+          this.ball.vel.y *= 0.4;
+          this.audio.playBounce(0.4);
+          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+          this.handleServiceFault('Pelota en la red');
+          return;
+        }
       } else {
+        this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+        this.ball.vel.z = -this.ball.vel.z * 0.22;
+        this.ball.vel.y *= 0.4;
+        this.audio.playBounce(0.4);
+        if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
         const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
         this.awardPoint(winner, 'Pelota atrapada en la red');
+        return;
       }
-      return;
     }
 
     // 2. Court Ground Bounce (Y <= ballRadius)
@@ -3580,6 +3865,24 @@ class TennisGameEngine {
                       (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol) :
                       (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol);
           validServiceBox = inZ && inX;
+        }
+
+        // Official Tennis Let Rule: Ball clipped net cord on serve
+        if (this.ball.isServeLetCandidate) {
+          this.ball.isServeLetCandidate = false;
+          if (validServiceBox) {
+            this.showAnnouncement('¡SAQUE DE RED (LET)!', 'Pelota tocó la red y entró en el cuadro • Se repite el saque');
+            this.audio.playWhistle();
+            if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
+            this.ball.vel.set(0, 0, 0);
+            setTimeout(() => {
+              this.prepareServe(this.server);
+            }, 1800);
+            return;
+          } else {
+            this.handleServiceFault('Fuera del cuadro tras rozar la red');
+            return;
+          }
         }
 
         if (!validServiceBox) {
@@ -3670,7 +3973,10 @@ class TennisGameEngine {
         const distToAIRacket = this._rHead.distanceTo(this.ball.pos);
         const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
 
-        if ((distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+        // Tennis Rule 24: Receiver must allow the serve to bounce in the service box
+        const canAIReturn = (this.rally > 0 || this.server === 'ai' || this.ball.hitGroundInCourt);
+
+        if (canAIReturn && (distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
           const aiPower = 0.72 + Math.random() * 0.28;
@@ -3783,9 +4089,12 @@ class TennisGameEngine {
           limbs.lArm.rotation.set(0.3 - 0.8 * p, -0.6 + 1.4 * p, 1.1 - 2.4 * p);
         } else {
           const p = (t - 0.70) / 0.30;
-          limbs.torso.rotation.y = -0.70 * (1 - p);
-          limbs.rArm.rotation.set(-0.5 * (1 - p), 0.8 * (1 - p), -1.4 * (1 - p));
-          limbs.lArm.rotation.set(-0.5 * (1 - p), 0.8 * (1 - p), -1.3 * (1 - p));
+          // Follow-through blending smoothly into neutral stance
+          limbs.torso.rotation.set(0.12 * p, -0.70 * (1 - p), 0);
+          limbs.rArm.rotation.set(-0.5 * (1 - p) - 0.55 * p, 0.8 * (1 - p) + 0.30 * p, -1.4 * (1 - p) - 0.42 * p);
+          limbs.lArm.rotation.set(-0.5 * (1 - p) - 0.50 * p, 0.8 * (1 - p) - 0.32 * p, -1.3 * (1 - p) + 0.40 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.55 * p, 0, 0);
+          if (limbs.lFore) limbs.lFore.rotation.set(0.55 * p, 0, 0);
         }
       } else {
         // Modern Aerodynamic Topspin Forehand (Windshield-Wiper Finish)
@@ -3805,21 +4114,17 @@ class TennisGameEngine {
           limbs.lArm.rotation.set(-0.6 + 0.8 * p, 0.2 - 0.3 * p, 0.75 - 1.2 * p);
         } else {
           const p = (t - 0.70) / 0.30;
-          // Deceleration wrap over left shoulder
-          limbs.torso.rotation.y = 0.55 * (1 - p);
-          limbs.rArm.rotation.set(-0.45 * (1 - p), -0.85 * (1 - p), 1.55 * (1 - p));
-          if (limbs.rFore) limbs.rFore.rotation.set(1.25 * (1 - p), 0, 0);
-          limbs.lArm.rotation.set(0.2 * (1 - p), -0.1 * (1 - p), -0.45 * (1 - p));
+          // Deceleration wrap over left shoulder blending smoothly into neutral ready posture
+          limbs.torso.rotation.set(0.12 * p, 0.55 * (1 - p), 0);
+          limbs.rArm.rotation.set(-0.45 * (1 - p) - 0.55 * p, -0.85 * (1 - p) + 0.30 * p, 1.55 * (1 - p) - 0.42 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.25 * (1 - p) + 0.55 * p, 0, 0);
+          limbs.lArm.rotation.set(0.2 * (1 - p) - 0.50 * p, -0.1 * (1 - p) - 0.32 * p, -0.45 * (1 - p) + 0.40 * p);
+          if (limbs.lFore) limbs.lFore.rotation.set(0.55 * p, 0, 0);
         }
       }
 
       if (char.swingProgress >= Math.PI) {
         char.isSwinging = false;
-        limbs.rArm.rotation.set(0, 0, 0);
-        limbs.lArm.rotation.set(0, 0, 0);
-        limbs.torso.rotation.set(0, 0, 0);
-        if (limbs.rFore) limbs.rFore.rotation.set(0, 0, 0);
-        if (limbs.lFore) limbs.lFore.rotation.set(0, 0, 0);
       }
     } else {
       // Neutral Athletic Posture: Hands holding racket in front at chest height
@@ -3830,13 +4135,19 @@ class TennisGameEngine {
         if (limbs.rFore) limbs.rFore.rotation.set(0.55, 0, 0);
         if (limbs.lFore) limbs.lFore.rotation.set(0.55, 0, 0);
       } else {
-        limbs.torso.rotation.set(0.05, 0, 0);
+        limbs.torso.rotation.set(0.08, 0, 0);
         limbs.rArm.rotation.set(Math.sin(char.runCycle) * 0.45, 0, isAI ? 0.2 : -0.2);
         if (limbs.rFore) limbs.rFore.rotation.set(0.25, 0, 0);
         if (limbs.lFore) limbs.lFore.rotation.set(0.25, 0, 0);
       }
     }
 
+    // Dynamic forward athletic bank when running
+    if (isMoving) {
+      char.model.rotation.x = isAI ? 0.08 : -0.08;
+    } else {
+      char.model.rotation.x = 0;
+    }
     char.model.rotation.y = isAI ? 0 : Math.PI;
   }
 
@@ -3870,6 +4181,13 @@ class TennisGameEngine {
       this._camTarget.set(0, 26.0, 1.0);
       this.camera.position.lerp(this._camTarget, dt * 4.0);
       this.camera.lookAt(0, 0, 0);
+    }
+
+    // Dynamic Camera Impact Shake (Smashes, Aces & Sweet Spots)
+    if (this.camShake > 0.002) {
+      this.camera.position.x += (Math.random() - 0.5) * this.camShake;
+      this.camera.position.y += (Math.random() - 0.5) * this.camShake;
+      this.camShake *= Math.pow(0.04, dt);
     }
   }
 
@@ -3970,20 +4288,25 @@ class TennisGameEngine {
       this.updatePhysics(dt);
     } else if (this.gameMode === 'online_host') {
       this.updatePlayer(dt);
+      // Smoothly interpolate Guest (AI mesh) on Host screen without teleports or jitter
+      this.ai.pos.lerp(this.ai.netTargetPos, Math.min(1.0, dt * 26));
+      this.ai.model.position.copy(this.ai.pos);
+      this.animateCharacter(this.ai, dt, true);
       this.syncOnlineHost(dt);
       this.updatePhysics(dt);
     } else if (this.gameMode === 'online_guest') {
       this.updatePlayer2Guest(dt);
-      // Smooth ball velocity extrapolation between host sync packets for locked 60fps
-      if (this.ball && this.ball.vel && this.ball.mesh) {
+      // Smooth ball velocity & gravity prediction between host sync packets for locked 60fps
+      if (this.ball && this.ball.vel && this.ball.mesh && this.pointActive) {
+        this.ball.vel.y -= 9.8 * dt;
         this.ball.pos.addScaledVector(this.ball.vel, dt);
         this.ball.mesh.position.copy(this.ball.pos);
         if (this.ball.shadow) {
-          this.ball.shadow.position.x = this.ball.pos.x;
-          this.ball.shadow.position.z = this.ball.pos.z;
+          this.ball.shadow.position.set(this.ball.pos.x, 0.015, this.ball.pos.z);
         }
       }
-      // Render and animate host's athlete model on guest's screen
+      // Render and smoothly interpolate host's athlete model on guest's screen without teleports
+      this.player.pos.lerp(this.player.netTargetPos, Math.min(1.0, dt * 26));
       this.player.model.position.copy(this.player.pos);
       this.animateCharacter(this.player, dt, false);
     } else {
