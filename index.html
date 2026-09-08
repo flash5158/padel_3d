@@ -101,11 +101,16 @@
     <!-- Bottom Right: Court 2D Minimap & Camera Controls -->
     <div class="bottom-right-panel">
       <div class="minimap-card" id="minimap-card">
-        <div class="minimap-header">
-          <span class="minimap-live-dot"></span>
-          <span class="minimap-title">RADAR PISTA</span>
+        <div class="minimap-header" id="minimap-header" title="Alternar Radar [R]">
+          <div class="minimap-header-left">
+            <span class="minimap-live-dot"></span>
+            <span class="minimap-title">RADAR</span>
+          </div>
+          <button class="minimap-toggle-btn" id="btn-toggle-minimap" title="Minimizar / Mostrar Radar [R]" aria-label="Toggle Minimap">
+            <span id="minimap-toggle-icon">−</span>
+          </button>
         </div>
-        <canvas id="minimap" width="110" height="220"></canvas>
+        <canvas id="minimap" width="168" height="336"></canvas>
       </div>
 
       <div class="hud-control-row">
