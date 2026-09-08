@@ -1204,98 +1204,146 @@ const TextureFactory = {
   // 10. The White House Neoclassical South Portico Facade Texture
   createWhiteHouseFacadeTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
+    canvas.width = 2048;
+    canvas.height = 1024;
     const ctx = canvas.getContext('2d');
 
-    // Off-white Virginia freestone limestone base
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(0, 0, 1024, 512);
+    // Virginia Freestone Off-White Limestone Base
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, 1024);
+    bgGrad.addColorStop(0.0, '#ffffff');
+    bgGrad.addColorStop(0.5, '#f8fafc');
+    bgGrad.addColorStop(1.0, '#e2e8f0');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 2048, 1024);
 
-    // Stone block masonry joints
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
-    ctx.lineWidth = 1;
-    for (let y = 0; y < 512; y += 32) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke();
+    // Fine Ashlar Masonry Stone Joints with Bevel Shading
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 1.5;
+    for (let y = 0; y < 1024; y += 64) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(2048, y); ctx.stroke();
     }
-    for (let y = 0; y < 512; y += 32) {
-      const offset = (y % 64 === 0) ? 0 : 32;
-      for (let x = offset; x < 1024; x += 64) {
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke();
+    for (let y = 0; y < 1024; y += 64) {
+      const offset = (y % 128 === 0) ? 0 : 64;
+      for (let x = offset; x < 2048; x += 128) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 64); ctx.stroke();
       }
     }
 
-    // Windows (2 levels of Georgian multi-pane windows with stone pediments)
-    const drawWindow = (x, y, w, h, isArched = false) => {
-      // Stone frame surround
-      ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(x - 4, y - 6, w + 8, h + 10);
-      // Window pane (reflecting blue sky + warm interior glow)
+    // Windows with Detailed Georgian Multi-Panes, Silk Curtains & Chandelier Glow
+    const drawGeorgianWindow = (x, y, w, h, isArched = false) => {
+      // Classical Stone Surround Frame
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(x - 8, y - 10, w + 16, h + 18);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - 8, y - 10, w + 16, h + 18);
+
+      // Triangular Pediment over Upper Level Windows
+      if (isArched) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.moveTo(x - 14, y - 10);
+        ctx.lineTo(x + w / 2, y - 48);
+        ctx.lineTo(x + w + 14, y - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+
+      // Interior Depth & Sky Reflection
       const winGrad = ctx.createLinearGradient(x, y, x, y + h);
-      winGrad.addColorStop(0, '#1e293b');
-      winGrad.addColorStop(0.6, '#0f172a');
-      winGrad.addColorStop(1, '#fef08a'); // chandelier glow
+      winGrad.addColorStop(0.0, '#0f172a');
+      winGrad.addColorStop(0.65, '#1e293b');
+      winGrad.addColorStop(1.0, '#fef08a'); // Warm interior chandelier light
       ctx.fillStyle = winGrad;
       ctx.fillRect(x, y, w, h);
 
+      // Silk Drape Curtains on Sides
+      ctx.fillStyle = 'rgba(254, 243, 199, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + 16, y + h * 0.5, x + 6, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x + w, y);
+      ctx.quadraticCurveTo(x + w - 16, y + h * 0.5, x + w - 6, y + h);
+      ctx.lineTo(x + w, y + h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Crystal Chandelier Glow in Center
+      const chanGlow = ctx.createRadialGradient(x + w / 2, y + h * 0.75, 2, x + w / 2, y + h * 0.75, 24);
+      chanGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+      chanGlow.addColorStop(0.5, 'rgba(245, 158, 11, 0.45)');
+      chanGlow.addColorStop(1, 'rgba(245, 158, 11, 0)');
+      ctx.fillStyle = chanGlow;
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + h * 0.75, 24, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Arched Fanlight at Top
       if (isArched) {
         ctx.beginPath();
         ctx.arc(x + w / 2, y, w / 2, Math.PI, 0);
         ctx.fillStyle = winGrad;
         ctx.fill();
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
 
-      // White mullions / window panes
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.lineWidth = 1.8;
+      // White Mullions / Panes
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 2.4;
       ctx.beginPath();
       ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h);
       ctx.stroke();
-      for (let py = y + 16; py < y + h; py += 16) {
+      for (let py = y + 28; py < y + h; py += 28) {
         ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(x + w, py); ctx.stroke();
       }
     };
 
-    // Upper level windows
+    // Upper level 12 windows with pediments
     for (let i = 0; i < 12; i++) {
-      const wx = 50 + i * 80;
-      drawWindow(wx, 100, 36, 68, true);
+      const wx = 80 + i * 160;
+      drawGeorgianWindow(wx, 210, 72, 140, true);
     }
 
-    // Lower level windows
+    // Lower level 12 tall french windows
     for (let i = 0; i < 12; i++) {
-      const wx = 50 + i * 80;
-      drawWindow(wx, 260, 36, 92, false);
+      const wx = 80 + i * 160;
+      drawGeorgianWindow(wx, 540, 72, 190, false);
     }
 
-    // Classical Entablature & Frieze at top
+    // Classical Entablature & Frieze with Decorative Triglyphs
     ctx.fillStyle = '#e2e8f0';
-    ctx.fillRect(0, 0, 1024, 45);
+    ctx.fillRect(0, 0, 2048, 90);
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(0, 40, 1024, 6);
+    ctx.fillRect(0, 82, 2048, 12);
 
     // Classical Dentils
     ctx.fillStyle = '#94a3b8';
-    for (let dx = 6; dx < 1024; dx += 16) {
-      ctx.fillRect(dx, 28, 9, 10);
+    for (let dx = 10; dx < 2048; dx += 28) {
+      ctx.fillRect(dx, 58, 16, 20);
     }
 
     // Balustrade along top parapet
     ctx.fillStyle = '#f1f5f9';
-    ctx.fillRect(0, 0, 1024, 18);
-    for (let bx = 8; bx < 1024; bx += 14) {
+    ctx.fillRect(0, 0, 2048, 36);
+    for (let bx = 12; bx < 2048; bx += 24) {
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillRect(bx, 4, 6, 12);
+      ctx.fillRect(bx, 8, 10, 24);
     }
 
     const tex = new THREE.CanvasTexture(canvas);
     return tex;
   },
 
-  // 11. Official 50-Star American Flag Texture for White House Flagpole
   createAmericanFlagTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -2414,7 +2462,7 @@ class TennisGameEngine {
   // 4. The White House - South Lawn Presidential Tennis Court
   buildWhiteHouseEnvironment() {
     this.scene.background = new THREE.Color(0x60a5fa);
-    this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0035);
+    this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0028);
     this.ambient.color.setHex(0xfff8e7);
     this.ambient.intensity = 0.95;
     this.sun.color.setHex(0xfffbf0);
@@ -2422,7 +2470,7 @@ class TennisGameEngine {
     this.sun.position.set(28, 48, 22);
 
     // Sky Dome with subtle atmospheric gradient
-    const whSkyGeo = new THREE.SphereGeometry(95, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    const whSkyGeo = new THREE.SphereGeometry(110, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
     whSkyGeo.scale(-1, 1, 1);
     const whSkyMat = new THREE.MeshBasicMaterial({
       color: 0x7dd3fc,
@@ -2435,7 +2483,7 @@ class TennisGameEngine {
 
     // Manicured South Lawn Fairway Grass Plane
     const lawnTex = TextureFactory.createWhiteHouseLawnTexture();
-    const lawnGeo = new THREE.PlaneGeometry(140, 150);
+    const lawnGeo = new THREE.PlaneGeometry(160, 170);
     const lawnMat = new THREE.MeshStandardMaterial({
       map: lawnTex,
       roughness: 0.88,
@@ -2443,7 +2491,7 @@ class TennisGameEngine {
     });
     const lawn = new THREE.Mesh(lawnGeo, lawnMat);
     lawn.rotation.x = -Math.PI / 2;
-    lawn.position.set(0, -0.04, -15);
+    lawn.position.set(0, -0.04, -10);
     lawn.receiveShadow = true;
     this.environmentGroup.add(lawn);
 
@@ -2464,8 +2512,8 @@ class TennisGameEngine {
     // East & West Colonnade Terraces
     const terraceMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.70 });
     [-1, 1].forEach(side => {
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(24, 7.0, 10), facadeMat);
-      wing.position.set(side * 39, 3.5, -54);
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(26, 7.0, 10), facadeMat);
+      wing.position.set(side * 40, 3.5, -54);
       const colonnade = new THREE.Mesh(new THREE.BoxGeometry(16, 4.5, 4), terraceMat);
       colonnade.position.set(side * 28, 2.25, -46);
       this.environmentGroup.add(wing, colonnade);
@@ -2528,10 +2576,9 @@ class TennisGameEngine {
     finial.position.set(0, 23.6, -45);
     this.environmentGroup.add(flagPole, finial);
 
-    // Waving American Flag (Plane with multiple width segments for dynamic wind wave animation)
+    // Waving American Flag
     const flagTex = TextureFactory.createAmericanFlagTexture();
     const flagGeo = new THREE.PlaneGeometry(4.4, 2.3, 24, 8);
-    // Offset flag so hoist edge connects to pole
     flagGeo.translate(2.2, 0, 0);
     const flagMat = new THREE.MeshStandardMaterial({
       map: flagTex,
@@ -2543,6 +2590,62 @@ class TennisGameEngine {
     this.whiteHouseFlag.position.set(0.08, 22.2, -45);
     this.environmentGroup.add(this.whiteHouseFlag);
 
+    // THE WASHINGTON MONUMENT (Iconic 35m Egyptian Obelisk in Far South Background)
+    const obeliskGroup = new THREE.Group();
+    obeliskGroup.position.set(0, 0, 85);
+    const obeliskMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.75, metalness: 0.05 });
+    // Main shaft
+    const obeliskShaft = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3.4, 30, 4), obeliskMat);
+    obeliskShaft.position.y = 15;
+    obeliskShaft.rotation.y = Math.PI / 4;
+    // Pyramidion apex
+    const obeliskApex = new THREE.Mesh(new THREE.ConeGeometry(2.4 * Math.SQRT2, 4.8, 4),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5, metalness: 0.2 }));
+    obeliskApex.position.y = 32.4;
+    obeliskApex.rotation.y = Math.PI / 4;
+    obeliskGroup.add(obeliskShaft, obeliskApex);
+    this.environmentGroup.add(obeliskGroup);
+
+    // MARINE ONE PRESIDENTIAL HELIPAD on South Lawn
+    const helipadCanvas = document.createElement('canvas');
+    helipadCanvas.width = 512; helipadCanvas.height = 512;
+    const hctx = helipadCanvas.getContext('2d');
+    hctx.fillStyle = '#475569'; hctx.beginPath(); hctx.arc(256, 256, 240, 0, Math.PI * 2); hctx.fill();
+    hctx.strokeStyle = '#ffffff'; hctx.lineWidth = 14; hctx.beginPath(); hctx.arc(256, 256, 210, 0, Math.PI * 2); hctx.stroke();
+    hctx.fillStyle = '#facc15'; hctx.font = '900 180px sans-serif'; hctx.textAlign = 'center'; hctx.textBaseline = 'middle';
+    hctx.fillText('H', 256, 260);
+    const helipadTex = new THREE.CanvasTexture(helipadCanvas);
+    const helipadMesh = new THREE.Mesh(new THREE.PlaneGeometry(13, 13),
+      new THREE.MeshStandardMaterial({ map: helipadTex, roughness: 0.85 }));
+    helipadMesh.rotation.x = -Math.PI / 2;
+    helipadMesh.position.set(-26, -0.02, -26);
+    this.environmentGroup.add(helipadMesh);
+
+    // US MARINE CORPS SENTRY GUARDS (Standing at Attention at Portico Base)
+    const marineSuit = new THREE.MeshStandardMaterial({ color: 0x0a1931, roughness: 0.65 });
+    const marinePants = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.70 });
+    const marineCap = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+    const marineSkin = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.50 });
+    [-4.5, 4.5].forEach(sx => {
+      const guard = new THREE.Group();
+      guard.position.set(sx, 1.2, -45.5);
+
+      const legs = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.95, 0.22), marinePants);
+      legs.position.y = 0.48;
+      const coat = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.80, 0.26), marineSuit);
+      coat.position.y = 1.35;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), marineSkin);
+      head.position.y = 1.88;
+      const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.14, 0.10, 16), marineCap);
+      hat.position.y = 2.01;
+      const brim = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.08),
+        new THREE.MeshBasicMaterial({ color: 0x050505 }));
+      brim.position.set(0, 1.96, 0.12);
+
+      guard.add(legs, coat, head, hat, brim);
+      this.environmentGroup.add(guard);
+    });
+
     // Black Wrought-Iron Security Fence with Gold Spear Finials
     const fenceMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.40, metalness: 0.85 });
     const spearMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.25, metalness: 0.90 });
@@ -2553,7 +2656,6 @@ class TennisGameEngine {
       const midX = (x1 + x2) / 2;
       const midZ = (z1 + z2) / 2;
 
-      // Bottom and Top Horizontal Rails
       [-1, 1].forEach(r => {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, len), fenceMat);
         rail.position.set(midX, r > 0 ? 2.1 : 0.25, midZ);
@@ -2561,24 +2663,19 @@ class TennisGameEngine {
         this.environmentGroup.add(rail);
       });
 
-      // Vertical Pickets
       const count = Math.floor(len / 0.55);
       for (let p = 0; p <= count; p++) {
         const t = p / count;
         const px = x1 + (x2 - x1) * t;
         const pz = z1 + (z2 - z1) * t;
-
         const picket = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 2.1, 8), fenceMat);
         picket.position.set(px, 1.15, pz);
-
         const spear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.22, 6), spearMat);
         spear.position.set(px, 2.30, pz);
-
         this.environmentGroup.add(picket, spear);
       }
     };
 
-    // Lateral perimeter fences
     makeFenceRun(-16, -26, -16, 26);
     makeFenceRun(16, -26, 16, 26);
     makeFenceRun(-16, 26, 16, 26);
@@ -2589,13 +2686,11 @@ class TennisGameEngine {
     const whtRoseM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.50 });
 
     [-11.5, 11.5].forEach(hx => {
-      // Long manicured boxwood hedge
       const hedge = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.95, 34), hedgeMat);
       hedge.position.set(hx, 0.48, 0);
       hedge.castShadow = true;
       this.environmentGroup.add(hedge);
 
-      // Flower clusters on top of hedge
       for (let b = -15; b <= 15; b += 1.8) {
         const roseMat = (Math.abs(b) % 2 === 0) ? redRoseM : whtRoseM;
         const rose = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), roseMat);
@@ -2612,11 +2707,9 @@ class TennisGameEngine {
         const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.40, 0.65, 12), potMat);
         pot.position.set(tx, 0.32, tz);
         pot.castShadow = true;
-
         const cone = new THREE.Mesh(new THREE.ConeGeometry(0.85, 3.4, 12), topiaryMat);
         cone.position.set(tx, 2.35, tz);
         cone.castShadow = true;
-
         this.environmentGroup.add(pot, cone);
       });
     });
@@ -2632,16 +2725,12 @@ class TennisGameEngine {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.6, 12), lampMat);
       pole.position.set(lp.x, 2.3, lp.z);
       pole.castShadow = true;
-
       const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.22, 0.70, 6), glassMat);
       lantern.position.set(lp.x, 4.75, lp.z);
-
       const cap = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.35, 6), lampMat);
       cap.position.set(lp.x, 5.25, lp.z);
-
       const light = new THREE.PointLight(0xfff1aa, 1.4, 22);
       light.position.set(lp.x, 4.75, lp.z);
-
       this.environmentGroup.add(pole, lantern, cap, light);
     });
 
@@ -2651,25 +2740,18 @@ class TennisGameEngine {
     [-1, 1].forEach(side => {
       const bench = new THREE.Group();
       bench.position.set(side * 8.6, 0, 0);
-
-      // Wood Seat & Back
       const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 0.65), mahogMat);
       seat.position.set(0, 0.45, 0);
       const back = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 0.08), mahogMat);
       back.position.set(0, 0.85, -0.28);
-
-      // Brass Legs
       [-0.8, 0.8].forEach(lx => {
         const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 8), brassMat);
         leg.position.set(lx, 0.22, 0);
         bench.add(leg);
       });
-
-      // Gold Presidential Seal Medal on Bench
       const medal = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), brassMat);
       medal.rotation.x = Math.PI / 2;
       medal.position.set(0, 0.90, -0.23);
-
       bench.add(seat, back, medal);
       this.environmentGroup.add(bench);
     });
@@ -2686,19 +2768,15 @@ class TennisGameEngine {
       const agent = new THREE.Group();
       agent.position.set(ap.x, 0, ap.z);
       agent.rotation.y = ap.rot;
-
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 1.25, 12), suitMat);
       body.position.y = 1.05;
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), headMat);
       head.position.y = 1.82;
       const shades = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.08), darkGlass);
       shades.position.set(0, 1.84, 0.12);
-
-      // Earpiece coil
       const earCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.12, 6),
         new THREE.MeshBasicMaterial({ color: 0xffffff }));
       earCoil.position.set(0.14, 1.76, -0.02);
-
       agent.add(body, head, shades, earCoil);
       this.environmentGroup.add(agent);
     });
@@ -2899,64 +2977,65 @@ class TennisGameEngine {
   // 2. Playa Paraíso (Tropical Beach Resort Sunset Setting)
   buildBeachEnvironment() {
     this.scene.background = new THREE.Color(0x1a0c14);
-    this.scene.fog = new THREE.FogExp2(0x1a0c14, 0.006);
+    this.scene.fog = new THREE.FogExp2(0x1a0c14, 0.0055);
     this.ambient.color.setHex(0xffe0c0);
-    this.ambient.intensity = 0.82;
+    this.ambient.intensity = 0.84;
     this.sun.color.setHex(0xff6622);
-    this.sun.intensity = 1.65;
+    this.sun.intensity = 1.68;
     this.sun.position.set(30, 22, -40);
 
     // SKY DOME
     const beachSkyTex = TextureFactory.createBeachSkyTexture();
-    const beachSkyGeo = new THREE.SphereGeometry(90, 40, 26, 0, Math.PI * 2, 0, Math.PI / 2);
+    const beachSkyGeo = new THREE.SphereGeometry(95, 40, 26, 0, Math.PI * 2, 0, Math.PI / 2);
     beachSkyGeo.scale(-1, 1, 1);
     const beachSky = new THREE.Mesh(beachSkyGeo,
       new THREE.MeshBasicMaterial({ map: beachSkyTex, side: THREE.BackSide, depthWrite: false }));
     beachSky.position.set(0, -1, 0);
     this.environmentGroup.add(beachSky);
 
-    // SAND - court zone only (does NOT reach where ocean is placed)
+    // DRY SAND - Surrounding court area
     const sandTex = TextureFactory.createBeachPlainSandTexture();
-    const sandMesh = new THREE.Mesh(new THREE.PlaneGeometry(110, 60),
+    const sandMesh = new THREE.Mesh(new THREE.PlaneGeometry(120, 52),
       new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.92, metalness: 0.02 }));
     sandMesh.rotation.x = -Math.PI / 2;
-    sandMesh.position.set(0, -0.04, 4);   // centred toward player, far edge ~Z=-26
+    sandMesh.position.set(0, -0.04, 4);
     sandMesh.receiveShadow = true;
     this.environmentGroup.add(sandMesh);
 
-    // OCEAN - starts at Z=-22, extends backward 80 units (centre at Z=-62)
-    // Build a clean water canvas texture - NO buggy repeating artifacts
+    // WET GLISTENING SAND TRANSITION STRIP (Z = -20 to -24)
+    // Dark, wet sand reflecting sunset glow right before water edge
+    const wetSandMat = new THREE.MeshStandardMaterial({
+      color: 0x8a5228,
+      roughness: 0.22,
+      metalness: 0.28
+    });
+    const wetSand = new THREE.Mesh(new THREE.PlaneGeometry(140, 5.0), wetSandMat);
+    wetSand.rotation.x = -Math.PI / 2;
+    wetSand.position.set(0, -0.05, -22.5);
+    wetSand.receiveShadow = true;
+    this.environmentGroup.add(wetSand);
+
+    // OCEAN - Starts at Z=-22, extends backward 85 units
     const oceanCanvas = document.createElement('canvas');
     oceanCanvas.width = 512; oceanCanvas.height = 512;
     const octx = oceanCanvas.getContext('2d');
     const ocGrad = octx.createLinearGradient(0, 0, 0, 512);
-    ocGrad.addColorStop(0.0, '#002244');
-    ocGrad.addColorStop(0.35, '#004466');
-    ocGrad.addColorStop(0.70, '#006688');
-    ocGrad.addColorStop(1.0, '#008aaa');
+    ocGrad.addColorStop(0.0, '#001a33');
+    ocGrad.addColorStop(0.35, '#003b5c');
+    ocGrad.addColorStop(0.70, '#005f7a');
+    ocGrad.addColorStop(1.0, '#008ba8');
     octx.fillStyle = ocGrad;
     octx.fillRect(0, 0, 512, 512);
-    // Shimmer streaks
-    for (let i = 0; i < 55; i++) {
+    // Sun Shimmer streaks
+    for (let i = 0; i < 65; i++) {
       const yy = Math.random() * 512;
       const lg = octx.createLinearGradient(0, yy, 512, yy + 18);
-      lg.addColorStop(0,   'rgba(160,230,255,0)');
-      lg.addColorStop(0.5, 'rgba(160,230,255,0.75)');
-      lg.addColorStop(1,   'rgba(160,230,255,0)');
-      octx.globalAlpha = 0.18;
+      lg.addColorStop(0,   'rgba(255,200,140,0)');
+      lg.addColorStop(0.5, 'rgba(255,220,170,0.85)');
+      lg.addColorStop(1,   'rgba(255,200,140,0)');
+      octx.globalAlpha = 0.22;
       octx.fillStyle = lg;
-      octx.fillRect(0, yy, 512, 2 + Math.random() * 4);
-    }
-    // Wave crest lines
-    octx.globalAlpha = 0.09;
-    octx.strokeStyle = 'rgba(255,255,255,0.9)';
-    octx.lineWidth = 1.5;
-    for (let i = 0; i < 16; i++) {
-      const yw = 25 + i * 28;
-      octx.beginPath();
-      octx.moveTo(0, yw);
-      for (let x = 0; x <= 512; x += 6) octx.lineTo(x, yw + Math.sin(x * 0.05) * 7);
-      octx.stroke();
+      octx.fillRect(0, yy, 512, 2 + Math.random() * 5);
     }
     octx.globalAlpha = 1;
     const oceanTex = new THREE.CanvasTexture(oceanCanvas);
@@ -2965,59 +3044,52 @@ class TennisGameEngine {
 
     const oceanMat = new THREE.MeshStandardMaterial({
       map: oceanTex,
-      color: 0x006688,
+      color: 0x005577,
       roughness: 0.08,
       metalness: 0.65,
       transparent: true,
-      opacity: 0.94,
+      opacity: 0.95,
       depthWrite: true,
       side: THREE.FrontSide,
     });
-    this.oceanMesh = new THREE.Mesh(new THREE.PlaneGeometry(180, 80, 64, 40), oceanMat);
+    this.oceanMesh = new THREE.Mesh(new THREE.PlaneGeometry(190, 85, 64, 40), oceanMat);
     this.oceanMesh.rotation.x = -Math.PI / 2;
-    this.oceanMesh.position.set(0, -0.28, -62);
+    this.oceanMesh.position.set(0, -0.25, -64.5);
     this.environmentGroup.add(this.oceanMesh);
 
-    // SHORELINE FOAM RIBBON at boundary Z=-22
+    // SHORELINE FOAM RIBBON at water boundary Z=-22
     const foamCv = document.createElement('canvas');
     foamCv.width = 512; foamCv.height = 64;
     const fctx = foamCv.getContext('2d');
     const fGrad = fctx.createLinearGradient(0, 0, 0, 64);
     fGrad.addColorStop(0.0, 'rgba(255,255,255,0)');
-    fGrad.addColorStop(0.3, 'rgba(255,255,255,0.82)');
-    fGrad.addColorStop(0.6, 'rgba(210,240,255,0.55)');
+    fGrad.addColorStop(0.3, 'rgba(255,255,255,0.88)');
+    fGrad.addColorStop(0.6, 'rgba(210,245,255,0.60)');
     fGrad.addColorStop(1.0, 'rgba(255,255,255,0)');
     fctx.fillStyle = fGrad;
     fctx.fillRect(0, 0, 512, 64);
-    for (let b = 0; b < 65; b++) {
-      fctx.globalAlpha = 0.3 + Math.random() * 0.5;
+    for (let b = 0; b < 70; b++) {
+      fctx.globalAlpha = 0.35 + Math.random() * 0.55;
       fctx.beginPath();
-      fctx.arc(Math.random() * 512, 12 + Math.random() * 30, 3 + Math.random() * 9, 0, Math.PI * 2);
+      fctx.arc(Math.random() * 512, 12 + Math.random() * 32, 3 + Math.random() * 9, 0, Math.PI * 2);
       fctx.fillStyle = 'white';
       fctx.fill();
     }
     fctx.globalAlpha = 1;
     const foamTex = new THREE.CanvasTexture(foamCv);
     foamTex.wrapS = THREE.RepeatWrapping;
-    foamTex.repeat.set(10, 1);
+    foamTex.repeat.set(12, 1);
     this.shorelineFoam = new THREE.Mesh(
-      new THREE.PlaneGeometry(110, 5),
-      new THREE.MeshBasicMaterial({ map: foamTex, transparent: true, opacity: 0.80, depthWrite: false, side: THREE.DoubleSide })
+      new THREE.PlaneGeometry(130, 4.5),
+      new THREE.MeshBasicMaterial({ map: foamTex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide })
     );
     this.shorelineFoam.rotation.x = -Math.PI / 2;
     this.shorelineFoam.position.set(0, 0.02, -22);
     this.environmentGroup.add(this.shorelineFoam);
 
-    // HORIZON FILL (prevents sky/water gap)
-    this.environmentGroup.add(Object.assign(
-      new THREE.Mesh(new THREE.PlaneGeometry(350, 80),
-        new THREE.MeshBasicMaterial({ color: 0x003d55, transparent: true, opacity: 0.88 })),
-      { rotation: new THREE.Euler(-Math.PI / 2, 0, 0), position: new THREE.Vector3(0, -0.6, -145) }
-    ));
-
-    // VOLCANIC ISLANDS on horizon
+    // VOLCANIC ISLANDS ON HORIZON
     const islandMat = new THREE.MeshStandardMaterial({ color: 0x121a10, roughness: 0.96 });
-    [{x:-52,z:-108,r:28,h:20},{x:2,z:-120,r:34,h:24},{x:60,z:-104,r:24,h:16}].forEach(p => {
+    [{x:-54,z:-110,r:30,h:22},{x:4,z:-122,r:36,h:26},{x:62,z:-106,r:26,h:18}].forEach(p => {
       const cone = new THREE.Mesh(new THREE.ConeGeometry(p.r, p.h, 10), islandMat);
       cone.position.set(p.x, 4, p.z); cone.scale.set(1.45, 0.48, 1.0);
       this.environmentGroup.add(cone);
@@ -3031,8 +3103,8 @@ class TennisGameEngine {
       map: palmLeafTex, transparent: true, alphaTest: 0.20,
       side: THREE.DoubleSide, roughness: 0.45, metalness: 0.02
     });
-    const cocoMat   = new THREE.MeshStandardMaterial({ color: 0x3a2010, roughness: 0.90 }); // ripe brown
-    const cocoGreen = new THREE.MeshStandardMaterial({ color: 0x3d6e22, roughness: 0.85 }); // unripe green
+    const cocoMat   = new THREE.MeshStandardMaterial({ color: 0x3a2010, roughness: 0.90 });
+    const cocoGreen = new THREE.MeshStandardMaterial({ color: 0x3d6e22, roughness: 0.85 });
     const baseRingM = new THREE.MeshStandardMaterial({ color: 0x6b4520, roughness: 0.92 });
     const huskM     = new THREE.MeshStandardMaterial({ color: 0x4a2a14, roughness: 0.95 });
 
@@ -3074,7 +3146,6 @@ class TennisGameEngine {
       crown.position.copy(cp);
       crown.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.20,0.54,8),huskM),{position:new THREE.Vector3(0,-0.24,0)}));
 
-      // Coconut cluster (5-7 per tree, mix ripe/unripe)
       const cocoN = 5 + idx%3;
       for (let c=0;c<cocoN;c++){
         const a=(c/cocoN)*Math.PI*2, r=0.30+(c%2)*0.08;
@@ -3084,14 +3155,12 @@ class TennisGameEngine {
         crown.add(coco);
       }
 
-      // 12 fronds
       for(let f=0;f<12;f++){
         const isUp=f%2===0, fa=(f/12)*Math.PI*2+idx*0.44;
         const fm=new THREE.Mesh(isUp?upFrond:lowFrond,leafMat);
         fm.castShadow=true;
         fm.position.set(Math.cos(fa)*0.22, isUp?0.14:-0.06, Math.sin(fa)*0.22);
         fm.rotation.y=-fa+Math.PI/2; fm.rotation.x=isUp?0.36:0.75;
-        fm.rotation.z=(Math.random()-0.5)*0.14;
         crown.add(fm);
       }
       g.add(crown);
@@ -3116,16 +3185,29 @@ class TennisGameEngine {
       this.environmentGroup.add(pole,cup,flame,light);
     });
 
-    // UMBRELLAS + BENCHES
-    const umbM=new THREE.MeshStandardMaterial({color:0xf59e0b,roughness:0.50});
-    const teakM=new THREE.MeshStandardMaterial({color:0x543310,roughness:0.65});
-    [-1,1].forEach(s=>{
-      this.environmentGroup.add(
-        Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,2.8,8),bambooM),{position:new THREE.Vector3(s*8.2,1.4,0)}),
-        Object.assign(new THREE.Mesh(new THREE.ConeGeometry(1.6,0.55,16),umbM),{position:new THREE.Vector3(s*8.2,2.7,0)}),
-        Object.assign(new THREE.Mesh(new THREE.BoxGeometry(1.8,0.45,0.7),teakM),{position:new THREE.Vector3(s*8.2,0.25,-2.2)})
-      );
+    // RESORT SUN LOUNGERS & RETRO SURFBOARDS
+    const teakM = new THREE.MeshStandardMaterial({ color: 0x543310, roughness: 0.65 });
+    const towelM = new THREE.MeshStandardMaterial({ color: 0x00f0ff, roughness: 0.45 });
+    [-1, 1].forEach(side => {
+      // Teak sun lounger
+      const lounger = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.28, 2.1), teakM);
+      lounger.position.set(side * 8.5, 0.14, 2.5);
+      lounger.rotation.y = side * -0.2;
+      const towel = new THREE.Mesh(new THREE.BoxGeometry(0.70, 0.05, 1.4), towelM);
+      towel.position.set(side * 8.5, 0.30, 2.6);
+      towel.rotation.y = side * -0.2;
+      this.environmentGroup.add(lounger, towel);
     });
+
+    // Retro Surfboards Propped on Bamboo Stand
+    const surfMat1 = new THREE.MeshStandardMaterial({ color: 0xff007f, roughness: 0.25, metalness: 0.1 });
+    const surfMat2 = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.25, metalness: 0.1 });
+    const boardGeo = new THREE.BoxGeometry(0.48, 2.2, 0.08);
+    const b1 = new THREE.Mesh(boardGeo, surfMat1);
+    b1.position.set(-8.8, 1.05, -3.5); b1.rotation.set(0.2, 0.3, 0.1);
+    const b2 = new THREE.Mesh(boardGeo, surfMat2);
+    b2.position.set(-8.3, 1.05, -3.2); b2.rotation.set(0.18, 0.1, 0.08);
+    this.environmentGroup.add(b1, b2);
   }
 
   // 3. Templo Zen Imperial (Kyoto Japanese Ancestral Temple Twilight Setting)
@@ -3561,33 +3643,48 @@ class TennisGameEngine {
     rSweatband.position.y = -0.56;
     rArmGroup.add(rSweatband);
 
-    // Articulated Hand Firmly Gripping Racket Handle
+    // Articulated Hand Firmly Gripping Racket Handle (5 Anatomical Curved Fingers)
     const rHandGroup = new THREE.Group();
     rHandGroup.position.y = -0.61;
 
+    // Muscular Palm
     const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.054, 0.026), skinMat);
     rHandGroup.add(rPalm);
 
-    // 4 Curled Wrapped Fingers
+    // 4 Articulated Fingers (Wrapping tightly around racket handle circumference)
     for (let f = 0; f < 4; f++) {
-      const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.046, 8), skinMat);
-      finger.rotation.z = Math.PI / 2;
-      finger.position.set(0, -0.018 + f * 0.012, 0.020);
-      rHandGroup.add(finger);
-    }
-    // Opposing Angled Thumb Locking Grip
-    const rThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.010, 0.010, 0.038, 8), skinMat);
-    rThumb.position.set(-0.022, 0.008, 0.014);
-    rThumb.rotation.set(-0.4, 0, 0.35);
-    rHandGroup.add(rThumb);
+      const fy = -0.018 + f * 0.012;
+      // Proximal phalange (knuckle to mid-finger)
+      const pPhal = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.028, 8), skinMat);
+      pPhal.position.set(0.022, fy, 0.015);
+      pPhal.rotation.z = Math.PI / 2;
+      pPhal.rotation.y = 0.45;
 
-    rArmGroup.add(rHandGroup);
+      // Distal phalange (curling inward over grip tape)
+      const dPhal = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.024, 8), skinMat);
+      dPhal.position.set(0.020, fy, 0.038);
+      dPhal.rotation.x = -Math.PI / 2.2;
+
+      rHandGroup.add(pPhal, dPhal);
+    }
+
+    // Opposing Angled Thumb Wrapped Firmly Across Front Grip Tape
+    const rThumbProx = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.026, 8), skinMat);
+    rThumbProx.position.set(-0.022, 0.006, 0.016);
+    rThumbProx.rotation.set(-0.4, 0.35, 0.45);
+    const rThumbDist = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.022, 8), skinMat);
+    rThumbDist.position.set(-0.014, 0.012, 0.034);
+    rThumbDist.rotation.set(-0.6, 0.2, 0.2);
+    rHandGroup.add(rThumbProx, rThumbDist);
 
     // 5. Authentic Carbon-Fiber Aerodynamic Strung Tennis Racket
+    // MOUNTED DIRECTLY INSIDE rHandGroup SO IT NEVER FLOATS
     const racketGroup = new THREE.Group();
-    racketGroup.position.set(0, -0.61, 0.16);
+    // Position handle precisely in center of palm and fingers
+    racketGroup.position.set(0.005, -0.06, 0.025);
+    racketGroup.rotation.set(-0.15, 0.05, 0.08);
 
-    // Perforated Overgrip Handle with Babolat/Wilson Finishing Collar Tape
+    // Perforated Overgrip Handle with Finishing Collar Tape
     const gripTex = TextureFactory.createPerforatedGripTexture();
     const handleMat = new THREE.MeshStandardMaterial({
       map: gripTex,
@@ -3665,7 +3762,8 @@ class TennisGameEngine {
     dampener.position.set(0, 0.33, 0);
     racketGroup.add(dampener);
 
-    rArmGroup.add(racketGroup);
+    rHandGroup.add(racketGroup);
+    rArmGroup.add(rHandGroup);
     root.add(rArmGroup);
 
     // Athlete Dynamic Contact Shadow
@@ -4246,7 +4344,7 @@ class TennisGameEngine {
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
 
-          if ((distToRacket <= 1.85 || distToBody <= 2.4) && this.ball.pos.z < 0.2 && this.ball.lastHitter !== 'ai') {
+          if ((distToRacket <= 2.5 || distToBody <= 3.2) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
             this.executeHitWithHitbox('ai', data.shot.power || 0.85, 0, true);
@@ -4307,6 +4405,7 @@ class TennisGameEngine {
         if ((distToP2Racket <= 1.45 || distToP2Body <= 1.95) && this.ball.pos.z < -0.25 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.10) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
+          this.ai.swingProgress = 0.32 * Math.PI;
           this.executeHitWithHitbox('ai', 0.85, 0, true);
         } else {
           this.startSwingAnimation(this.ai, 'forehand');
@@ -4417,6 +4516,832 @@ class TennisGameEngine {
   }
 
   setCameraMode(mode) {
+    this.cameraMode = mode;
+    document.querySelectorAll('.cam-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.cam === mode);
+    });
+  }
+
+  // --- Official Tennis Serve System (Behind Baseline to Diagonal Service Box) ---
+  prepareServe(server) {
+    this.pointActive = false;
+    this.server = server;
+    this.ball.vel.set(0, 0, 0);
+    this.ball.spin.set(0, 0, 0);
+    this.ball.bounceCount = 0;
+    this.ball.hitGroundInCourt = false;
+    this.ball.lastHitter = null;
+    this.rally = 0;
+    this.updateHUD();
+
+    const promptEl = document.getElementById('serve-prompt');
+    const serveLabel = (this.serveFaultCount === 0) ? '1ER SERVICIO' : '2DO SERVICIO';
+
+    if (server === 'player') {
+      // Server behind baseline at Z = 12.2m
+      const serveX = this.servingSide * 1.8;
+      this.player.pos.set(serveX, 0, 12.2);
+      this.ball.pos.set(serveX + 0.35, 1.1, 11.8);
+      this.ai.pos.set(-this.servingSide * 2.5, 0, -12.2);
+
+      if (promptEl) {
+        promptEl.classList.remove('hidden');
+        promptEl.innerHTML = `<span>${serveLabel}: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong></span>`;
+      }
+      document.getElementById('serve-player').innerText = '🎾';
+      document.getElementById('serve-ai').innerText = '';
+    } else {
+      // Rival / AI / Guest Server behind baseline at Z = -12.2m
+      const serveX = -this.servingSide * 1.8;
+      this.ai.pos.set(serveX, 0, -12.2);
+      this.ball.pos.set(serveX - 0.35, 1.1, -11.8);
+      this.player.pos.set(this.servingSide * 2.5, 0, 12.2);
+      document.getElementById('serve-player').innerText = '';
+      document.getElementById('serve-ai').innerText = '🎾';
+
+      if (this.gameMode === 'local') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = `<span>J2 (${serveLabel}): Presiona <strong>[ENTER]</strong></span>`;
+        }
+      } else if (this.gameMode === 'online_guest') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = `<span>Tu Saque (${serveLabel}): Presiona <strong>[ESPACIO / CLIC]</strong></span>`;
+        }
+      } else if (this.gameMode === 'online_host') {
+        if (promptEl) {
+          promptEl.classList.remove('hidden');
+          promptEl.innerHTML = `<span>Esperando Saque del Rival (${serveLabel})...</span>`;
+        }
+      } else {
+        // Solo vs AI
+        if (promptEl) promptEl.classList.add('hidden');
+        setTimeout(() => {
+          if (!this.pointActive && this.server === 'ai') {
+            this.executeAIServe();
+          }
+        }, 1400);
+      }
+    }
+  }
+
+  // Execute Overhead Tennis Serve with Realistic Biomechanics & Guaranteed Clearance
+  executeServe() {
+    this.pointActive = true;
+    const promptEl = document.getElementById('serve-prompt');
+    if (promptEl) promptEl.classList.add('hidden');
+    this.ball.lastHitter = 'player';
+    this.ball.bounceCount = 0;
+    this.ball.hitGroundInCourt = false;
+
+    // Directional Aim within the diagonal legal service box:
+    // Box boundaries: Z in [-6.40m, 0], X on opposite diagonal side
+    // When this.servingSide === 1: Opponent box is X in [-4.115, 0]. Default center is -2.10m.
+    // When this.servingSide === -1: Opponent box is X in [0, 4.115]. Default center is +2.10m.
+    let targetX = -this.servingSide * 2.10;
+    if (this.keys['a'] || this.keys['arrowleft']) {
+      targetX = -this.servingSide * 3.15; // Aim wide towards sideline
+    } else if (this.keys['d'] || this.keys['arrowright']) {
+      targetX = -this.servingSide * 1.05; // Aim down the 'T' center line
+    }
+
+    // Landing depth safely centered in service box (Z = -3.8m)
+    const targetZ = -3.8;
+    const flightTime = 0.68; // Professional crisp serve speed
+
+    // Overhead contact point (apex of serve toss)
+    this.ball.pos.y = 2.45;
+    this.ball.pos.x = this.player.pos.x + 0.22;
+    this.ball.pos.z = 11.4;
+
+    const vx = (targetX - this.ball.pos.x) / flightTime;
+    const vz = (targetZ - this.ball.pos.z) / flightTime;
+
+    // Guaranteed Net Clearance (Net is 0.914m; we enforce y_net >= 1.30m)
+    const timeToNet = (0 - this.ball.pos.z) / vz;
+    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
+
+    this.ball.vel.set(vx, vy, vz);
+    this.ball.spin.set(16.0, 0, 0); // Heavy forward topspin kick pulling ball down
+
+    this.audio.playHit(1.0, true, true);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
+    this.startSwingAnimation(this.player, 'serve');
+    this.particles.burst(this.ball.pos, 28, 0x00f0ff, 4.5);
+
+    const sLabel = (this.serveFaultCount === 0) ? '1ER SAQUE' : '2DO SAQUE';
+    this.showAnnouncement(`¡${sLabel}!`, 'Saque limpio y potente');
+    this.showTimingFeedback('SWEET SPOT • SERVICIO', 'perfect');
+  }
+
+  executeAIServe() {
+    this.pointActive = true;
+    const promptEl = document.getElementById('serve-prompt');
+    if (promptEl) promptEl.classList.add('hidden');
+    this.ball.lastHitter = 'ai';
+    this.ball.bounceCount = 0;
+    this.ball.hitGroundInCourt = false;
+
+    // Diagonal service box on player side (Z in [0, 6.40m])
+    const sideChoice = Math.random();
+    let targetX = this.servingSide * 2.10;
+    if (sideChoice < 0.35) targetX = this.servingSide * 3.15; // wide
+    else if (sideChoice > 0.70) targetX = this.servingSide * 1.05; // down the T
+
+    const targetZ = 3.8;
+    const flightTime = 0.68;
+
+    this.ball.pos.y = 2.45;
+    this.ball.pos.x = this.ai.pos.x - 0.22;
+    this.ball.pos.z = -11.4;
+
+    const vx = (targetX - this.ball.pos.x) / flightTime;
+    const vz = (targetZ - this.ball.pos.z) / flightTime;
+
+    const timeToNet = (0 - this.ball.pos.z) / vz;
+    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
+
+    this.ball.vel.set(vx, vy, vz);
+    this.ball.spin.set(-16.0, 0, 0);
+
+    this.audio.playHit(1.0, true, true);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
+    this.startSwingAnimation(this.ai, 'serve');
+    this.particles.burst(this.ball.pos, 28, 0xff2a55, 4.5);
+  }
+
+  // --- Hitbox & Shot Execution ---
+  triggerPlayerShot() {
+    this.isChargingPower = false;
+    const power = Math.max(0.45, this.power);
+    this.power = 0.55;
+    document.getElementById('power-bar').style.width = '0%';
+
+    // Tennis Rule 24: Receiver CANNOT volley the serve before it bounces in the service box!
+    if (this.rally === 0 && this.server !== 'player' && !this.ball.hitGroundInCourt) {
+      this.startSwingAnimation(this.player, 'forehand');
+      this.showTimingFeedback('¡DEBE BOTAR EN EL CUADRO! (REGLA DE SAQUE)', 'late');
+      this.audio.playAirSwing();
+      return;
+    }
+
+    this.player.limbs.racket.getWorldPosition(this._rHead);
+    this.player.racketHitbox.pos.copy(this._rHead);
+
+    const distToBody = this.player.pos.distanceTo(this.ball.pos);
+    const distToHead = this._rHead.distanceTo(this.ball.pos);
+    const timeOffset = (this.ball.pos.z - this.player.pos.z);
+
+    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
+    const canHit = (distToHead <= 1.45 || distToBody <= 1.95) &&
+                   this.ball.pos.z > 0.25 &&
+                   this.ball.lastHitter !== 'player' &&
+                   this.ball.pos.y >= 0.10;
+
+    if (canHit) {
+      const isSweetSpot = (distToHead <= 0.85 || isSmash) && Math.abs(timeOffset) < 0.35;
+      const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
+      this.startSwingAnimation(this.player, swingType);
+      // Snap swing directly into impact zone so racket string bed visibly connects with ball!
+      this.player.swingProgress = 0.32 * Math.PI;
+
+      let timingLabel = 'PERFECT • SWEET SPOT';
+      let timingClass = 'perfect';
+      if (!isSweetSpot) {
+        timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
+        timingClass = 'early';
+      }
+
+      this.showTimingFeedback(timingLabel, timingClass);
+      this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
+    } else {
+      this.startSwingAnimation(this.player, 'forehand');
+      if (distToBody < 3.2 && this.ball.lastHitter !== 'player') {
+        this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
+        this.audio.playAirSwing();
+      }
+    }
+  }
+
+  startSwingAnimation(char, type = 'forehand') {
+    char.isSwinging = true;
+    char.swingType = type;
+    char.swingProgress = 0;
+  }
+
+  executeHitWithHitbox(hitter, power, timingOffset, isSweetSpot) {
+    this.ball.lastHitter = hitter;
+    this.ball.bounceCount = 0;
+    this.ball.hitGroundInCourt = false;
+    this.rally++;
+
+    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
+    const isLob = (this.shotType === 'GLOBO');
+    const isSlice = (this.shotType === 'SLICE');
+
+    // Directional aim within tennis singles boundaries (+/-4.115m)
+    let targetX = (Math.random() - 0.5) * 4.5;
+    if (hitter === 'player') {
+      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.1;
+      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.1;
+      else if (timingOffset < -0.3) targetX *= -1.2;
+    }
+    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.5, this.HALF_W - 0.5);
+
+    let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.8) : (8.2 + Math.random() * 2.8);
+    let flightTime = 1.02;
+    let extraArc = 1.2;
+
+    if (isSmash) {
+      flightTime = 0.68;
+      extraArc = -0.5;
+      this.showAnnouncement('¡SMASH DIRECTO!', 'Remate ganador por encima de la red');
+      this.particles.burst(this.ball.pos, 35, 0xff0055, 6.0);
+    } else if (isLob) {
+      flightTime = 1.65;
+      extraArc = 6.4;
+      this.showAnnouncement('¡GLOBO AL FONDO!', 'Buscando la línea de fondo');
+      this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
+    } else if (isSlice) {
+      flightTime = 1.15;
+      extraArc = 0.4;
+      this.showAnnouncement('¡GOLPE CORTADO (SLICE)!', 'Bajo bote con efecto invertido');
+      this.particles.burst(this.ball.pos, 22, 0xa855f7, 3.5);
+    } else {
+      if (isSweetSpot) {
+        flightTime = 0.90;
+        this.particles.burst(this.ball.pos, 28, 0x00ffaa, 4.8);
+      } else {
+        this.particles.burst(this.ball.pos, 15, 0xffea00, 3.0);
+      }
+    }
+
+    const vx = (targetX - this.ball.pos.x) / flightTime;
+    const vz = (targetZ - this.ball.pos.z) / flightTime;
+    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + extraArc;
+
+    this.ball.vel.set(vx, vy, vz);
+
+    // Ball 3D Angular Velocity (Tennis Topspin / Backspin)
+    const spinRate = isSmash ? 20.0 : (isLob ? -12.0 : (isSlice ? -18.0 : 14.0));
+    this.ball.spin.set(spinRate, (Math.random() - 0.5) * 6.0, 0);
+
+    this.audio.playHit(power, isSmash, isSweetSpot);
+    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
+    this.camShake = isSmash ? 0.35 : (isSweetSpot ? 0.16 : 0.08);
+
+    // Racket Impact Recoil Visual (kick on ball contact)
+    const hitterChar = hitter === 'player' ? this.player : this.ai;
+    if (hitterChar) {
+      hitterChar.racketImpactRecoil = isSmash ? 0.38 : (isSweetSpot ? 0.22 : 0.14);
+    }
+
+    this.shotType = 'DRIVE';
+    document.getElementById('current-shot').innerText = 'DRIVE';
+    this.updateHUD();
+  }
+
+  showTimingFeedback(text, className) {
+    const el = document.getElementById('timing-feedback');
+    const txt = document.getElementById('timing-text');
+    txt.innerText = text;
+    el.className = `timing-badge ${className}`;
+    clearTimeout(this.timingTimeout);
+    this.timingTimeout = setTimeout(() => el.classList.add('hidden'), 1500);
+  }
+
+  // --- Official Tennis Point Evaluation & Scoring System ---
+  awardPoint(winner, reason = '') {
+    if (!this.pointActive) return;
+    this.pointActive = false;
+    this.serveFaultCount = 0; // Reset serve faults on point end
+
+    this.audio.playWhistle();
+    if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
+
+    const isMulti = (this.gameMode === 'local' || this.gameMode === 'online_host' || this.gameMode === 'online_guest');
+    const p1Label = isMulti ? 'JUGADOR 1 (AZUL)' : 'TI';
+    const p2Label = isMulti ? 'JUGADOR 2 (ROJO)' : 'EL RIVAL';
+
+    if (winner === 'player') {
+      this.scorePlayer++;
+      this.audio.playCrowd();
+      this.showAnnouncement(`¡PUNTO PARA ${p1Label}!`, reason);
+    } else {
+      this.scoreAI++;
+      this.showAnnouncement(`¡PUNTO PARA ${p2Label}!`, reason);
+    }
+
+    // Tennis Game Calculation (0, 15, 30, 40, Deuce, Advantage)
+    let gameWon = false;
+    let gameWinner = null;
+
+    if (this.scorePlayer >= 4 && this.scorePlayer - this.scoreAI >= 2) {
+      gameWon = true;
+      gameWinner = 'player';
+      this.gamesPlayer++;
+      this.scorePlayer = 0; this.scoreAI = 0;
+      this.showAnnouncement(`¡JUEGO PARA ${p1Label}!`, 'Gana el juego');
+    } else if (this.scoreAI >= 4 && this.scoreAI - this.scorePlayer >= 2) {
+      gameWon = true;
+      gameWinner = 'ai';
+      this.gamesAI++;
+      this.scorePlayer = 0; this.scoreAI = 0;
+      this.showAnnouncement(`¡JUEGO PARA ${p2Label}!`, 'Gana el juego');
+    } else if (this.scorePlayer >= 3 && this.scoreAI >= 3) {
+      if (this.scorePlayer === this.scoreAI) {
+        this.showAnnouncement('¡IGUALES (DEUCE)!', '40 - 40');
+      } else if (this.scorePlayer === this.scoreAI + 1) {
+        this.showAnnouncement(`¡VENTAJA ${p1Label}!`, 'Punto de juego');
+      } else if (this.scoreAI === this.scorePlayer + 1) {
+        this.showAnnouncement(`¡VENTAJA ${p2Label}!`, 'Punto de juego');
+      }
+    }
+
+    // Set check (First to 6 with 2 games lead)
+    if (gameWon) {
+      if (this.gamesPlayer >= 6 && this.gamesPlayer - this.gamesAI >= 2) {
+        this.setsPlayer++;
+        this.gamesPlayer = 0; this.gamesAI = 0;
+        this.showAnnouncement(`¡SET PARA ${p1Label}!`, 'Consigue la primera manga');
+      } else if (this.gamesAI >= 6 && this.gamesAI - this.gamesPlayer >= 2) {
+        this.setsAI++;
+        this.gamesPlayer = 0; this.gamesAI = 0;
+        this.showAnnouncement(`¡SET PARA ${p2Label}!`, 'Consigue la primera manga');
+      }
+      // Alternate server after every game
+      this.server = (this.server === 'player') ? 'ai' : 'player';
+      this.servingSide = 1;
+    } else {
+      // Alternate serving side (Deuce / Ad) after every point within game
+      this.servingSide = -this.servingSide;
+    }
+
+    this.ball.vel.set(0, 0, 0);
+    this.updateHUD();
+
+    setTimeout(() => {
+      this.prepareServe(this.server);
+    }, 2200);
+  }
+
+  // Handle Service Fault (1st Serve fault -> 2nd serve, 2nd Serve fault -> Double Fault)
+  handleServiceFault(faultReason) {
+    this.pointActive = false;
+    this.audio.playOut();
+    if (this.gameMode === 'online_host') this._pendingSound = 'out';
+
+    if (this.serveFaultCount === 0) {
+      this.serveFaultCount = 1;
+      this.showAnnouncement('¡FALTA EN EL SAQUE!', `${faultReason} • Segundo servicio`);
+      setTimeout(() => {
+        this.prepareServe(this.server);
+      }, 1800);
+    } else {
+      this.serveFaultCount = 0;
+      const winner = (this.server === 'player') ? 'ai' : 'player';
+      this.awardPoint(winner, '¡DOBLE FALTA!');
+    }
+  }
+
+  formatScore(p1, p2) {
+    if (p1 >= 3 && p2 >= 3) {
+      if (p1 === p2) return '40';
+      if (p1 === p2 + 1) return 'AD';
+      return '40';
+    }
+    const map = ['0', '15', '30', '40'];
+    return map[Math.min(p1, 3)];
+  }
+
+  updateHUD() {
+    document.getElementById('pts-player').innerText = this.formatScore(this.scorePlayer, this.scoreAI);
+    document.getElementById('pts-ai').innerText = this.formatScore(this.scoreAI, this.scorePlayer);
+    document.getElementById('games-player').innerText = this.gamesPlayer;
+    document.getElementById('games-ai').innerText = this.gamesAI;
+    document.getElementById('sets-player').innerText = this.setsPlayer;
+    document.getElementById('sets-ai').innerText = this.setsAI;
+    document.getElementById('rally-count').innerText = this.rally;
+  }
+
+  showAnnouncement(title, sub) {
+    const el = document.getElementById('center-announcement');
+    if (el) {
+      const t = document.getElementById('announcement-title');
+      const s = document.getElementById('announcement-sub');
+      if (t) t.innerText = title;
+      if (s) s.innerText = sub;
+      el.classList.remove('hidden');
+      clearTimeout(this.annTimeout);
+      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2000);
+    }
+    if (this.gameMode === 'online_host') {
+      this._pendingAnn = { title, sub };
+    }
+  }
+
+  // --- Official Tennis Physics Loop (No Walls, Strictly Singles Court Out Rules) ---
+  updatePhysics(dt) {
+    if (!this.pointActive) return;
+
+    this.ball.prevPos.copy(this.ball.pos);
+
+    // Gravity & Air Drag
+    const GRAVITY = -9.8;
+    this.ball.vel.y += GRAVITY * dt;
+    this.ball.vel.x *= (1 - 0.02 * dt);
+    this.ball.vel.z *= (1 - 0.02 * dt);
+
+    this.ball.pos.addScaledVector(this.ball.vel, dt);
+
+    // Ball 3D Spin
+    this.ball.mesh.rotation.x += this.ball.spin.x * dt;
+    this.ball.mesh.rotation.y += this.ball.spin.y * dt;
+    this.ball.mesh.rotation.z += this.ball.spin.z * dt;
+
+    const speedKmH = Math.round(this.ball.vel.length() * 3.6);
+    document.getElementById('ball-speed').innerHTML = `${speedKmH} <small>km/h</small>`;
+
+    // Fast Shot Motion Trail
+    if (this.ball.vel.lengthSq() > 280) {
+      const trailColor = (this.ball.lastHitter === 'player') ? 0x00f0ff : 0xff2a55;
+      this.particles.spawnBallTrail(this.ball.pos, trailColor);
+    }
+
+    // 1. Continuous Collision Detection (CCD) Net Check
+    const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
+    if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
+      if (this.rally === 0) {
+        // Check if ball grazed the top cord tape (within 0.08m of net height)
+        if (this.ball.pos.y >= this.NET_H - 0.08) {
+          this.ball.isServeLetCandidate = true;
+          this.ball.vel.z *= 0.62; // Slows down and continues over net
+          this.ball.vel.y = Math.max(this.ball.vel.y, 1.1);
+          this.audio.playBounce(0.35);
+          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+          return;
+        } else {
+          this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+          this.ball.vel.z = -this.ball.vel.z * 0.22;
+          this.ball.vel.y *= 0.4;
+          this.audio.playBounce(0.4);
+          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+          this.handleServiceFault('Pelota en la red');
+          return;
+        }
+      } else {
+        this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
+        this.ball.vel.z = -this.ball.vel.z * 0.22;
+        this.ball.vel.y *= 0.4;
+        this.audio.playBounce(0.4);
+        if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, 'Pelota atrapada en la red');
+        return;
+      }
+    }
+
+    // 2. Court Ground Bounce (Y <= ballRadius)
+    if (this.ball.pos.y <= this.ballRadius) {
+      this.ball.pos.y = this.ballRadius;
+      this.ball.vel.y = -this.ball.vel.y * 0.74; // Hard court restitution
+      this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
+      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
+
+      // Map-themed impact particle burst
+      if (this.currentMap === 'beach') {
+        this.particles.burst(this.ball.pos, 14, 0xd9a766, 2.6);
+      } else if (this.currentMap === 'zen') {
+        this.particles.burst(this.ball.pos, 12, 0xffb6c1, 2.3);
+      } else {
+        this.particles.burst(this.ball.pos, 9, 0x88ccff, 2.0);
+      }
+
+      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
+
+      // Rule A: SERVICE BOUNCE CHECK
+      if (this.rally === 0 && !this.ball.hitGroundInCourt) {
+        // Must land inside the diagonal service box
+        // Player serve: lands on AI side (Z: -6.40m to 0), X on opposite side
+        let validServiceBox = false;
+        // Official Tennis Rule: A ball touching any part of the boundary line is IN
+        const lineTol = 0.22;
+        if (this.server === 'player') {
+          const inZ = (this.ball.pos.z >= -this.SERVICE_Z - lineTol && this.ball.pos.z <= lineTol);
+          const inX = (this.servingSide === 1) ?
+                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol) :
+                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol);
+          validServiceBox = inZ && inX;
+        } else {
+          const inZ = (this.ball.pos.z >= -lineTol && this.ball.pos.z <= this.SERVICE_Z + lineTol);
+          const inX = (this.servingSide === 1) ?
+                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol) :
+                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol);
+          validServiceBox = inZ && inX;
+        }
+
+        // Official Tennis Let Rule: Ball clipped net cord on serve
+        if (this.ball.isServeLetCandidate) {
+          this.ball.isServeLetCandidate = false;
+          if (validServiceBox) {
+            this.showAnnouncement('¡SAQUE DE RED (LET)!', 'Pelota tocó la red y entró en el cuadro • Se repite el saque');
+            this.audio.playWhistle();
+            if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
+            this.ball.vel.set(0, 0, 0);
+            setTimeout(() => {
+              this.prepareServe(this.server);
+            }, 1800);
+            return;
+          } else {
+            this.handleServiceFault('Fuera del cuadro tras rozar la red');
+            return;
+          }
+        }
+
+        if (!validServiceBox) {
+          this.handleServiceFault('Fuera del cuadro de saque');
+          return;
+        }
+
+        // Valid serve first bounce inside diagonal service box
+        this.ball.hitGroundInCourt = true;
+        this.ball.bounceCount = 1;
+        return;
+      }
+
+      // Rule B: Double Bounce Rule
+      // If ball already bounced inside the court once, any subsequent ground bounce is a double bounce point for the hitter
+      if (this.ball.hitGroundInCourt) {
+        const winner = this.ball.lastHitter || (currentSide === 'player' ? 'ai' : 'player');
+        this.awardPoint(winner, 'Doble bote en pista');
+        return;
+      }
+
+      // Rule C: First bounce in rally (this.rally > 0 && !this.ball.hitGroundInCourt)
+      // Own court bounce fault:
+      if (this.ball.lastHitter && this.ball.lastHitter === currentSide) {
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, 'Bote en campo propio (Falta)');
+        return;
+      }
+
+      // Rally in-play singles boundaries (touching line is IN)
+      const lineTol = 0.22;
+      const inSinglesX = Math.abs(this.ball.pos.x) <= this.HALF_W + lineTol;
+      const inSinglesZ = Math.abs(this.ball.pos.z) <= this.HALF_L + lineTol;
+
+      if (!inSinglesX || !inSinglesZ) {
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, '¡Pelota Fuera (OUT)!');
+        return;
+      }
+
+      this.ball.hitGroundInCourt = true;
+      this.ball.bounceCount = 1;
+    }
+
+    // Synchronize Ball & Shadow
+    this.ball.mesh.position.copy(this.ball.pos);
+    this.ball.shadow.position.set(this.ball.pos.x, 0.015, this.ball.pos.z);
+    const sScale = Math.max(0.4, 1.0 - (this.ball.pos.y / 6.0));
+    this.ball.shadow.scale.set(sScale, sScale, sScale);
+
+    // Landing Ring Projection
+    if (this.ball.vel.y < 0) {
+      const tToF = (this.ball.pos.y - this.ballRadius) / Math.max(Math.abs(this.ball.vel.y), 0.1);
+      const px = this.ball.pos.x + this.ball.vel.x * tToF;
+      const pz = this.ball.pos.z + this.ball.vel.z * tToF;
+      this.ball.targetMarker.position.set(px, 0.02, pz);
+      this.ball.targetMarker.visible = true;
+    } else {
+      this.ball.targetMarker.visible = false;
+    }
+  }
+
+  // --- AI Opponent Tactical Positioning & Intercept ---
+  updateAI(dt) {
+    if (!this.isPlaying) return;
+
+    if (this.pointActive) {
+      if (this.ball.vel.z < 0) {
+        // Ball approaching AI side: intercept landing position
+        const targetZ = -10.5;
+        const timeToZ = Math.max(0.05, (this.ball.pos.z - targetZ) / Math.max(Math.abs(this.ball.vel.z), 1));
+        const futureX = THREE.MathUtils.clamp(
+          this.ball.pos.x + this.ball.vel.x * timeToZ,
+          -this.HALF_W + 0.4,
+          this.HALF_W - 0.4
+        );
+        this.ai.targetPos.set(futureX, 0, targetZ);
+      } else {
+        // AI recovers to center baseline
+        this.ai.targetPos.set(0, 0, -11.5);
+      }
+
+      const delta = this._v1.subVectors(this.ai.targetPos, this.ai.pos);
+      const dist = delta.length();
+      if (dist > 0.1) {
+        delta.normalize();
+        this.ai.pos.addScaledVector(delta, Math.min(this.ai.speed * dt, dist));
+        this.ai.runCycle += dt * 14;
+      } else {
+        this.ai.runCycle *= 0.8;
+      }
+
+      // AI Return Strike
+      if (this.ai.limbs && this.ai.limbs.racket) {
+        this.ai.limbs.racket.getWorldPosition(this._rHead);
+        const distToAIRacket = this._rHead.distanceTo(this.ball.pos);
+        const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
+
+        // Tennis Rule 24: Receiver must allow the serve to bounce in the service box
+        const canAIReturn = (this.rally > 0 || this.server === 'ai' || this.ball.hitGroundInCourt);
+
+        if (canAIReturn && (distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+          const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
+          this.startSwingAnimation(this.ai, swingType);
+          const aiPower = 0.72 + Math.random() * 0.28;
+          this.executeHitWithHitbox('ai', aiPower, 0, true);
+        }
+      }
+    }
+
+    this.ai.model.position.copy(this.ai.pos);
+    this.animateCharacter(this.ai, dt, true);
+  }
+
+  // --- Player Movement & Animation ---
+  updatePlayer(dt) {
+    if (!this.isPlaying) return;
+
+    const dir = this._v1.set(0, 0, 0);
+    if (this.keys['w'] || this.keys['arrowup']) dir.z -= 1;
+    if (this.keys['s'] || this.keys['arrowdown']) dir.z += 1;
+    if (this.keys['a'] || this.keys['arrowleft']) dir.x -= 1;
+    if (this.keys['d'] || this.keys['arrowright']) dir.x += 1;
+
+    const isSprinting = this.keys['shift'];
+    const curSpeed = this.player.speed * (isSprinting ? 1.4 : 1.0);
+
+    if (dir.lengthSq() > 0) {
+      dir.normalize();
+      this.player.pos.addScaledVector(dir, curSpeed * dt);
+      this.player.runCycle += dt * 14;
+
+      this.player.pos.x = THREE.MathUtils.clamp(this.player.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
+      this.player.pos.z = THREE.MathUtils.clamp(this.player.pos.z, 0.9, this.HALF_L + 3.5);
+    } else {
+      this.player.runCycle *= 0.8;
+    }
+
+    if (this.isChargingPower) {
+      this.power = Math.min(this.power + dt * 1.6, 1.0);
+      document.getElementById('power-bar').style.width = `${this.power * 100}%`;
+    }
+
+    this.player.model.position.copy(this.player.pos);
+    this.animateCharacter(this.player, dt, false);
+  }
+
+  // --- Pro Character Animations (Kinetic Chain Multi-Joint Biomechanics) ---
+  animateCharacter(char, dt, isAI) {
+    const limbs = char.limbs;
+    if (!limbs) return;
+
+    const time = this.clock ? this.clock.getElapsedTime() : 0;
+    const isMoving = Math.abs(Math.sin(char.runCycle)) > 0.05;
+
+    // 1. Lower Body & Biomechanical Running Stride vs Pro Ready Bounce
+    const runPhase = char.runCycle || 0;
+    if (isMoving) {
+      const stride   = Math.sin(runPhase) * 0.82;
+      const hipSway  = Math.sin(runPhase * 2) * 0.045;
+      const calfSnap = Math.max(0, Math.sin(runPhase - 0.55) * 1.15);
+      limbs.lLeg.rotation.x = stride;
+      limbs.lLeg.rotation.z = -hipSway;
+      limbs.rLeg.rotation.x = -stride;
+      limbs.rLeg.rotation.z = hipSway;
+      if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -stride * 0.88 + calfSnap * 0.35);
+      if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, stride * 0.88 - calfSnap * 0.35);
+
+      if (!char.isSwinging) {
+        limbs.lArm.rotation.x = -stride * 0.70;
+        limbs.lArm.rotation.z = -0.08;
+        limbs.rArm.rotation.x = stride * 0.55;
+        limbs.rArm.rotation.z = 0.08;
+        if (limbs.rFore) limbs.rFore.rotation.set(0.35, 0, 0);
+        if (limbs.lFore) limbs.lFore.rotation.set(0.35, 0, 0);
+      }
+      limbs.torso.rotation.x = 0.12; // Forward athletic lean
+      limbs.torso.rotation.y = Math.sin(runPhase) * 0.08;
+      limbs.torso.rotation.z = Math.sin(runPhase * 2) * 0.025;
+      if (limbs.head) limbs.head.rotation.x = Math.sin(runPhase * 2) * 0.022;
+    } else {
+      // AUTHENTIC PRO 2-HANDED READY POSITION (Chest height, string bed facing opponent)
+      const bounce = Math.sin(time * 6.5) * 0.028;
+      const sway   = Math.sin(time * 2.2) * 0.015;
+      limbs.lLeg.rotation.set(0.16, 0, -0.10);
+      limbs.rLeg.rotation.set(0.16, 0,  0.10);
+      if (limbs.lCalf) limbs.lCalf.rotation.x = 0.22 + bounce;
+      if (limbs.rCalf) limbs.rCalf.rotation.x = 0.22 + bounce;
+
+      limbs.torso.rotation.set(0.08, 0, sway); // forward anticipation tilt
+      if (limbs.head) limbs.head.rotation.x = bounce * 0.45;
+
+      if (!char.isSwinging) {
+        // Right dominant arm bent forward holding racket handle at waist/chest
+        limbs.rArm.rotation.set(-0.62 + bounce * 0.5, 0.32, -0.22);
+        if (limbs.rFore) limbs.rFore.rotation.set(1.15, 0, 0);
+
+        // Left non-dominant arm cradling racket throat
+        limbs.lArm.rotation.set(-0.52 + bounce * 0.5, -0.42, 0.28);
+        if (limbs.lFore) limbs.lFore.rotation.set(0.98, 0, 0);
+      }
+    }
+
+    // 2. KINETIC CHAIN STROKE MECHANICS (With Visible Ball Impact Sweep)
+    if (char.isSwinging) {
+      char.swingProgress += dt * 10.5;
+      const t = Math.min(char.swingProgress / Math.PI, 1.0);
+
+      if (char.swingType === 'serve') {
+        // Authentic Overhead Tennis Serve: Trophy Stance -> Explosive Extension -> Pronation Finish
+        if (t <= 0.36) {
+          const p = t / 0.36;
+          limbs.lArm.rotation.set(-2.6 * p, 0, 0.25 * p);
+          limbs.rArm.rotation.set(1.4 * p, -0.6 * p, -1.2 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * p, 0, 0);
+          limbs.torso.rotation.set(-0.25 * p, 0.35 * p, 0);
+        } else if (t <= 0.72) {
+          const p = (t - 0.36) / 0.36;
+          limbs.lArm.rotation.set(-2.6 * (1 - p), 0, 0);
+          // High overhead contact extension directly into ball path
+          limbs.rArm.rotation.set(1.4 - 3.8 * p, -0.6 + 0.9 * p, -1.2 + 1.4 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * (1 - p), 0, 0);
+          limbs.torso.rotation.set(-0.25 + 0.55 * p, 0.35 - 0.45 * p, 0);
+        } else {
+          const p = (t - 0.72) / 0.28;
+          limbs.rArm.rotation.set(-2.4 + 3.2 * p, 0.3 - 0.5 * p, 0.2 - 1.6 * p);
+          limbs.torso.rotation.set(0.30 * (1 - p), -0.10 * (1 - p), 0);
+        }
+      } else if (char.swingType === 'backhand') {
+        // Two-Handed Backhand: Unit Turn Coil -> Forward Accelerating Drive -> High Wrap
+        if (t <= 0.34) {
+          const p = t / 0.34;
+          limbs.torso.rotation.y = 0.85 * p;
+          limbs.rArm.rotation.set(0.35 * p, -0.75 * p, 1.35 * p);
+          limbs.lArm.rotation.set(0.28 * p, -0.55 * p, 1.05 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.85 * p, 0, 0);
+        } else if (t <= 0.68) {
+          const p = (t - 0.34) / 0.34;
+          // Contact sweep across strike zone
+          limbs.torso.rotation.y = 0.85 - 1.55 * p;
+          limbs.rArm.rotation.set(0.35 - 1.05 * p, -0.75 + 1.55 * p, 1.35 - 2.75 * p);
+          limbs.lArm.rotation.set(0.28 - 0.95 * p, -0.55 + 1.35 * p, 1.05 - 2.35 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.85 + 0.45 * p, 0, 0);
+        } else {
+          const p = (t - 0.68) / 0.32;
+          limbs.torso.rotation.set(0.12 * p, -0.70 * (1 - p), 0);
+          limbs.rArm.rotation.set(-0.70 * (1 - p) - 0.62 * p, 0.80 * (1 - p) + 0.32 * p, -1.40 * (1 - p) - 0.22 * p);
+          limbs.lArm.rotation.set(-0.67 * (1 - p) - 0.52 * p, 0.80 * (1 - p) - 0.42 * p, -1.30 * (1 - p) + 0.28 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.30 * (1 - p) + 1.15 * p, 0, 0);
+          if (limbs.lFore) limbs.lFore.rotation.set(0.60 * (1 - p) + 0.98 * p, 0, 0);
+        }
+      } else {
+        // Modern Topspin Forehand: Unit Turn -> Slot Lag -> Sweet Spot Impact -> Windshield Wiper Finish
+        if (t <= 0.34) {
+          const p = t / 0.34;
+          limbs.torso.rotation.y = -0.92 * p;
+          limbs.rArm.rotation.set(0.32 * p, 0.78 * p, -1.52 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.55 * p, 0, 0);
+          limbs.lArm.rotation.set(-0.65 * p, 0.22 * p, 0.78 * p);
+        } else if (t <= 0.68) {
+          const p = (t - 0.34) / 0.34;
+          // Forward drive with racket head whipping forward through ball contact point
+          limbs.torso.rotation.y = -0.92 + 1.48 * p;
+          limbs.rArm.rotation.set(0.32 - 0.85 * p, 0.78 - 1.65 * p, -1.52 + 3.15 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(0.55 + 0.85 * p, 0, 0);
+          limbs.lArm.rotation.set(-0.65 + 0.85 * p, 0.22 - 0.35 * p, 0.78 - 1.25 * p);
+        } else {
+          const p = (t - 0.68) / 0.32;
+          limbs.torso.rotation.set(0.12 * p, 0.56 * (1 - p), 0);
+          limbs.rArm.rotation.set(-0.53 * (1 - p) - 0.62 * p, -0.87 * (1 - p) + 0.32 * p, 1.63 * (1 - p) - 0.22 * p);
+          if (limbs.rFore) limbs.rFore.rotation.set(1.40 * (1 - p) + 1.15 * p, 0, 0);
+          limbs.lArm.rotation.set(0.20 * (1 - p) - 0.52 * p, -0.13 * (1 - p) - 0.42 * p, -0.47 * (1 - p) + 0.28 * p);
+          if (limbs.lFore) limbs.lFore.rotation.set(0.60 * (1 - p) + 0.98 * p, 0, 0);
+        }
+      }
+
+      if (char.swingProgress >= Math.PI) {
+        char.isSwinging = false;
+        char.swingProgress = 0;
+      }
+    }
+  }
+
+  setCameraMode(mode) {
+
     this.cameraMode = mode;
     document.querySelectorAll('.cam-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.cam === mode);
