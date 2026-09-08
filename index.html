@@ -92,6 +92,13 @@
         <canvas id="minimap" width="80" height="160"></canvas>
       </div>
 
+      <div class="hud-control-row">
+        <button class="map-quick-btn" id="btn-switch-map" title="Cambiar Escenario [M]">
+          <span id="current-map-icon">🏟️</span>
+          <span id="current-map-name">ARENA PRO</span>
+        </button>
+      </div>
+
       <div class="camera-controls">
         <button class="cam-btn active" data-cam="third">📹 JUGADOR [1]</button>
         <button class="cam-btn" data-cam="broadcast">📺 BROADCAST [2]</button>
@@ -113,29 +120,43 @@
       </div>
 
       <h1 class="game-title">TENNIS MASTER 3D</h1>
-      <p class="game-subtitle">Simulador profesional de tenis con pista abierta DecoTurf, raquetas encordadas PBR, 1er y 2do servicio, y multijugador online P2P.</p>
+      <p class="game-subtitle">Simulador profesional con gráficos avanzados, personajes atléticos de alta definición, raquetas de fibra de carbono y escenarios seleccionables.</p>
 
-      <!-- Minimalist Highlights -->
-      <div class="luxury-features">
-        <div class="luxury-feat">
-          <span class="feat-bullet">01</span>
-          <div class="feat-info">
-            <h5>Pista Abierta Grand Slam</h5>
-            <p>Superficie rápida oficial, red reglamentaria con tensor central y líneas de individuales y dobles.</p>
-          </div>
+      <!-- Map / Arena Environment Selector -->
+      <div class="map-selector-section">
+        <div class="section-badge">
+          <span class="pulse-dot-small"></span>
+          <span>ELIGE TU ESCENARIO</span>
         </div>
-        <div class="luxury-feat">
-          <span class="feat-bullet">02</span>
-          <div class="feat-info">
-            <h5>Raquetas Encordadas PBR</h5>
-            <p>Cordaje tensado de alta precisión con empuñadura de dos manos y sweet-spot dinámico.</p>
+        <div class="map-grid">
+          <div class="map-card active" data-map="stadium" id="map-card-stadium">
+            <div class="map-card-tag">NOCHE PRO</div>
+            <div class="map-card-emoji">🏟️</div>
+            <div class="map-card-details">
+              <h4>Grand Slam Arena</h4>
+              <p>DecoTurf Azul • Focos de Estadio • Gradas</p>
+            </div>
+            <div class="map-glow"></div>
           </div>
-        </div>
-        <div class="luxury-feat">
-          <span class="feat-bullet">03</span>
-          <div class="feat-info">
-            <h5>Reglas Oficiales y Acústica</h5>
-            <p>1er y 2do servicio, cantos de OUT, faltas en red, deuce/ventaja y sonido nítido de cuerdas.</p>
+
+          <div class="map-card" data-map="beach" id="map-card-beach">
+            <div class="map-card-tag">ATARDECER</div>
+            <div class="map-card-emoji">🏖️</div>
+            <div class="map-card-details">
+              <h4>Playa Paraíso</h4>
+              <p>Arena Fina • Palmeras • Olas y Antorchas</p>
+            </div>
+            <div class="map-glow"></div>
+          </div>
+
+          <div class="map-card" data-map="zen" id="map-card-zen">
+            <div class="map-card-tag">MÍSTICO</div>
+            <div class="map-card-emoji">⛩️</div>
+            <div class="map-card-details">
+              <h4>Templo Zen Kyoto</h4>
+              <p>Piedra Imperial • Torii • Lluvia Sakura</p>
+            </div>
+            <div class="map-glow"></div>
           </div>
         </div>
       </div>

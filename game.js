@@ -152,6 +152,49 @@ class TennisAudioPro {
     noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
     noise.start(t);
   }
+
+  // Tropical Beach Ocean Surf Wave (Ambiance)
+  playBeachWave() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const dur = 3.5;
+    const bSize = Math.floor(this.ctx.sampleRate * dur);
+    const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.sin((i / bSize) * Math.PI);
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = b;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.setValueAtTime(320, t);
+    f.frequency.linearRampToValueAtTime(650, t + 1.2);
+    f.frequency.linearRampToValueAtTime(240, t + dur);
+    f.Q.value = 1.2;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.01, t);
+    g.gain.linearRampToValueAtTime(0.20, t + 1.2);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    noise.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    noise.start(t);
+  }
+
+  // Kyoto Zen Temple Wind Chime / Singing Bowl Bell
+  playZenBell() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const freqs = [880, 1320, 1760];
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      const vol = 0.12 / (idx + 1);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 2.8 + idx * 0.4);
+      osc.connect(g); g.connect(this.ctx.destination);
+      osc.start(t); osc.stop(t + 3.2);
+    });
+  }
 }
 
 // Alias for backward compatibility
@@ -434,6 +477,277 @@ const TextureFactory = {
       ctx.fillRect(0, y + 8, 256, 4);
     }
     return new THREE.CanvasTexture(canvas);
+  },
+
+  // 6. Tropical Beach Sand Court (Compacted Golden Sand + Rustic Weathered Planks + White Marine Rope Lines)
+  createBeachSandTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    // Warm Tropical Sand Base
+    ctx.fillStyle = '#d9a766';
+    ctx.fillRect(0, 0, 1024, 2048);
+
+    // Fine Sand Granule Noise
+    for (let i = 0; i < 110000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,245,210,0.18)' : 'rgba(140,85,30,0.14)';
+      ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
+    }
+
+    // Dune Wind Ripples
+    ctx.strokeStyle = 'rgba(215, 155, 85, 0.25)';
+    ctx.lineWidth = 12;
+    for (let y = 40; y < 2048; y += 48) {
+      ctx.beginPath();
+      for (let x = 0; x <= 1024; x += 32) {
+        const dy = Math.sin((x / 1024) * Math.PI * 4 + y * 0.1) * 6;
+        if (x === 0) ctx.moveTo(x, y + dy); else ctx.lineTo(x, y + dy);
+      }
+      ctx.stroke();
+    }
+
+    // Coordinate Mapping
+    const scaleX = 1024 / 16.0;
+    const scaleY = 2048 / 30.0;
+    const toCanvasX = (x) => 512 + x * scaleX;
+    const toCanvasY = (z) => 1024 + z * scaleY;
+
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    // Weathered Wooden Boundary Border Planks
+    ctx.fillStyle = '#6b4423';
+    ctx.fillRect(xL - 14, yT - 14, (xR - xL) + 28, 14);
+    ctx.fillRect(xL - 14, yB, (xR - xL) + 28, 14);
+    ctx.fillRect(xL - 14, yT, 14, yB - yT);
+    ctx.fillRect(xR, yT, 14, yB - yT);
+
+    // Center Tropical Resort Compass Star Watermark
+    ctx.strokeStyle = 'rgba(255, 235, 180, 0.35)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(512, 1024, 150, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255, 235, 180, 0.45)';
+    ctx.font = '900 42px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PLAYA PARAÍSO • RESORT', 512, 1038);
+
+    // Braided Marine White Rope Lines
+    ctx.strokeStyle = '#fffbf0';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
+    ctx.beginPath();
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(512, yS1); ctx.lineTo(512, yS2);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 8;
+    return tex;
+  },
+
+  // 7. Kyoto Zen Temple Court (Polished Slate Stone + Woven Tatami Borders + Gold Sakura Crest)
+  createZenStoneTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    // Outer Court: Dark River Cobblestones
+    ctx.fillStyle = '#161922';
+    ctx.fillRect(0, 0, 1024, 2048);
+
+    // Slate Flagstone Tiles
+    const tileSize = 64;
+    for (let y = 0; y < 2048; y += tileSize) {
+      for (let x = 0; x < 1024; x += tileSize) {
+        const shade = Math.floor(24 + (Math.sin(x * 0.05) + Math.cos(y * 0.05)) * 6);
+        ctx.fillStyle = `rgb(${shade}, ${shade + 3}, ${shade + 8})`;
+        ctx.fillRect(x + 2, y + 2, tileSize - 4, tileSize - 4);
+      }
+    }
+
+    const scaleX = 1024 / 16.0;
+    const scaleY = 2048 / 30.0;
+    const toCanvasX = (x) => 512 + x * scaleX;
+    const toCanvasY = (z) => 1024 + z * scaleY;
+
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    // Inner Court: Polished Black Imperial Slate
+    ctx.fillStyle = '#1e2430';
+    ctx.fillRect(xL, yT, xR - xL, yB - yT);
+
+    // Woven Green Tatami Rush Mat Borders along tramlines
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
+
+    ctx.fillStyle = '#2d4a22';
+    ctx.fillRect(xL, yT, sL - xL, yB - yT);
+    ctx.fillRect(sR, yT, xR - sR, yB - yT);
+
+    // Center Golden Sakura Flower Crest
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.45)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(512, 1024, 150, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 5 Sakura Petals
+    ctx.fillStyle = 'rgba(255, 182, 193, 0.45)';
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+      const px = 512 + Math.cos(angle) * 70;
+      const py = 1024 + Math.sin(angle) * 70;
+      ctx.beginPath();
+      ctx.arc(px, py, 45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '900 38px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('KYOTO ZEN TEMPLE • 京都', 512, 1038);
+
+    // Pure White Lacquered Stone Inlay Lines
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    ctx.beginPath();
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(512, yS1); ctx.lineTo(512, yS2);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 8;
+    return tex;
+  },
+
+  // 8. Glossy 3K Carbon Fiber Weave Texture (Aerodynamic Racket Hoop & Throat)
+  createCarbonFiberTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0f1318';
+    ctx.fillRect(0, 0, 256, 256);
+
+    const step = 8;
+    for (let y = 0; y < 256; y += step) {
+      for (let x = 0; x < 256; x += step) {
+        const isDiagonal = ((x / step) + (y / step)) % 2 === 0;
+        ctx.fillStyle = isDiagonal ? '#1f2530' : '#080a0d';
+        ctx.fillRect(x, y, step, step);
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(x, y, step, 1);
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 4);
+    return tex;
+  },
+
+  // 9. Perforated Cushioned Pro Tennis Overgrip Tape
+  createPerforatedGripTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 256, 512);
+
+    // Overlapping Spiral Edges
+    for (let y = -256; y < 768; y += 48) {
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(0, y, 256, 6);
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.fillRect(0, y + 6, 256, 4);
+
+      // Micro Perforation Holes
+      ctx.fillStyle = '#94a3b8';
+      for (let x = 16; x < 256; x += 24) {
+        ctx.beginPath();
+        ctx.arc(x, y + 24, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Top Finishing Rubber Collar Tape (Black with Gold Trim)
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 470, 256, 42);
+    ctx.fillStyle = '#e5c07b';
+    ctx.fillRect(0, 470, 256, 3);
+    ctx.fillRect(0, 509, 256, 3);
+
+    return new THREE.CanvasTexture(canvas);
+  },
+
+  // 10. Delicate Falling Sakura Cherry Blossom Petal Texture
+  createSakuraPetalTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 64, 64);
+
+    const grad = ctx.createRadialGradient(32, 32, 4, 32, 32, 28);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#ffb6c1');
+    grad.addColorStop(0.8, '#ff69b4');
+    grad.addColorStop(1, 'rgba(255, 105, 180, 0)');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(32, 6);
+    ctx.bezierCurveTo(48, 12, 54, 36, 32, 58);
+    ctx.bezierCurveTo(10, 36, 16, 12, 32, 6);
+    ctx.fill();
+
+    return new THREE.CanvasTexture(canvas);
   }
 };
 
@@ -442,8 +756,9 @@ class ParticleSystem {
   constructor(scene) {
     this.scene = scene;
     this.particles = [];
-    const geo = new THREE.SphereGeometry(0.045, 6, 6);
-    this.geo = geo;
+    this.sakuraParticles = [];
+    this.ballTrail = [];
+    this.geo = new THREE.SphereGeometry(0.045, 6, 6);
   }
 
   burst(pos, count = 18, colorHex = 0xffea00, speedScale = 3.5) {
@@ -461,7 +776,54 @@ class ParticleSystem {
     }
   }
 
+  spawnBallTrail(pos, colorHex = 0x00f0ff) {
+    const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85 });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), mat);
+    mesh.position.copy(pos);
+    this.scene.add(mesh);
+    this.ballTrail.push({ mesh, life: 0.22, maxLife: 0.22 });
+  }
+
+  initSakura(count = 45) {
+    this.clearSakura();
+    const petalTex = TextureFactory.createSakuraPetalTexture();
+    const mat = new THREE.MeshBasicMaterial({
+      map: petalTex,
+      transparent: true,
+      opacity: 0.88,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const geo = new THREE.PlaneGeometry(0.25, 0.35);
+
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(
+        (Math.random() - 0.5) * 36,
+        2.0 + Math.random() * 12,
+        (Math.random() - 0.5) * 44
+      );
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      this.scene.add(mesh);
+      this.sakuraParticles.push({
+        mesh,
+        rotSpeed: new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1),
+        fallSpeed: 0.8 + Math.random() * 0.9,
+        driftPhase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  clearSakura() {
+    this.sakuraParticles.forEach(p => {
+      this.scene.remove(p.mesh);
+      p.mesh.geometry.dispose();
+    });
+    this.sakuraParticles = [];
+  }
+
   update(dt) {
+    // 1. Standard Bursts
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.life -= dt * 2.6;
@@ -473,6 +835,37 @@ class ParticleSystem {
         this.scene.remove(p.mesh);
         p.mesh.geometry.dispose();
         this.particles.splice(i, 1);
+      }
+    }
+
+    // 2. Ball Motion Ribbon Trail
+    for (let i = this.ballTrail.length - 1; i >= 0; i--) {
+      const t = this.ballTrail[i];
+      t.life -= dt;
+      const progress = Math.max(0, t.life / t.maxLife);
+      t.mesh.scale.set(progress, progress, progress);
+      t.mesh.material.opacity = progress * 0.8;
+      if (t.life <= 0) {
+        this.scene.remove(t.mesh);
+        t.mesh.geometry.dispose();
+        this.ballTrail.splice(i, 1);
+      }
+    }
+
+    // 3. Falling Sakura Petals in Zen Temple
+    for (let i = 0; i < this.sakuraParticles.length; i++) {
+      const sp = this.sakuraParticles[i];
+      sp.mesh.position.y -= sp.fallSpeed * dt;
+      sp.mesh.position.x += Math.sin(sp.driftPhase + sp.mesh.position.y * 0.8) * 0.9 * dt;
+      sp.mesh.position.z += Math.cos(sp.driftPhase + sp.mesh.position.y * 0.8) * 0.6 * dt;
+      sp.mesh.rotation.x += sp.rotSpeed.x * dt;
+      sp.mesh.rotation.y += sp.rotSpeed.y * dt;
+      sp.mesh.rotation.z += sp.rotSpeed.z * dt;
+
+      if (sp.mesh.position.y < 0.05) {
+        sp.mesh.position.y = 10 + Math.random() * 4;
+        sp.mesh.position.x = (Math.random() - 0.5) * 36;
+        sp.mesh.position.z = (Math.random() - 0.5) * 44;
       }
     }
   }
@@ -573,11 +966,14 @@ class TennisGameEngine {
     this._minimapTick = 0;
     this._pendingSound = null;
     this._pendingAnn = null;
+    this.currentMap = 'stadium';
+    this.oceanMesh = null;
+    this.tikiTorches = [];
 
     this.initThree();
     this.particles = new ParticleSystem(this.scene);
-    this.buildArena();
-    this.buildCourt();
+    this.buildCourt(this.currentMap);
+    this.buildEnvironment(this.currentMap);
 
     this.player.model = this.createProAthlete(0x00f0ff, 0xffffff, '#00f0ff', '7', false);
     this.ai.model = this.createProAthlete(0xff2a55, 0x111827, '#ff2a55', '1', true);
@@ -594,7 +990,7 @@ class TennisGameEngine {
     this.animate();
   }
 
-  // --- Three.js & Lighting Setup ---
+  // --- Three.js & Dynamic Lighting Setup ---
   initThree() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x081326);
@@ -612,66 +1008,29 @@ class TennisGameEngine {
     this.renderer.toneMappingExposure = 1.25;
     this.container.appendChild(this.renderer.domElement);
 
-    // Warm Grand Slam Stadium Lighting
-    const ambient = new THREE.AmbientLight(0xdbeafe, 0.65);
-    this.scene.add(ambient);
+    // Dynamic Atmosphere Lights
+    this.ambient = new THREE.AmbientLight(0xdbeafe, 0.65);
+    this.scene.add(this.ambient);
 
-    const sun = new THREE.DirectionalLight(0xfff8ee, 1.35);
-    sun.position.set(16, 28, 12);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    sun.shadow.camera.near = 5;
-    sun.shadow.camera.far = 70;
-    sun.shadow.camera.left = -20;
-    sun.shadow.camera.right = 20;
-    sun.shadow.camera.top = 24;
-    sun.shadow.camera.bottom = -24;
-    sun.shadow.bias = -0.0006;
-    this.scene.add(sun);
+    this.sun = new THREE.DirectionalLight(0xfff8ee, 1.35);
+    this.sun.position.set(16, 28, 12);
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.width = 2048;
+    this.sun.shadow.mapSize.height = 2048;
+    this.sun.shadow.camera.near = 5;
+    this.sun.shadow.camera.far = 70;
+    this.sun.shadow.camera.left = -22;
+    this.sun.shadow.camera.right = 22;
+    this.sun.shadow.camera.top = 26;
+    this.sun.shadow.camera.bottom = -26;
+    this.sun.shadow.bias = -0.0006;
+    this.scene.add(this.sun);
 
-    // 4 Corner Stadium Floodlight Towers
-    const lightTowers = [
-      { x: -13.0, z: -18.0 }, { x: 13.0, z: -18.0 },
-      { x: -13.0, z: 18.0 }, { x: 13.0, z: 18.0 }
-    ];
-
-    lightTowers.forEach(t => {
-      const spot = new THREE.SpotLight(0xffffff, 0.95, 55, Math.PI / 3.2, 0.45);
-      spot.position.set(t.x, 15, t.z);
-      spot.target.position.set(0, 0, (t.z > 0 ? 4 : -4));
-      this.scene.add(spot);
-      this.scene.add(spot.target);
-
-      // Steel Spaceframe Truss Pillar
-      const trussGeo = new THREE.BoxGeometry(0.35, 15, 0.35);
-      const trussMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.9, roughness: 0.2 });
-      const truss = new THREE.Mesh(trussGeo, trussMat);
-      truss.position.set(t.x, 7.5, t.z);
-      this.scene.add(truss);
-
-      // Emissive Bank of Floodlamps
-      const bank = new THREE.Mesh(
-        new THREE.BoxGeometry(2.0, 0.8, 0.9),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
-      );
-      bank.position.set(t.x, 15.2, t.z);
-      this.scene.add(bank);
-
-      // Volumetric Light Cone Illusion
-      const coneGeo = new THREE.ConeGeometry(4.2, 17, 16, 1, true);
-      const coneMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        transparent: true,
-        opacity: 0.04,
-        side: THREE.DoubleSide,
-        depthWrite: false
-      });
-      const cone = new THREE.Mesh(coneGeo, coneMat);
-      cone.position.set(t.x * 0.7, 7.5, t.z * 0.7);
-      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -15, -t.z).normalize());
-      this.scene.add(cone);
-    });
+    // Groups for Court and Environment
+    this.courtGroup = new THREE.Group();
+    this.environmentGroup = new THREE.Group();
+    this.scene.add(this.courtGroup);
+    this.scene.add(this.environmentGroup);
 
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -680,30 +1039,190 @@ class TennisGameEngine {
     });
   }
 
-  // --- Grand Slam Arena: Grandstands, Umpire Chair, LED Ribbons ---
-  buildArena() {
+  // --- Dynamic Map / Arena Environment Switcher ---
+  setMap(mapId, broadcast = true) {
+    if (!['stadium', 'beach', 'zen'].includes(mapId)) return;
+    this.currentMap = mapId;
+
+    this.buildCourt(mapId);
+    this.buildEnvironment(mapId);
+
+    if (mapId === 'zen') {
+      this.particles.initSakura(50);
+    } else {
+      this.particles.clearSakura();
+    }
+
+    const mapNames = {
+      stadium: { name: 'ARENA PRO', icon: '🏟️' },
+      beach: { name: 'PLAYA PARAÍSO', icon: '🏖️' },
+      zen: { name: 'TEMPLO ZEN', icon: '⛩️' }
+    };
+    const info = mapNames[mapId] || mapNames.stadium;
+    const nameEl = document.getElementById('current-map-name');
+    const iconEl = document.getElementById('current-map-icon');
+    if (nameEl) nameEl.innerText = info.name;
+    if (iconEl) iconEl.innerText = info.icon;
+
+    document.querySelectorAll('.map-card').forEach(card => {
+      card.classList.toggle('active', card.dataset.map === mapId);
+    });
+
+    if (mapId === 'beach') this.audio.playBeachWave();
+    else if (mapId === 'zen') this.audio.playZenBell();
+
+    this.showAnnouncement(`PISTA: ${info.name}`, 'Nuevo escenario cargado');
+
+    if (broadcast && this.gameMode === 'online_host' && this.conn && this.conn.open) {
+      this.conn.send({ type: 'map_change', map: mapId });
+    }
+  }
+
+  cycleMap() {
+    const maps = ['stadium', 'beach', 'zen'];
+    const nextIdx = (maps.indexOf(this.currentMap) + 1) % maps.length;
+    this.setMap(maps[nextIdx], true);
+  }
+
+  // --- Official Open Tennis Court (DecoTurf, Beach Sand, or Zen Stone) ---
+  buildCourt(mapId = 'stadium') {
+    while (this.courtGroup.children.length > 0) {
+      const obj = this.courtGroup.children[0];
+      this.courtGroup.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    }
+
+    let courtTex;
+    let outerColor;
+    let postMat;
+
+    if (mapId === 'beach') {
+      courtTex = TextureFactory.createBeachSandTexture();
+      outerColor = 0xc89858;
+      postMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6, metalness: 0.1 });
+    } else if (mapId === 'zen') {
+      courtTex = TextureFactory.createZenStoneTexture();
+      outerColor = 0x0f131a;
+      postMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35, metalness: 0.3 });
+    } else {
+      courtTex = TextureFactory.createTurfTexture();
+      outerColor = 0x050c18;
+      postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.2 });
+    }
+
+    // 1. In-Court Ground Plane
+    const courtGeo = new THREE.PlaneGeometry(16.0, 30.0);
+    const courtMat = new THREE.MeshStandardMaterial({
+      map: courtTex,
+      roughness: mapId === 'beach' ? 0.92 : (mapId === 'zen' ? 0.62 : 0.76),
+      metalness: mapId === 'zen' ? 0.12 : 0.05
+    });
+    const court = new THREE.Mesh(courtGeo, courtMat);
+    court.rotation.x = -Math.PI / 2;
+    court.receiveShadow = true;
+    this.courtGroup.add(court);
+
+    // 2. Surrounding Floor
+    const outerGeo = new THREE.PlaneGeometry(42, 56);
+    const outerMat = new THREE.MeshStandardMaterial({
+      color: outerColor,
+      roughness: 0.95
+    });
+    const outer = new THREE.Mesh(outerGeo, outerMat);
+    outer.rotation.x = -Math.PI / 2;
+    outer.position.y = -0.015;
+    outer.receiveShadow = true;
+    this.courtGroup.add(outer);
+
+    // 3. Official Tennis Net with Center Strap
+    const netWidth = 12.4;
+    const netGeo = new THREE.PlaneGeometry(netWidth, this.NET_H, 48, 12);
+    const netMat = new THREE.MeshStandardMaterial({
+      color: mapId === 'beach' ? 0x1a1a1a : (mapId === 'zen' ? 0x181818 : 0x0a0a0a),
+      roughness: 0.9,
+      wireframe: true
+    });
+    const net = new THREE.Mesh(netGeo, netMat);
+    net.position.set(0, this.NET_H / 2, 0);
+    this.courtGroup.add(net);
+
+    const tapeGeo = new THREE.BoxGeometry(netWidth, 0.065, 0.045);
+    const tapeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+    const tape = new THREE.Mesh(tapeGeo, tapeMat);
+    tape.position.set(0, this.NET_H, 0);
+    this.courtGroup.add(tape);
+
+    const strapGeo = new THREE.BoxGeometry(0.06, this.NET_H, 0.05);
+    const strap = new THREE.Mesh(strapGeo, tapeMat);
+    strap.position.set(0, this.NET_H / 2, 0);
+    this.courtGroup.add(strap);
+
+    const nPostGeo = new THREE.CylinderGeometry(0.065, 0.065, this.NET_POST_H, 16);
+    const np1 = new THREE.Mesh(nPostGeo, postMat);
+    np1.position.set(-netWidth / 2, this.NET_POST_H / 2, 0);
+    const np2 = new THREE.Mesh(nPostGeo, postMat);
+    np2.position.set(netWidth / 2, this.NET_POST_H / 2, 0);
+    this.courtGroup.add(np1, np2);
+  }
+
+  // --- Environment Factory: Stadium, Tropical Beach & Kyoto Zen Temple ---
+  buildEnvironment(mapId = 'stadium') {
+    while (this.environmentGroup.children.length > 0) {
+      const obj = this.environmentGroup.children[0];
+      this.environmentGroup.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    }
+    this.tikiTorches = [];
+    this.oceanMesh = null;
+
+    if (mapId === 'beach') {
+      this.buildBeachEnvironment();
+    } else if (mapId === 'zen') {
+      this.buildZenEnvironment();
+    } else {
+      this.buildStadiumEnvironment();
+    }
+  }
+
+  // 1. Grand Slam Arena Environment (Arthur Ashe / Roland Garros / Wimbledon Pro Night)
+  buildStadiumEnvironment() {
+    this.scene.background = new THREE.Color(0x081326);
+    this.scene.fog = new THREE.FogExp2(0x081326, 0.010);
+    this.ambient.color.setHex(0xdbeafe);
+    this.ambient.intensity = 0.65;
+    this.sun.color.setHex(0xfff8ee);
+    this.sun.intensity = 1.35;
+    this.sun.position.set(16, 28, 12);
+
     const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
     const seatBlue = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 });
     const seatRed = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.5 });
     const seatGold = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
 
-    // Lateral Grandstands with 8 Tiered Rows
+    // Lateral Grandstands with 8 Tiered Rows & 3D Cheering Spectators
     [-1, 1].forEach(side => {
       const xBase = side * 13.5;
       for (let row = 0; row < 8; row++) {
         const step = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.70, 36), standMat);
         step.position.set(xBase + side * (row * 1.45), row * 0.70 + 0.35, 0);
         step.receiveShadow = true;
-        this.scene.add(step);
+        this.environmentGroup.add(step);
 
         for (let s = -16; s <= 16; s += 0.9) {
           const sChoice = Math.abs(s + row) % 3;
           const sMat = (sChoice === 0) ? seatBlue : (sChoice === 1 ? seatRed : seatGold);
           const seat = new THREE.Mesh(new THREE.BoxGeometry(0.60, 0.48, 0.60), sMat);
           seat.position.set(xBase + side * (row * 1.45), row * 0.70 + 0.76, s);
-          this.scene.add(seat);
+          this.environmentGroup.add(seat);
 
-          // 3D Cheering Spectators
           if (Math.sin(s * 2.8 + row * 1.9) > -0.2) {
             const body = new THREE.Mesh(
               new THREE.CylinderGeometry(0.19, 0.23, 0.70, 8),
@@ -717,56 +1236,48 @@ class TennisGameEngine {
             );
             head.position.set(xBase + side * (row * 1.45), row * 0.70 + 1.68, s);
 
-            this.scene.add(body);
-            this.scene.add(head);
+            this.environmentGroup.add(body, head);
           }
         }
       }
     });
 
-    // Elevated Tennis Umpire Chair (Silla de juez de árbitro)
+    // Elevated Umpire High Chair
     const umpireGroup = new THREE.Group();
     umpireGroup.position.set(6.8, 0, 0);
-
     const uMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.3 });
     const seatMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 });
 
-    // Ladder Legs
-    const l1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
-    l1.position.set(-0.35, 1.25, 0.35); l1.rotation.z = -0.12;
-    const l2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
-    l2.position.set(-0.35, 1.25, -0.35); l2.rotation.z = -0.12;
-    const l3 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
-    l3.position.set(0.35, 1.25, 0.35); l3.rotation.z = 0.12;
-    const l4 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
-    l4.position.set(0.35, 1.25, -0.35); l4.rotation.z = 0.12;
-    umpireGroup.add(l1, l2, l3, l4);
+    [-0.35, 0.35].forEach(lx => {
+      [-0.35, 0.35].forEach(lz => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.5, 8), uMat);
+        leg.position.set(lx, 1.25, lz);
+        leg.rotation.z = lx > 0 ? 0.12 : -0.12;
+        umpireGroup.add(leg);
+      });
+    });
 
-    // Platform & High Chair
     const uPlat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.9), uMat);
     uPlat.position.y = 2.4;
     const uSeat = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.6, 0.6), seatMat);
     uSeat.position.set(0, 2.75, 0);
-    umpireGroup.add(uPlat, uSeat);
-
-    // Umpire Canopy Umbrella
     const uCanopy = new THREE.Mesh(new THREE.ConeGeometry(0.85, 0.35, 16),
       new THREE.MeshStandardMaterial({ color: 0x0369a1, roughness: 0.3 }));
     uCanopy.position.set(0, 3.4, 0);
-    umpireGroup.add(uCanopy);
-    this.scene.add(umpireGroup);
+    umpireGroup.add(uPlat, uSeat, uCanopy);
+    this.environmentGroup.add(umpireGroup);
 
-    // Player Rest Benches (Opposite side at X = -6.8m)
+    // Player Benches
     const benchGroup = new THREE.Group();
     benchGroup.position.set(-6.8, 0, 0);
-    const bench1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
-    bench1.position.set(0, 0.3, 2.0);
-    const bench2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
-    bench2.position.set(0, 0.3, -2.0);
-    benchGroup.add(bench1, bench2);
-    this.scene.add(benchGroup);
+    const b1 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
+    b1.position.set(0, 0.3, 2.0);
+    const b2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.6), seatMat);
+    b2.position.set(0, 0.3, -2.0);
+    benchGroup.add(b1, b2);
+    this.environmentGroup.add(benchGroup);
 
-    // LED Grand Slam Digital Ribbon Banners
+    // LED Ribbon Banners
     const ledCanvas = document.createElement('canvas');
     ledCanvas.width = 1024; ledCanvas.height = 128;
     const lctx = ledCanvas.getContext('2d');
@@ -778,94 +1289,307 @@ class TennisGameEngine {
     const ledTex = new THREE.CanvasTexture(ledCanvas);
     ledTex.wrapS = THREE.RepeatWrapping;
     ledTex.repeat.set(3, 1);
-
     const ledMat = new THREE.MeshBasicMaterial({ map: ledTex });
     const ledGeo = new THREE.PlaneGeometry(34, 1.0);
 
     const ledLeft = new THREE.Mesh(ledGeo, ledMat);
     ledLeft.position.set(-9.2, 0.50, 0);
     ledLeft.rotation.y = Math.PI / 2;
-    this.scene.add(ledLeft);
-
     const ledRight = new THREE.Mesh(ledGeo, ledMat);
     ledRight.position.set(9.2, 0.50, 0);
     ledRight.rotation.y = -Math.PI / 2;
-    this.scene.add(ledRight);
+    this.environmentGroup.add(ledLeft, ledRight);
 
-    // Overhead Spaceframe Roof Trusses
-    const trussMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.3 });
+    // 4 Corner Floodlight Towers with Volumetric Cones
+    const lightTowers = [
+      { x: -13.0, z: -18.0 }, { x: 13.0, z: -18.0 },
+      { x: -13.0, z: 18.0 }, { x: 13.0, z: 18.0 }
+    ];
+    lightTowers.forEach(t => {
+      const spot = new THREE.SpotLight(0xffffff, 0.95, 55, Math.PI / 3.2, 0.45);
+      spot.position.set(t.x, 15, t.z);
+      spot.target.position.set(0, 0, (t.z > 0 ? 4 : -4));
+      this.environmentGroup.add(spot, spot.target);
+
+      const truss = new THREE.Mesh(new THREE.BoxGeometry(0.35, 15, 0.35), uMat);
+      truss.position.set(t.x, 7.5, t.z);
+      const bank = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 0.9), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      bank.position.set(t.x, 15.2, t.z);
+
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(4.2, 17, 16, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false })
+      );
+      cone.position.set(t.x * 0.7, 7.5, t.z * 0.7);
+      cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -15, -t.z).normalize());
+
+      this.environmentGroup.add(truss, bank, cone);
+    });
+
+    // Spaceframe Roof Trusses
     for (let z = -15; z <= 15; z += 7.5) {
-      const beam = new THREE.Mesh(new THREE.BoxGeometry(32, 0.38, 0.38), trussMat);
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(32, 0.38, 0.38), uMat);
       beam.position.set(0, 16, z);
-      this.scene.add(beam);
+      this.environmentGroup.add(beam);
     }
   }
 
-  // --- Official Open Tennis Court (No Glass Walls) ---
-  buildCourt() {
-    // 1. DecoTurf Court Ground Plane
-    const courtTex = TextureFactory.createTurfTexture();
-    const courtGeo = new THREE.PlaneGeometry(16.0, 30.0);
-    const courtMat = new THREE.MeshStandardMaterial({
-      map: courtTex,
-      roughness: 0.76,
-      metalness: 0.05
+  // 2. Playa Paraíso (Tropical Beach Resort Sunset Setting)
+  buildBeachEnvironment() {
+    this.scene.background = new THREE.Color(0x381822);
+    this.scene.fog = new THREE.FogExp2(0x381822, 0.008);
+    this.ambient.color.setHex(0xffe0b0);
+    this.ambient.intensity = 0.75;
+    this.sun.color.setHex(0xff9944);
+    this.sun.intensity = 1.45;
+    this.sun.position.set(24, 18, -32);
+
+    // Expansive Turquoise Ocean Plane with Animated Waves
+    const oceanGeo = new THREE.PlaneGeometry(130, 90, 48, 48);
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x008b8b,
+      roughness: 0.18,
+      metalness: 0.65,
+      transparent: true,
+      opacity: 0.88
     });
-    const court = new THREE.Mesh(courtGeo, courtMat);
-    court.rotation.x = -Math.PI / 2;
-    court.receiveShadow = true;
-    this.scene.add(court);
+    this.oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+    this.oceanMesh.position.set(0, -0.42, -45);
+    this.oceanMesh.rotation.x = -Math.PI / 2;
+    this.environmentGroup.add(this.oceanMesh);
 
-    // Surrounding Stadium Floor
-    const outerGeo = new THREE.PlaneGeometry(38, 52);
-    const outerMat = new THREE.MeshStandardMaterial({ color: 0x050c18, roughness: 0.95 });
-    const outer = new THREE.Mesh(outerGeo, outerMat);
-    outer.rotation.x = -Math.PI / 2;
-    outer.position.y = -0.015;
-    outer.receiveShadow = true;
-    this.scene.add(outer);
-
-    // 2. Official Tennis Net with Center Strap (0.914m center, 1.07m posts)
-    const netWidth = 12.4; // Spanning full width past tramlines
-    const netGeo = new THREE.PlaneGeometry(netWidth, this.NET_H, 48, 12);
-    const netMat = new THREE.MeshStandardMaterial({
-      color: 0x0a0a0a,
-      roughness: 0.9,
-      wireframe: true
+    // Distant Volcanic Tropical Island Hills
+    const islandMat = new THREE.MeshStandardMaterial({ color: 0x1c2b20, roughness: 0.9 });
+    [-45, 0, 45].forEach(xOff => {
+      const hill = new THREE.Mesh(new THREE.ConeGeometry(24, 18, 12), islandMat);
+      hill.position.set(xOff, 5, -85);
+      hill.scale.set(1.5, 0.6, 1.0);
+      this.environmentGroup.add(hill);
     });
-    const net = new THREE.Mesh(netGeo, netMat);
-    net.position.set(0, this.NET_H / 2, 0);
-    this.scene.add(net);
 
-    // Top White Vinyl Band (5cm regulation tape)
-    const tapeGeo = new THREE.BoxGeometry(netWidth, 0.065, 0.045);
-    const tapeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-    const tape = new THREE.Mesh(tapeGeo, tapeMat);
-    tape.position.set(0, this.NET_H, 0);
-    this.scene.add(tape);
+    // Procedural Curved Palm Trees around Court Perimeter
+    const palmPositions = [
+      { x: -14, z: -14 }, { x: 14, z: -14 },
+      { x: -16, z: 0 },   { x: 16, z: 0 },
+      { x: -14, z: 14 },  { x: 14, z: 14 },
+      { x: -11, z: 22 },  { x: 11, z: 22 }
+    ];
 
-    // Center White Strap (Fita central)
-    const strapGeo = new THREE.BoxGeometry(0.06, this.NET_H, 0.05);
-    const strap = new THREE.Mesh(strapGeo, tapeMat);
-    strap.position.set(0, this.NET_H / 2, 0);
-    this.scene.add(strap);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x228b22, roughness: 0.45, side: THREE.DoubleSide });
+    const cocoMat = new THREE.MeshStandardMaterial({ color: 0x3d2314, roughness: 0.8 });
 
-    // Net Steel Posts (1.07m height at X = +/-5.8m)
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.2 });
-    const nPostGeo = new THREE.CylinderGeometry(0.065, 0.065, this.NET_POST_H, 16);
+    palmPositions.forEach((pos, idx) => {
+      const palmGroup = new THREE.Group();
+      palmGroup.position.set(pos.x, 0, pos.z);
 
-    const np1 = new THREE.Mesh(nPostGeo, postMat);
-    np1.position.set(-netWidth / 2, this.NET_POST_H / 2, 0);
-    const np2 = new THREE.Mesh(nPostGeo, postMat);
-    np2.position.set(netWidth / 2, this.NET_POST_H / 2, 0);
-    this.scene.add(np1, np2);
+      // Curved Trunk
+      const curve = new THREE.CubicBezierCurve3(
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 3, 0),
+        new THREE.Vector3((idx % 2 === 0 ? 1 : -1) * 1.5, 6, 0.8),
+        new THREE.Vector3((idx % 2 === 0 ? 2 : -2) * 1.8, 8.5, 1.2)
+      );
+      const trunkGeo = new THREE.TubeGeometry(curve, 16, 0.28, 8, false);
+      const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+      trunk.castShadow = true;
+      palmGroup.add(trunk);
+
+      // Palm Crown with Radiating Fronds
+      const crownPos = curve.getPoint(1);
+      const crown = new THREE.Group();
+      crown.position.copy(crownPos);
+
+      // Coconuts cluster
+      for (let c = 0; c < 4; c++) {
+        const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 8), cocoMat);
+        coconut.position.set(Math.cos(c * 1.5) * 0.3, -0.2, Math.sin(c * 1.5) * 0.3);
+        crown.add(coconut);
+      }
+
+      // 8 Fronds
+      for (let f = 0; f < 8; f++) {
+        const frondAngle = (f * Math.PI * 2) / 8;
+        const frond = new THREE.Mesh(new THREE.ConeGeometry(0.7, 3.8, 6), leafMat);
+        frond.position.set(Math.cos(frondAngle) * 1.8, -0.6, Math.sin(frondAngle) * 1.8);
+        frond.rotation.x = Math.sin(frondAngle) * 0.85 + 0.3;
+        frond.rotation.z = -Math.cos(frondAngle) * 0.85;
+        crown.add(frond);
+      }
+
+      palmGroup.add(crown);
+      this.environmentGroup.add(palmGroup);
+    });
+
+    // 4 Bamboo Tiki Torches with Warm Flickering Point Lights
+    const torchPositions = [
+      { x: -8.5, z: -14.5 }, { x: 8.5, z: -14.5 },
+      { x: -8.5, z: 14.5 },  { x: 8.5, z: 14.5 }
+    ];
+    const bambooMat = new THREE.MeshStandardMaterial({ color: 0x855328, roughness: 0.7 });
+    const fireMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+
+    torchPositions.forEach((tPos, tIdx) => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 2.2, 8), bambooMat);
+      pole.position.set(tPos.x, 1.1, tPos.z);
+
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.08, 0.25, 8), bambooMat);
+      cup.position.set(tPos.x, 2.15, tPos.z);
+
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 8), fireMat);
+      flame.position.set(tPos.x, 2.38, tPos.z);
+
+      const light = new THREE.PointLight(0xff6600, 1.8, 14);
+      light.position.set(tPos.x, 2.45, tPos.z);
+
+      this.tikiTorches.push({ light, flame, baseIntensity: 1.8, seed: tIdx * 2.5 });
+      this.environmentGroup.add(pole, cup, flame, light);
+    });
+
+    // Beach Striped Umbrellas and Wooden Teak Benches
+    const umbMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
+    const teakMat = new THREE.MeshStandardMaterial({ color: 0x543310, roughness: 0.65 });
+
+    [-1, 1].forEach(side => {
+      const umbPole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.8, 8), bambooMat);
+      umbPole.position.set(side * 8.2, 1.4, 0);
+      const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.55, 16), umbMat);
+      canopy.position.set(side * 8.2, 2.7, 0);
+
+      const bench = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.45, 0.7), teakMat);
+      bench.position.set(side * 8.2, 0.25, -2.2);
+
+      this.environmentGroup.add(umbPole, canopy, bench);
+    });
   }
 
-  // --- Pro Tennis Athlete 3D Model with Strung Tennis Racket ---
+  // 3. Templo Zen Imperial (Kyoto Japanese Ancestral Temple Twilight Setting)
+  buildZenEnvironment() {
+    this.scene.background = new THREE.Color(0x160f22);
+    this.scene.fog = new THREE.FogExp2(0x160f22, 0.010);
+    this.ambient.color.setHex(0x5c3d70);
+    this.ambient.intensity = 0.68;
+    this.sun.color.setHex(0xb197fc);
+    this.sun.intensity = 1.25;
+    this.sun.position.set(-18, 22, -24);
+
+    const toriiMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.35, metalness: 0.15 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.25, metalness: 0.85 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x1f1924, roughness: 0.75 });
+    const tileMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+
+    // 2 Majestic Crimson Torii Gates behind Baselines
+    [-18.5, 18.5].forEach(zPos => {
+      const torii = new THREE.Group();
+      torii.position.set(0, 0, zPos);
+
+      // Two Main Crimson Columns
+      [-3.6, 3.6].forEach(x => {
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 6.2, 16), toriiMat);
+        pillar.position.set(x, 3.1, 0);
+        pillar.castShadow = true;
+        const baseStone = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.42, 0.5, 16), woodMat);
+        baseStone.position.set(x, 0.25, 0);
+        torii.add(pillar, baseStone);
+      });
+
+      // Upper Curved Kasagi Beam with Gold Accent Ends
+      const topBeam = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.42, 0.52), toriiMat);
+      topBeam.position.set(0, 5.9, 0);
+      const topCap = new THREE.Mesh(new THREE.BoxGeometry(9.6, 0.16, 0.62), tileMat);
+      topCap.position.set(0, 6.16, 0);
+
+      const goldEndL = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.46, 0.56), goldMat);
+      goldEndL.position.set(-4.5, 5.9, 0);
+      const goldEndR = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.46, 0.56), goldMat);
+      goldEndR.position.set(4.5, 5.9, 0);
+
+      // Nuki Crossbeam
+      const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.28, 0.32), toriiMat);
+      crossBeam.position.set(0, 4.8, 0);
+
+      torii.add(topBeam, topCap, goldEndL, goldEndR, crossBeam);
+      this.environmentGroup.add(torii);
+    });
+
+    // 2 Traditional Multi-Tiered Japanese Pagodas
+    [-17, 17].forEach((xSide, pIdx) => {
+      const pagoda = new THREE.Group();
+      pagoda.position.set(xSide, 0, 0);
+
+      // 4 Tiered Pagoda Roofs
+      for (let tier = 0; tier < 4; tier++) {
+        const y = tier * 3.2;
+        const w = 6.4 - tier * 0.9;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w * 0.7, 2.2, w * 0.7), woodMat);
+        body.position.set(0, y + 1.1, 0);
+
+        // Flared Curved Roof
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(w * 0.9, 1.2, 4), tileMat);
+        roof.position.set(0, y + 2.6, 0);
+        roof.rotation.y = Math.PI / 4;
+
+        pagoda.add(body, roof);
+      }
+
+      // Ornamental Spire (Sorin)
+      const sorin = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.14, 3.5, 8), goldMat);
+      sorin.position.set(0, 14.5, 0);
+      pagoda.add(sorin);
+
+      this.environmentGroup.add(pagoda);
+    });
+
+    // 6 Traditional Stone Toro Lanterns with Warm Candlelight
+    const toroPositions = [
+      { x: -7.8, z: -10 }, { x: 7.8, z: -10 },
+      { x: -7.8, z: 0 },   { x: 7.8, z: 0 },
+      { x: -7.8, z: 10 },  { x: 7.8, z: 10 }
+    ];
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.85 });
+    const paperGlow = new THREE.MeshBasicMaterial({ color: 0xffe57f });
+
+    toroPositions.forEach(pos => {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.35, 0.4, 8), stoneMat);
+      base.position.set(pos.x, 0.2, pos.z);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 1.1, 8), stoneMat);
+      post.position.set(pos.x, 0.9, pos.z);
+      const platform = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.14, 0.65), stoneMat);
+      platform.position.set(pos.x, 1.5, pos.z);
+
+      const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.45, 0.42), paperGlow);
+      lamp.position.set(pos.x, 1.78, pos.z);
+
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(0.68, 0.38, 6), stoneMat);
+      roof.position.set(pos.x, 2.18, pos.z);
+
+      const pLight = new THREE.PointLight(0xffaa22, 1.4, 10);
+      pLight.position.set(pos.x, 1.8, pos.z);
+
+      this.environmentGroup.add(base, post, platform, lamp, roof, pLight);
+    });
+
+    // Bamboo Perimeter Fences
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x3f2d1c, roughness: 0.8 });
+    [-9.6, 9.6].forEach(fx => {
+      for (let fz = -14; fz <= 14; fz += 2.2) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.4, 8), fenceMat);
+        post.position.set(fx, 0.7, fz);
+        this.environmentGroup.add(post);
+      }
+      const rail1 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 30), fenceMat);
+      rail1.position.set(fx, 1.1, 0);
+      const rail2 = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 30), fenceMat);
+      rail2.position.set(fx, 0.5, 0);
+      this.environmentGroup.add(rail1, rail2);
+    });
+  }
+
+  // --- AAA Athletic Character Model (Sculpted Anatomy & Carbon Fiber Racket) ---
   createProAthlete(jerseyColor, shortsColor, accentHex, jerseyNumber, isAI = false) {
     const root = new THREE.Group();
 
-    // 1. Athletic Torso & Technical Tennis Polo
+    // 1. Athletic Muscular Torso & Technical Polo with Collar & Buttons
     const torsoGroup = new THREE.Group();
     torsoGroup.position.y = 0.98;
 
@@ -875,95 +1599,108 @@ class TennisGameEngine {
 
     const jerseyMat = new THREE.MeshStandardMaterial({
       map: jerseyTex,
-      roughness: 0.42,
-      metalness: 0.15
+      roughness: 0.38,
+      metalness: 0.12
     });
 
-    const chestGeo = new THREE.CylinderGeometry(0.24, 0.20, 0.36, 24);
+    // Sculpted Athletic Chest (V-Taper)
+    const chestGeo = new THREE.CylinderGeometry(0.25, 0.20, 0.38, 24);
     const chest = new THREE.Mesh(chestGeo, jerseyMat);
     chest.position.y = 0.12;
     chest.castShadow = true;
     torsoGroup.add(chest);
 
+    // Polo Collar & Front Button Placket
+    const collarMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xffdd00 : 0xffffff, roughness: 0.45 });
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.092, 0.018, 8, 24), collarMat);
+    collar.rotation.x = Math.PI / 2;
+    collar.position.y = 0.31;
+
+    const placket = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.16, 0.015), collarMat);
+    placket.position.set(0, 0.22, 0.24);
+
+    // 2 3D Buttons
+    const buttonMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2 });
+    const btn1 = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.005, 8), buttonMat);
+    btn1.position.set(0, 0.25, 0.25); btn1.rotation.x = Math.PI / 2;
+    const btn2 = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.005, 8), buttonMat);
+    btn2.position.set(0, 0.19, 0.25); btn2.rotation.x = Math.PI / 2;
+    torsoGroup.add(collar, placket, btn1, btn2);
+
+    // Athletic Shorts with Side Ventilation Piping
     const waistGeo = new THREE.CylinderGeometry(0.20, 0.175, 0.28, 24);
     const waistMat = new THREE.MeshStandardMaterial({
       color: shortsColor,
-      roughness: 0.7,
-      metalness: 0.1
+      roughness: 0.65,
+      metalness: 0.08
     });
     const waist = new THREE.Mesh(waistGeo, waistMat);
     waist.position.y = -0.16;
     waist.castShadow = true;
     torsoGroup.add(waist);
 
+    // Warm Athletic Subsurface Skin
     const skinMat = new THREE.MeshStandardMaterial({
-      color: 0xefc4a4,
-      roughness: 0.55,
-      metalness: 0.05
+      color: isAI ? 0xdfb496 : 0xf2cbac,
+      roughness: 0.52,
+      metalness: 0.04
     });
     const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.090, 0.14, 16), skinMat);
     neck.position.y = 0.36;
     torsoGroup.add(neck);
 
-    const collarMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xffdd00 : 0xffffff, roughness: 0.5 });
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.088, 0.016, 8, 24), collarMat);
-    collar.rotation.x = Math.PI / 2;
-    collar.position.y = 0.31;
-    torsoGroup.add(collar);
-
     root.add(torsoGroup);
 
-    // 2. Sculpted Athletic Head with Tennis Cap & Sports Visor
+    // 2. Sculpted Athletic Head, Hair, Cap & Polarized Sunglasses
     const headGroup = new THREE.Group();
     headGroup.position.y = 1.48;
 
-    const headGeo = new THREE.SphereGeometry(0.138, 24, 24);
-    const head = new THREE.Mesh(headGeo, skinMat);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.138, 24, 24), skinMat);
     head.castShadow = true;
-    headGroup.add(head);
 
     const nose = new THREE.Mesh(new THREE.ConeGeometry(0.024, 0.06, 8), skinMat);
     nose.position.set(0, -0.01, 0.14);
     nose.rotation.x = Math.PI / 2;
-    headGroup.add(nose);
 
-    // Tennis Cap / Pro Visor
+    // Pro Visor / Backward Cap with Sweatband
     const capMat = new THREE.MeshStandardMaterial({
       color: isAI ? 0x0f172a : 0xffffff,
-      roughness: 0.45,
-      metalness: 0.2
+      roughness: 0.40,
+      metalness: 0.15
     });
-    const cap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.144, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2),
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.144, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    cap.position.y = 0.025;
+
+    const sweatBandMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xff2a55 : 0x0284c7, roughness: 0.8 });
+    const sweatband = new THREE.Mesh(new THREE.TorusGeometry(0.140, 0.016, 8, 24), sweatBandMat);
+    sweatband.rotation.x = Math.PI / 2;
+    sweatband.position.y = 0.02;
+
+    const brim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3),
       capMat
     );
-    cap.position.y = 0.025;
-    headGroup.add(cap);
-
-    const brimGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.018, 20, 1, false, -Math.PI / 3, (2 * Math.PI) / 3);
-    const brim = new THREE.Mesh(brimGeo, capMat);
     brim.position.set(0, 0.045, 0.10);
     brim.rotation.x = 0.18;
-    headGroup.add(brim);
 
-    // Polarized Wrap-Around Sunglasses
+    // Polarized Sport Sunglasses with Mirror Clearcoat
     const lensMat = new THREE.MeshPhysicalMaterial({
       color: isAI ? 0xff0055 : 0x00f0ff,
       metalness: 0.95,
-      roughness: 0.05,
-      transmission: 0.2,
+      roughness: 0.04,
       reflectivity: 1.0,
-      clearcoat: 1.0
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05
     });
     const glasses = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.038, 0.12), lensMat);
     glasses.position.set(0, 0.01, 0.10);
-    headGroup.add(glasses);
 
+    headGroup.add(head, nose, cap, sweatband, brim, glasses);
     root.add(headGroup);
 
-    // 3. Articulated Legs (Hips, Knees, Calves)
-    const legGeo = new THREE.CylinderGeometry(0.088, 0.068, 0.40, 16);
-    const calfGeo = new THREE.CylinderGeometry(0.068, 0.052, 0.38, 16);
+    // 3. Articulated Muscular Legs & Pro Tennis Sneakers
+    const legGeo = new THREE.CylinderGeometry(0.092, 0.070, 0.40, 16);
+    const calfGeo = new THREE.CylinderGeometry(0.070, 0.054, 0.38, 16);
 
     const createLeg = (isRight) => {
       const legGroup = new THREE.Group();
@@ -982,16 +1719,41 @@ class TennisGameEngine {
       calf.castShadow = true;
       kneeGroup.add(calf);
 
-      // Tennis Court Sneakers
-      const shoeMat = new THREE.MeshStandardMaterial({
-        color: isRight ? 0xffffff : 0x0f172a,
-        roughness: 0.35,
-        metalness: 0.2
+      // Crew Athletic Tennis Socks with Dual Retro Stripes
+      const sockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 });
+      const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.056, 0.14, 16), sockMat);
+      sock.position.y = -0.31;
+
+      const stripeMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xdc2626 : 0x0284c7 });
+      const sRing = new THREE.Mesh(new THREE.TorusGeometry(0.059, 0.005, 6, 16), stripeMat);
+      sRing.rotation.x = Math.PI / 2;
+      sRing.position.y = -0.26;
+      kneeGroup.add(sock, sRing);
+
+      // Modern Pro Tennis Sneaker (Asics/Nike style with EVA midsole and laces)
+      const shoeGroup = new THREE.Group();
+      shoeGroup.position.set(0, -0.38, 0.05);
+
+      const shoeUpperMat = new THREE.MeshStandardMaterial({
+        color: isRight ? 0xffffff : (isAI ? 0x111827 : 0x0f172a),
+        roughness: 0.4,
+        metalness: 0.1
       });
-      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.26), shoeMat);
-      shoe.position.set(0, -0.38, 0.05);
-      shoe.castShadow = true;
-      kneeGroup.add(shoe);
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.07, 0.26), shoeUpperMat);
+      upper.castShadow = true;
+
+      // Molded EVA Midsole
+      const soleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.7 });
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.27), soleMat);
+      sole.position.y = -0.045;
+
+      // Colored Laces
+      const laceMat = new THREE.MeshStandardMaterial({ color: isAI ? 0xff2a55 : 0x00f0ff });
+      const lace = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.12), laceMat);
+      lace.position.set(0, 0.04, 0.02);
+
+      shoeGroup.add(upper, sole, lace);
+      kneeGroup.add(shoeGroup);
 
       legGroup.add(kneeGroup);
       return { legGroup, kneeGroup };
@@ -999,103 +1761,155 @@ class TennisGameEngine {
 
     const leftLegData = createLeg(false);
     const rightLegData = createLeg(true);
-    root.add(leftLegData.legGroup);
-    root.add(rightLegData.legGroup);
+    root.add(leftLegData.legGroup, rightLegData.legGroup);
 
-    // 4. Articulated Arms (Deltoids, Biceps, Elbows, Forearms)
-    const armGeo = new THREE.CylinderGeometry(0.065, 0.052, 0.32, 16);
-    const forearmGeo = new THREE.CylinderGeometry(0.052, 0.042, 0.30, 16);
+    // 4. Sculpted Arms, Deltoid Caps, Compression Sleeve & Sweatbands
+    const armGeo = new THREE.CylinderGeometry(0.068, 0.054, 0.32, 16);
+    const forearmGeo = new THREE.CylinderGeometry(0.054, 0.044, 0.30, 16);
 
-    // Left Arm
+    // Left Arm (With Smart Fitness Band)
     const lArmGroup = new THREE.Group();
     lArmGroup.position.set(-0.28, 1.25, 0);
+
+    const lDeltoid = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 16), skinMat);
+    lDeltoid.position.y = 0.01;
     const lUpper = new THREE.Mesh(armGeo, skinMat);
     lUpper.position.y = -0.16;
-    lArmGroup.add(lUpper);
+    lArmGroup.add(lDeltoid, lUpper);
 
     const lFore = new THREE.Mesh(forearmGeo, skinMat);
     lFore.position.y = -0.45;
     lArmGroup.add(lFore);
+
+    // Smart Fitness Watch on Left Wrist
+    const watchBand = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.035, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 }));
+    watchBand.position.y = -0.56;
+    const watchScreen = new THREE.Mesh(new THREE.BoxGeometry(0.028, 0.01, 0.038),
+      new THREE.MeshBasicMaterial({ color: 0x00ffaa }));
+    watchScreen.position.set(0, -0.56, 0.05);
+    lArmGroup.add(watchBand, watchScreen);
     root.add(lArmGroup);
 
-    // Right Arm (Dominant Playing Arm holding Racket)
+    // Right Arm (Dominant Playing Arm with Compression Sleeve & Wrist Sweatband)
     const rArmGroup = new THREE.Group();
     rArmGroup.position.set(0.28, 1.25, 0);
-    const rUpper = new THREE.Mesh(armGeo, skinMat);
+
+    const rDeltoid = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 16), skinMat);
+    rDeltoid.position.y = 0.01;
+
+    // Compression Sleeve
+    const sleeveMat = new THREE.MeshStandardMaterial({
+      color: isAI ? 0xdc2626 : 0x0284c7,
+      roughness: 0.45
+    });
+    const rUpper = new THREE.Mesh(armGeo, sleeveMat);
     rUpper.position.y = -0.16;
-    rArmGroup.add(rUpper);
+    rArmGroup.add(rDeltoid, rUpper);
 
     const rFore = new THREE.Mesh(forearmGeo, skinMat);
     rFore.position.y = -0.45;
     rArmGroup.add(rFore);
 
-    const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), skinMat);
-    rHand.position.y = -0.60;
+    // Dominant Wrist Sweatband
+    const rSweatband = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.048, 0.06, 16),
+      new THREE.MeshStandardMaterial({ color: isAI ? 0xffdd00 : 0xffffff, roughness: 0.8 }));
+    rSweatband.position.y = -0.56;
+    rArmGroup.add(rSweatband);
+
+    // Hand Gripping Racket
+    const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 12), skinMat);
+    rHand.position.y = -0.61;
     rArmGroup.add(rHand);
 
-    // 5. Authentic Strung Tennis Racket (Extended Two-Handed Grip & Open String Bed)
+    // 5. Authentic Carbon-Fiber Aerodynamic Strung Tennis Racket
     const racketGroup = new THREE.Group();
-    racketGroup.position.set(0, -0.60, 0.18);
+    racketGroup.position.set(0, -0.61, 0.18);
 
-    // Extended Dual-Hand Tennis Grip Handle
-    const gripTex = TextureFactory.createGripTexture();
+    // Perforated Overgrip Handle with Babolat/Wilson Finishing Collar Tape
+    const gripTex = TextureFactory.createPerforatedGripTexture();
     const handleMat = new THREE.MeshStandardMaterial({
       map: gripTex,
-      roughness: 0.5,
-      metalness: 0.1
+      roughness: 0.48,
+      metalness: 0.08
     });
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.025, 0.32, 16), handleMat);
-    handle.position.y = 0.16;
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.025, 0.33, 16), handleMat);
+    handle.position.y = 0.165;
     racketGroup.add(handle);
 
-    // Flared Butt Cap with Tournament Logo
+    // Flared Butt Cap with Gold Tournament Emblem
     const buttCap = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.032, 0.024, 0.03, 16),
-      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 })
+      new THREE.CylinderGeometry(0.033, 0.025, 0.032, 16),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.25, metalness: 0.3 })
     );
     buttCap.position.y = 0.01;
     racketGroup.add(buttCap);
 
-    // V-Throat Bridge
-    const throatMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.2 });
-    const pylonGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.16, 10);
-    const pL = new THREE.Mesh(pylonGeo, throatMat);
-    pL.position.set(-0.044, 0.36, 0); pL.rotation.z = -0.34;
-    const pR = new THREE.Mesh(pylonGeo, throatMat);
-    pR.position.set(0.044, 0.36, 0); pR.rotation.z = 0.34;
-    racketGroup.add(pL, pR);
-
-    // Elliptical Aerodynamic Graphite Tennis Hoop Frame
-    const hoopMat = new THREE.MeshStandardMaterial({
-      color: isAI ? 0xdc2626 : 0x0284c7,
-      metalness: 0.88,
+    // Aerodynamic V-Throat with Carbon Fiber Texture
+    const carbonTex = TextureFactory.createCarbonFiberTexture();
+    const carbonMat = new THREE.MeshStandardMaterial({
+      map: carbonTex,
+      color: 0x242d38,
+      metalness: 0.85,
       roughness: 0.22
     });
-    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.022, 10, 36), hoopMat);
+
+    const pylonGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.17, 12);
+    const pL = new THREE.Mesh(pylonGeo, carbonMat);
+    pL.position.set(-0.044, 0.37, 0); pL.rotation.z = -0.34;
+    const pR = new THREE.Mesh(pylonGeo, carbonMat);
+    pR.position.set(0.044, 0.37, 0); pR.rotation.z = 0.34;
+    racketGroup.add(pL, pR);
+
+    // Elliptical Aerodynamic Hoop Frame
+    const hoopMat = new THREE.MeshPhysicalMaterial({
+      color: isAI ? 0xdc2626 : 0x0284c7,
+      metalness: 0.90,
+      roughness: 0.15,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.1
+    });
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.023, 12, 40), hoopMat);
     hoop.scale.set(0.95, 1.35, 1.0);
-    hoop.position.y = 0.56;
+    hoop.position.y = 0.57;
     racketGroup.add(hoop);
 
-    // High-Tension Cross-Strung String Bed (Double-Sided Transparent Plane)
+    // Head Bumper Guard along outer hoop tip
+    const bumperMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+    const bumper = new THREE.Mesh(new THREE.TorusGeometry(0.244, 0.008, 8, 20, Math.PI), bumperMat);
+    bumper.scale.set(0.95, 1.35, 1.0);
+    bumper.position.y = 0.57;
+    racketGroup.add(bumper);
+
+    // High-Tension Cross-Strung String Bed with Stencil Logo
     const stringTex = TextureFactory.createRacketFaceTexture(accentHex);
     const stringMat = new THREE.MeshStandardMaterial({
       map: stringTex,
       transparent: true,
-      opacity: 0.88,
-      roughness: 0.15,
-      metalness: 0.1,
+      opacity: 0.90,
+      roughness: 0.12,
+      metalness: 0.15,
       side: THREE.DoubleSide
     });
     const stringPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.62), stringMat);
-    stringPlane.position.y = 0.56;
+    stringPlane.position.y = 0.57;
     racketGroup.add(stringPlane);
+
+    // Silicone Vibration Dampener (Donut button in bottom strings)
+    const dampener = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.024, 0.024, 0.015, 12),
+      new THREE.MeshStandardMaterial({ color: isAI ? 0xffdd00 : 0x00f0ff, roughness: 0.4 })
+    );
+    dampener.rotation.x = Math.PI / 2;
+    dampener.position.set(0, 0.33, 0);
+    racketGroup.add(dampener);
 
     rArmGroup.add(racketGroup);
     root.add(rArmGroup);
 
     // Athlete Dynamic Contact Shadow
     const shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.60, 24),
+      new THREE.CircleGeometry(0.62, 24),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.55 })
     );
     shadow.rotation.x = -Math.PI / 2;
@@ -1183,6 +1997,10 @@ class TennisGameEngine {
       if (e.key === '2') this.setCameraMode('broadcast');
       if (e.key === '3') this.setCameraMode('top');
 
+      if (e.key.toLowerCase() === 'm') {
+        this.cycleMap();
+      }
+
       if (e.code === 'Space') {
         this.handleActionPress();
       }
@@ -1260,6 +2078,24 @@ class TennisGameEngine {
         this.setCameraMode(e.currentTarget.dataset.cam);
       });
     });
+
+    // Map Selector Cards in Start Screen
+    document.querySelectorAll('.map-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const selectedMap = card.dataset.map;
+        if (selectedMap) {
+          this.setMap(selectedMap, true);
+        }
+      });
+    });
+
+    // In-game HUD Quick Map Switcher Button
+    const btnSwitchMap = document.getElementById('btn-switch-map');
+    if (btnSwitchMap) {
+      btnSwitchMap.addEventListener('click', () => {
+        this.cycleMap();
+      });
+    }
   }
 
   // --- Multiplayer Engine (P2P WebRTC & Local 2-Player) ---
@@ -1488,6 +2324,10 @@ class TennisGameEngine {
           else if (data.snd === 'crowd') this.audio.playCrowd();
         }
 
+        if (data.map && data.map !== this.currentMap) {
+          this.setMap(data.map, false);
+        }
+
         const promptEl = document.getElementById('serve-prompt');
         if (this.pointActive) {
           if (promptEl) promptEl.classList.add('hidden');
@@ -1531,6 +2371,10 @@ class TennisGameEngine {
       } else if (data.type === 'guest_serve' && this.gameMode === 'online_host') {
         if (!this.pointActive && this.server === 'ai') {
           this.executeAIServe();
+        }
+      } else if (data.type === 'map_change' && this.gameMode === 'online_guest') {
+        if (data.map) {
+          this.setMap(data.map, false);
         }
       }
     });
@@ -1661,7 +2505,8 @@ class TennisGameEngine {
         rally: this.rally,
         pa: this.pointActive,
         srv: this.server,
-        side: this.servingSide
+        side: this.servingSide,
+        map: this.currentMap
       };
 
       if (this._pendingAnn) {
@@ -2081,6 +2926,12 @@ class TennisGameEngine {
     const speedKmH = Math.round(this.ball.vel.length() * 3.6);
     document.getElementById('ball-speed').innerHTML = `${speedKmH} <small>km/h</small>`;
 
+    // Fast Shot Motion Trail
+    if (this.ball.vel.lengthSq() > 280) {
+      const trailColor = (this.ball.lastHitter === 'player') ? 0x00f0ff : 0xff2a55;
+      this.particles.spawnBallTrail(this.ball.pos, trailColor);
+    }
+
     // 1. Continuous Collision Detection (CCD) Net Check
     const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
     if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
@@ -2107,7 +2958,14 @@ class TennisGameEngine {
       this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
       if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
 
-      this.particles.burst(this.ball.pos, 8, 0x88ccff, 2.0);
+      // Map-themed impact particle burst
+      if (this.currentMap === 'beach') {
+        this.particles.burst(this.ball.pos, 14, 0xd9a766, 2.6);
+      } else if (this.currentMap === 'zen') {
+        this.particles.burst(this.ball.pos, 12, 0xffb6c1, 2.3);
+      } else {
+        this.particles.burst(this.ball.pos, 9, 0x88ccff, 2.0);
+      }
 
       const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
 
@@ -2406,6 +3264,31 @@ class TennisGameEngine {
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
     this.particles.update(dt);
+
+    // Dynamic Environment Animations
+    if (this.currentMap === 'beach') {
+      const time = this.clock.getElapsedTime();
+      if (this.oceanMesh && this.oceanMesh.geometry && this.oceanMesh.geometry.attributes.position) {
+        const pos = this.oceanMesh.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const u = pos.getX(i);
+          const v = pos.getY(i);
+          const wave = Math.sin(u * 0.12 + time * 2.2) * Math.cos(v * 0.15 + time * 1.8) * 0.45;
+          pos.setZ(i, wave);
+        }
+        pos.needsUpdate = true;
+      }
+      if (this.tikiTorches && this.tikiTorches.length > 0) {
+        for (let i = 0; i < this.tikiTorches.length; i++) {
+          const torch = this.tikiTorches[i];
+          const flicker = Math.sin(time * 12 + torch.seed) * 0.35 + Math.cos(time * 7 + torch.seed * 1.7) * 0.2;
+          torch.light.intensity = torch.baseIntensity + flicker;
+          if (torch.flame) {
+            torch.flame.scale.y = 1 + flicker * 0.3;
+          }
+        }
+      }
+    }
 
     if (this.gameMode === 'local') {
       this.updatePlayer(dt);
