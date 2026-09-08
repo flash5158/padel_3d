@@ -761,6 +761,50 @@ const TextureFactory = {
   },
 
   // 6. Tropical Beach Sand Court (Compacted Golden Sand + Rustic Weathered Planks + White Marine Rope Lines)
+  // 2b. Seamless Outer Beach Plain Sand (No Court Lines)
+  createBeachPlainSandTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Warm Tropical Golden Sand Base
+    ctx.fillStyle = '#dc9e58';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Multi-Tone Micro-Grain Noise
+    for (let i = 0; i < 65000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 248, 220, 0.20)' : 'rgba(120, 65, 18, 0.16)';
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+    }
+
+    // Gentle Wind Dune Waves
+    ctx.lineWidth = 6;
+    for (let y = 15; y < 512; y += 32) {
+      ctx.strokeStyle = (y % 64 === 0) ? 'rgba(245, 195, 125, 0.28)' : 'rgba(110, 55, 12, 0.10)';
+      ctx.beginPath();
+      for (let x = 0; x <= 512; x += 16) {
+        const dy = Math.sin((x / 512) * Math.PI * 4 + y * 0.09) * 4;
+        if (x === 0) ctx.moveTo(x, y + dy); else ctx.lineTo(x, y + dy);
+      }
+      ctx.stroke();
+    }
+
+    // Tiny Crushed Shell & Quartz Flecks
+    for (let i = 0; i < 200; i++) {
+      const sx = Math.random() * 512, sy = Math.random() * 512;
+      ctx.fillStyle = Math.random() > 0.4 ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 190, 170, 0.55)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, Math.random() * 2 + 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(8, 5);
+    return tex;
+  },
+
   createBeachSandTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -978,6 +1022,329 @@ const TextureFactory = {
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = 8;
     return tex;
+  },
+
+  // 8. The White House - Presidential DecoTurf Court (US Open Blue + South Lawn Emerald Green + Presidential Seal)
+  createWhiteHouseTurfTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
+
+    // Outer Court Apron: South Lawn Deep Presidential Emerald Green
+    ctx.fillStyle = '#14532d';
+    ctx.fillRect(0, 0, 1024, 2048);
+
+    // Subtle grass blade and court texture grain
+    for (let i = 0; i < 90000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(34, 197, 94, 0.08)' : 'rgba(5, 46, 22, 0.12)';
+      ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
+    }
+
+    const scaleX = 1024 / 16.0;
+    const scaleY = 2048 / 30.0;
+    const toCanvasX = (x) => 512 + x * scaleX;
+    const toCanvasY = (z) => 1024 + z * scaleY;
+
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    // Inner Court: Official US Open / White House Blue
+    ctx.fillStyle = '#1d4ed8';
+    ctx.fillRect(xL, yT, xR - xL, yB - yT);
+
+    // Subtle micro-acrylic court grit texture
+    for (let i = 0; i < 70000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(96, 165, 250, 0.08)' : 'rgba(30, 58, 138, 0.08)';
+      ctx.fillRect(xL + Math.random() * (xR - xL), yT + Math.random() * (yB - yT), 2, 2);
+    }
+
+    // Doubles tramline alleys: Presidential Deep Navy Blue
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
+
+    ctx.fillStyle = '#1e3a8a';
+    ctx.fillRect(xL, yT, sL - xL, yB - yT);
+    ctx.fillRect(sR, yT, xR - sR, yB - yT);
+
+    // Center Court Presidential Seal Emblem
+    ctx.strokeStyle = '#d4af37'; // Gold
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(512, 1024, 155, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(512, 1024, 135, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 50 Stars ring around the Presidential Seal
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 36; i++) {
+      const ang = (i / 36) * Math.PI * 2;
+      const sx = 512 + Math.cos(ang) * 145;
+      const sy = 1024 + Math.sin(ang) * 145;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Golden Eagle / Shield Crest Centerpiece
+    ctx.fillStyle = '#d4af37';
+    ctx.beginPath();
+    ctx.moveTo(512 - 32, 1024 - 38);
+    ctx.lineTo(512 + 32, 1024 - 38);
+    ctx.lineTo(512 + 28, 1024 + 10);
+    ctx.lineTo(512, 1024 + 40);
+    ctx.lineTo(512 - 28, 1024 + 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Outspread Eagle Wings
+    ctx.beginPath();
+    ctx.moveTo(512, 1024 - 20);
+    ctx.quadraticCurveTo(512 - 65, 1024 - 55, 512 - 80, 1024 - 25);
+    ctx.quadraticCurveTo(512 - 45, 1024 - 10, 512 - 25, 1024 - 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(512, 1024 - 20);
+    ctx.quadraticCurveTo(512 + 65, 1024 - 55, 512 + 80, 1024 - 25);
+    ctx.quadraticCurveTo(512 + 45, 1024 - 10, 512 + 25, 1024 - 5);
+    ctx.closePath();
+    ctx.fill();
+
+    // Presidential Court Typography
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 36px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('THE WHITE HOUSE', 512, 940);
+    ctx.font = '600 24px sans-serif';
+    ctx.fillStyle = '#d4af37';
+    ctx.fillText('PRESIDENTIAL COURT • WASHINGTON, D.C.', 512, 1115);
+
+    // Official Tournament Regulation White Lines (5cm width)
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'square';
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    ctx.beginPath();
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(512, yS1); ctx.lineTo(512, yS2);
+    ctx.stroke();
+
+    // Center service hashes
+    ctx.beginPath();
+    ctx.moveTo(512, yT); ctx.lineTo(512, yT + 16);
+    ctx.moveTo(512, yB); ctx.lineTo(512, yB - 16);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 8;
+    return tex;
+  },
+
+  // 9. Manicured South Lawn Striped Grass Texture
+  createWhiteHouseLawnTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base emerald green
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Diagonal fairway lawnmower stripes
+    const stripeW = 48;
+    for (let i = -512; i < 1024; i += stripeW * 2) {
+      ctx.fillStyle = 'rgba(22, 163, 74, 0.35)';
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i + stripeW, 0);
+      ctx.lineTo(i + stripeW + 512, 512);
+      ctx.lineTo(i + 512, 512);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Grass blade speckles
+    for (let i = 0; i < 45000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(187, 247, 208, 0.14)' : 'rgba(20, 83, 45, 0.16)';
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 3);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(12, 12);
+    return tex;
+  },
+
+  // 10. The White House Neoclassical South Portico Facade Texture
+  createWhiteHouseFacadeTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Off-white Virginia freestone limestone base
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, 1024, 512);
+
+    // Stone block masonry joints
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y < 512; y += 32) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(1024, y); ctx.stroke();
+    }
+    for (let y = 0; y < 512; y += 32) {
+      const offset = (y % 64 === 0) ? 0 : 32;
+      for (let x = offset; x < 1024; x += 64) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke();
+      }
+    }
+
+    // Windows (2 levels of Georgian multi-pane windows with stone pediments)
+    const drawWindow = (x, y, w, h, isArched = false) => {
+      // Stone frame surround
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(x - 4, y - 6, w + 8, h + 10);
+      // Window pane (reflecting blue sky + warm interior glow)
+      const winGrad = ctx.createLinearGradient(x, y, x, y + h);
+      winGrad.addColorStop(0, '#1e293b');
+      winGrad.addColorStop(0.6, '#0f172a');
+      winGrad.addColorStop(1, '#fef08a'); // chandelier glow
+      ctx.fillStyle = winGrad;
+      ctx.fillRect(x, y, w, h);
+
+      if (isArched) {
+        ctx.beginPath();
+        ctx.arc(x + w / 2, y, w / 2, Math.PI, 0);
+        ctx.fillStyle = winGrad;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // White mullions / window panes
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h);
+      ctx.stroke();
+      for (let py = y + 16; py < y + h; py += 16) {
+        ctx.beginPath(); ctx.moveTo(x, py); ctx.lineTo(x + w, py); ctx.stroke();
+      }
+    };
+
+    // Upper level windows
+    for (let i = 0; i < 12; i++) {
+      const wx = 50 + i * 80;
+      drawWindow(wx, 100, 36, 68, true);
+    }
+
+    // Lower level windows
+    for (let i = 0; i < 12; i++) {
+      const wx = 50 + i * 80;
+      drawWindow(wx, 260, 36, 92, false);
+    }
+
+    // Classical Entablature & Frieze at top
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(0, 0, 1024, 45);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(0, 40, 1024, 6);
+
+    // Classical Dentils
+    ctx.fillStyle = '#94a3b8';
+    for (let dx = 6; dx < 1024; dx += 16) {
+      ctx.fillRect(dx, 28, 9, 10);
+    }
+
+    // Balustrade along top parapet
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(0, 0, 1024, 18);
+    for (let bx = 8; bx < 1024; bx += 14) {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(bx, 4, 6, 12);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  },
+
+  // 11. Official 50-Star American Flag Texture for White House Flagpole
+  createAmericanFlagTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 270;
+    const ctx = canvas.getContext('2d');
+
+    // 13 Stripes
+    const stripeH = 270 / 13;
+    for (let i = 0; i < 13; i++) {
+      ctx.fillStyle = (i % 2 === 0) ? '#b22234' : '#ffffff';
+      ctx.fillRect(0, i * stripeH, 512, stripeH);
+    }
+
+    // Blue Canton
+    const cantonW = 512 * 0.40;
+    const cantonH = stripeH * 7;
+    ctx.fillStyle = '#3c3b6e';
+    ctx.fillRect(0, 0, cantonW, cantonH);
+
+    // 50 Stars (9 alternating rows of 6 and 5 stars)
+    ctx.fillStyle = '#ffffff';
+    const drawStar = (cx, cy, r) => {
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a1 = (i * Math.PI * 2) / 5 - Math.PI / 2;
+        const a2 = a1 + Math.PI / 5;
+        const x1 = cx + Math.cos(a1) * r;
+        const y1 = cy + Math.sin(a1) * r;
+        const x2 = cx + Math.cos(a2) * (r * 0.42);
+        const y2 = cy + Math.sin(a2) * (r * 0.42);
+        if (i === 0) ctx.moveTo(x1, y1); else ctx.lineTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    for (let row = 0; row < 9; row++) {
+      const isEven = (row % 2 === 0);
+      const cols = isEven ? 6 : 5;
+      const y = 10 + row * ((cantonH - 20) / 8);
+      const xStart = isEven ? 14 : 28;
+      const xSpacing = (cantonW - 28) / 5;
+      for (let col = 0; col < cols; col++) {
+        drawStar(xStart + col * xSpacing, y, 4.2);
+      }
+    }
+
+    return new THREE.CanvasTexture(canvas);
   },
 
   // 8. Glossy 3K Carbon Fiber Weave Texture (Aerodynamic Racket Hoop & Throat)
@@ -1886,7 +2253,7 @@ class TennisGameEngine {
 
   // --- Dynamic Map / Arena Environment Switcher ---
   setMap(mapId, broadcast = true) {
-    if (!['stadium', 'beach', 'zen'].includes(mapId)) return;
+    if (!['stadium', 'beach', 'zen', 'whitehouse'].includes(mapId)) return;
     this.currentMap = mapId;
 
     this.buildCourt(mapId);
@@ -1901,7 +2268,8 @@ class TennisGameEngine {
     const mapNames = {
       stadium: { name: 'ARENA PRO', icon: '🏟️' },
       beach: { name: 'PLAYA PARAÍSO', icon: '🏖️' },
-      zen: { name: 'TEMPLO ZEN', icon: '⛩️' }
+      zen: { name: 'TEMPLO ZEN', icon: '⛩️' },
+      whitehouse: { name: 'LA CASA BLANCA', icon: '🏛️' }
     };
     const info = mapNames[mapId] || mapNames.stadium;
     const nameEl = document.getElementById('current-map-name');
@@ -1924,7 +2292,7 @@ class TennisGameEngine {
   }
 
   cycleMap() {
-    const maps = ['stadium', 'beach', 'zen'];
+    const maps = ['stadium', 'beach', 'zen', 'whitehouse'];
     const nextIdx = (maps.indexOf(this.currentMap) + 1) % maps.length;
     this.setMap(maps[nextIdx], true);
   }
@@ -1953,6 +2321,10 @@ class TennisGameEngine {
       courtTex = TextureFactory.createZenStoneTexture();
       outerColor = 0x0f131a;
       postMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35, metalness: 0.3 });
+    } else if (mapId === 'whitehouse') {
+      courtTex = TextureFactory.createWhiteHouseTurfTexture();
+      outerColor = 0x14532d;
+      postMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.22, metalness: 0.90 }); // 24K Presidential Brass
     } else {
       courtTex = TextureFactory.createTurfTexture();
       outerColor = 0x050c18;
@@ -2032,9 +2404,304 @@ class TennisGameEngine {
       this.buildBeachEnvironment();
     } else if (mapId === 'zen') {
       this.buildZenEnvironment();
+    } else if (mapId === 'whitehouse') {
+      this.buildWhiteHouseEnvironment();
     } else {
       this.buildStadiumEnvironment();
     }
+  }
+
+  // 4. The White House - South Lawn Presidential Tennis Court
+  buildWhiteHouseEnvironment() {
+    this.scene.background = new THREE.Color(0x60a5fa);
+    this.scene.fog = new THREE.FogExp2(0x93c5fd, 0.0035);
+    this.ambient.color.setHex(0xfff8e7);
+    this.ambient.intensity = 0.95;
+    this.sun.color.setHex(0xfffbf0);
+    this.sun.intensity = 1.85;
+    this.sun.position.set(28, 48, 22);
+
+    // Sky Dome with subtle atmospheric gradient
+    const whSkyGeo = new THREE.SphereGeometry(95, 32, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+    whSkyGeo.scale(-1, 1, 1);
+    const whSkyMat = new THREE.MeshBasicMaterial({
+      color: 0x7dd3fc,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    const whSky = new THREE.Mesh(whSkyGeo, whSkyMat);
+    whSky.position.set(0, -1, 0);
+    this.environmentGroup.add(whSky);
+
+    // Manicured South Lawn Fairway Grass Plane
+    const lawnTex = TextureFactory.createWhiteHouseLawnTexture();
+    const lawnGeo = new THREE.PlaneGeometry(140, 150);
+    const lawnMat = new THREE.MeshStandardMaterial({
+      map: lawnTex,
+      roughness: 0.88,
+      metalness: 0.02
+    });
+    const lawn = new THREE.Mesh(lawnGeo, lawnMat);
+    lawn.rotation.x = -Math.PI / 2;
+    lawn.position.set(0, -0.04, -15);
+    lawn.receiveShadow = true;
+    this.environmentGroup.add(lawn);
+
+    // Neoclassical Executive Residence Facade at Z = -52
+    const facadeTex = TextureFactory.createWhiteHouseFacadeTexture();
+    const facadeMat = new THREE.MeshStandardMaterial({
+      map: facadeTex,
+      roughness: 0.65,
+      metalness: 0.08
+    });
+    // Main residence center block
+    const mainBuilding = new THREE.Mesh(new THREE.BoxGeometry(58, 14.5, 14), facadeMat);
+    mainBuilding.position.set(0, 7.25, -52);
+    mainBuilding.castShadow = true;
+    mainBuilding.receiveShadow = true;
+    this.environmentGroup.add(mainBuilding);
+
+    // East & West Colonnade Terraces
+    const terraceMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.70 });
+    [-1, 1].forEach(side => {
+      const wing = new THREE.Mesh(new THREE.BoxGeometry(24, 7.0, 10), facadeMat);
+      wing.position.set(side * 39, 3.5, -54);
+      const colonnade = new THREE.Mesh(new THREE.BoxGeometry(16, 4.5, 4), terraceMat);
+      colonnade.position.set(side * 28, 2.25, -46);
+      this.environmentGroup.add(wing, colonnade);
+    });
+
+    // Neoclassical South Portico (Semi-Circular Protrusion & Balcony)
+    const porticoGroup = new THREE.Group();
+    porticoGroup.position.set(0, 0, -45);
+
+    // Raised Stone Porch Podium
+    const porchBase = new THREE.Mesh(new THREE.CylinderGeometry(8.5, 8.8, 1.2, 32, 1, false, 0, Math.PI), terraceMat);
+    porchBase.position.y = 0.6;
+    porchBase.rotation.y = -Math.PI;
+    porticoGroup.add(porchBase);
+
+    // Portico Roof / Upper Balcony Floor
+    const porchRoof = new THREE.Mesh(new THREE.CylinderGeometry(8.6, 8.6, 0.9, 32, 1, false, 0, Math.PI), terraceMat);
+    porchRoof.position.y = 12.8;
+    porchRoof.rotation.y = -Math.PI;
+    porticoGroup.add(porchRoof);
+
+    // 6 Classical Ionic Columns supporting the Portico
+    const colMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.50 });
+    const colGeo = new THREE.CylinderGeometry(0.44, 0.40, 11.4, 20);
+    const colBaseGeo = new THREE.CylinderGeometry(0.55, 0.60, 0.4, 20);
+    const colCapGeo = new THREE.BoxGeometry(0.95, 0.45, 0.95);
+
+    for (let c = 0; c < 6; c++) {
+      const ang = (c / 5) * Math.PI;
+      const cx = Math.cos(ang) * 7.5;
+      const cz = Math.sin(ang) * 7.5;
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.set(cx, 6.7, -cz);
+      col.castShadow = true;
+
+      const base = new THREE.Mesh(colBaseGeo, terraceMat);
+      base.position.set(cx, 1.3, -cz);
+
+      const cap = new THREE.Mesh(colCapGeo, terraceMat);
+      cap.position.set(cx, 12.2, -cz);
+
+      porticoGroup.add(col, base, cap);
+    }
+
+    // Triangular Pediment / Cornice Gable on Portico Roof
+    const pediment = new THREE.Mesh(new THREE.ConeGeometry(9.0, 3.2, 4), terraceMat);
+    pediment.position.set(0, 14.8, 0);
+    pediment.rotation.y = Math.PI / 4;
+    porticoGroup.add(pediment);
+
+    this.environmentGroup.add(porticoGroup);
+
+    // Presidential Rooftop Flagpole with Waving 50-Star American Flag
+    const flagPoleMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.90, roughness: 0.20 });
+    const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 9.0, 16), flagPoleMat);
+    flagPole.position.set(0, 19.0, -45);
+
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.95, roughness: 0.15 }));
+    finial.position.set(0, 23.6, -45);
+    this.environmentGroup.add(flagPole, finial);
+
+    // Waving American Flag (Plane with multiple width segments for dynamic wind wave animation)
+    const flagTex = TextureFactory.createAmericanFlagTexture();
+    const flagGeo = new THREE.PlaneGeometry(4.4, 2.3, 24, 8);
+    // Offset flag so hoist edge connects to pole
+    flagGeo.translate(2.2, 0, 0);
+    const flagMat = new THREE.MeshStandardMaterial({
+      map: flagTex,
+      roughness: 0.40,
+      metalness: 0.05,
+      side: THREE.DoubleSide
+    });
+    this.whiteHouseFlag = new THREE.Mesh(flagGeo, flagMat);
+    this.whiteHouseFlag.position.set(0.08, 22.2, -45);
+    this.environmentGroup.add(this.whiteHouseFlag);
+
+    // Black Wrought-Iron Security Fence with Gold Spear Finials
+    const fenceMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.40, metalness: 0.85 });
+    const spearMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.25, metalness: 0.90 });
+
+    const makeFenceRun = (x1, z1, x2, z2) => {
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      const ang = Math.atan2(x2 - x1, z2 - z1);
+      const midX = (x1 + x2) / 2;
+      const midZ = (z1 + z2) / 2;
+
+      // Bottom and Top Horizontal Rails
+      [-1, 1].forEach(r => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, len), fenceMat);
+        rail.position.set(midX, r > 0 ? 2.1 : 0.25, midZ);
+        rail.rotation.y = ang;
+        this.environmentGroup.add(rail);
+      });
+
+      // Vertical Pickets
+      const count = Math.floor(len / 0.55);
+      for (let p = 0; p <= count; p++) {
+        const t = p / count;
+        const px = x1 + (x2 - x1) * t;
+        const pz = z1 + (z2 - z1) * t;
+
+        const picket = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 2.1, 8), fenceMat);
+        picket.position.set(px, 1.15, pz);
+
+        const spear = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.22, 6), spearMat);
+        spear.position.set(px, 2.30, pz);
+
+        this.environmentGroup.add(picket, spear);
+      }
+    };
+
+    // Lateral perimeter fences
+    makeFenceRun(-16, -26, -16, 26);
+    makeFenceRun(16, -26, 16, 26);
+    makeFenceRun(-16, 26, 16, 26);
+
+    // Jacqueline Kennedy Rose Gardens along Court Boundaries
+    const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x14532d, roughness: 0.92 });
+    const redRoseM = new THREE.MeshStandardMaterial({ color: 0xbe123c, roughness: 0.50 });
+    const whtRoseM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.50 });
+
+    [-11.5, 11.5].forEach(hx => {
+      // Long manicured boxwood hedge
+      const hedge = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.95, 34), hedgeMat);
+      hedge.position.set(hx, 0.48, 0);
+      hedge.castShadow = true;
+      this.environmentGroup.add(hedge);
+
+      // Flower clusters on top of hedge
+      for (let b = -15; b <= 15; b += 1.8) {
+        const roseMat = (Math.abs(b) % 2 === 0) ? redRoseM : whtRoseM;
+        const rose = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), roseMat);
+        rose.position.set(hx + (Math.sin(b) * 0.35), 0.98, b);
+        this.environmentGroup.add(rose);
+      }
+    });
+
+    // Manicured Conical Emerald Cypress Topiaries flanking the court
+    const topiaryMat = new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.85 });
+    const potMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.60 });
+    [-13.8, 13.8].forEach(tx => {
+      [-18, -9, 0, 9, 18].forEach(tz => {
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.40, 0.65, 12), potMat);
+        pot.position.set(tx, 0.32, tz);
+        pot.castShadow = true;
+
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.85, 3.4, 12), topiaryMat);
+        cone.position.set(tx, 2.35, tz);
+        cone.castShadow = true;
+
+        this.environmentGroup.add(pot, cone);
+      });
+    });
+
+    // Washington D.C. Cast-Iron Ornamental Streetlamps
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.30, metalness: 0.90 });
+    const glassMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const lampPositions = [
+      { x: -14.5, z: -21 }, { x: 14.5, z: -21 },
+      { x: -14.5, z: 21 },  { x: 14.5, z: 21 }
+    ];
+    lampPositions.forEach(lp => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 4.6, 12), lampMat);
+      pole.position.set(lp.x, 2.3, lp.z);
+      pole.castShadow = true;
+
+      const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.22, 0.70, 6), glassMat);
+      lantern.position.set(lp.x, 4.75, lp.z);
+
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.35, 6), lampMat);
+      cap.position.set(lp.x, 5.25, lp.z);
+
+      const light = new THREE.PointLight(0xfff1aa, 1.4, 22);
+      light.position.set(lp.x, 4.75, lp.z);
+
+      this.environmentGroup.add(pole, lantern, cap, light);
+    });
+
+    // Presidential Mahogany & Brass Player Benches
+    const mahogMat = new THREE.MeshStandardMaterial({ color: 0x3f1a0e, roughness: 0.45 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.90, roughness: 0.20 });
+    [-1, 1].forEach(side => {
+      const bench = new THREE.Group();
+      bench.position.set(side * 8.6, 0, 0);
+
+      // Wood Seat & Back
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 0.65), mahogMat);
+      seat.position.set(0, 0.45, 0);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 0.08), mahogMat);
+      back.position.set(0, 0.85, -0.28);
+
+      // Brass Legs
+      [-0.8, 0.8].forEach(lx => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.45, 8), brassMat);
+        leg.position.set(lx, 0.22, 0);
+        bench.add(leg);
+      });
+
+      // Gold Presidential Seal Medal on Bench
+      const medal = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.03, 16), brassMat);
+      medal.rotation.x = Math.PI / 2;
+      medal.position.set(0, 0.90, -0.23);
+
+      bench.add(seat, back, medal);
+      this.environmentGroup.add(bench);
+    });
+
+    // Secret Service Agents standing watch near perimeter
+    const suitMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.70 });
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.50 });
+    const darkGlass = new THREE.MeshBasicMaterial({ color: 0x050505 });
+    const agentPositions = [
+      { x: -14.2, z: -14, rot: 0.4 },
+      { x: 14.2, z: 14, rot: -2.8 }
+    ];
+    agentPositions.forEach(ap => {
+      const agent = new THREE.Group();
+      agent.position.set(ap.x, 0, ap.z);
+      agent.rotation.y = ap.rot;
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 1.25, 12), suitMat);
+      body.position.y = 1.05;
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), headMat);
+      head.position.y = 1.82;
+      const shades = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.08), darkGlass);
+      shades.position.set(0, 1.84, 0.12);
+
+      // Earpiece coil
+      const earCoil = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.12, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      earCoil.position.set(0.14, 1.76, -0.02);
+
+      agent.add(body, head, shades, earCoil);
+      this.environmentGroup.add(agent);
+    });
   }
 
   // 1. Grand Slam Arena Environment (Arthur Ashe / Roland Garros / Wimbledon Pro Night)
@@ -2249,9 +2916,7 @@ class TennisGameEngine {
     this.environmentGroup.add(beachSky);
 
     // SAND - court zone only (does NOT reach where ocean is placed)
-    const sandTex = TextureFactory.createBeachSandTexture();
-    sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping;
-    sandTex.repeat.set(8, 8);
+    const sandTex = TextureFactory.createBeachPlainSandTexture();
     const sandMesh = new THREE.Mesh(new THREE.PlaneGeometry(110, 60),
       new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.92, metalness: 0.02 }));
     sandMesh.rotation.x = -Math.PI / 2;
@@ -3690,7 +4355,7 @@ class TennisGameEngine {
     }
 
     this.netTimer += dt;
-    if (this.netTimer >= 0.020 && this.conn && this.conn.open) {
+    if (this.netTimer >= 0.033 && this.conn && this.conn.open && (!this.conn.dataChannel || this.conn.dataChannel.bufferedAmount < 16384)) {
       this.netTimer = 0;
       this.conn.send({
         type: 'p2_input',
@@ -3708,7 +4373,7 @@ class TennisGameEngine {
 
   syncOnlineHost(dt) {
     this.netTimer += dt;
-    if (this.netTimer >= 0.020 && this.conn && this.conn.open) {
+    if (this.netTimer >= 0.033 && this.conn && this.conn.open && (!this.conn.dataChannel || this.conn.dataChannel.bufferedAmount < 16384)) {
       this.netTimer = 0;
       const packet = {
         type: 'sync',
@@ -4698,6 +5363,19 @@ class TennisGameEngine {
     this.particles.update(dt);
 
     // Dynamic Environment Animations
+      // White House American Flag Dynamic Wind Wave
+      if (this.currentMap === 'whitehouse' && this.whiteHouseFlag && this.whiteHouseFlag.geometry) {
+        const time = this.clock.getElapsedTime();
+        const pos = this.whiteHouseFlag.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const u = pos.getX(i);
+          const v = pos.getY(i);
+          const wave = Math.sin(u * 2.8 - time * 6.5) * 0.18 * (u / 4.4) + Math.cos(v * 2.0 + time * 4.2) * 0.05 * (u / 4.4);
+          pos.setZ(i, wave);
+        }
+        pos.needsUpdate = true;
+      }
+
     if (this.currentMap === 'beach') {
       const time = this.clock.getElapsedTime();
       if (this.oceanMesh && this.oceanMesh.geometry && this.oceanMesh.geometry.attributes.position) {
@@ -4722,7 +5400,7 @@ class TennisGameEngine {
       if (this.shorelineFoam) {
         const foamAlpha = 0.55 + Math.sin(time * 1.4) * 0.22 + Math.sin(time * 2.8 + 0.9) * 0.12;
         this.shorelineFoam.material.opacity = THREE.MathUtils.clamp(foamAlpha, 0.22, 0.85);
-        this.shorelineFoam.position.z = -13.5 + Math.sin(time * 1.1) * 0.65;
+        this.shorelineFoam.position.z = -22.0 + Math.sin(time * 1.1) * 0.65;
       }
       if (this.tikiTorches && this.tikiTorches.length > 0) {
         for (let i = 0; i < this.tikiTorches.length; i++) {
