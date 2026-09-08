@@ -2162,6 +2162,7 @@ class TennisGameEngine {
     this.conn = null;
     this.roomCode = null;
     this.netTimer = 0;
+    this.isConnecting = false; // True while WebRTC handshake in progress
 
     // Ball Physics with True 3D Aerodynamics & Spin
     this.ballRadius = 0.125;
@@ -3856,7 +3857,6 @@ class TennisGameEngine {
       if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
         if (e.code === 'Enter') {
           document.activeElement.blur();
-          this.applyProfileAndStart('ai');
         }
         return;
       }
@@ -3864,7 +3864,10 @@ class TennisGameEngine {
       this.keys[e.key.toLowerCase()] = true;
       this.audio.init();
 
+      // Only start AI game if we are on the AI tab and NOT connecting/waiting for online
       if (!this.isPlaying && (e.code === 'Space' || e.code === 'Enter')) {
+        if (this.isConnecting) return; // Don't start AI while connecting online
+        if (this.gameMode !== 'ai') return; // Only auto-start from AI tab
         this.applyProfileAndStart('ai');
         return;
       }
@@ -4358,11 +4361,16 @@ class TennisGameEngine {
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('room');
     if (roomParam) {
-      if (tabAI) [tabAI, tabOnline, tabLocal].forEach(t => t.classList.remove('active'));
-      if (panelAI) [panelAI, panelOnline, panelLocal].forEach(p => p.classList.add('hidden'));
+      // Switch to online tab visually
+      const allTabs2 = [tabAI, tabOnline, tabTourn, tabLocal];
+      const allPanels2 = [panelAI, panelOnline, panelTourn, panelLocal];
+      allTabs2.forEach(t => t?.classList.remove('active'));
+      allPanels2.forEach(p => p?.classList.add('hidden'));
       if (tabOnline) tabOnline.classList.add('active');
       if (panelOnline) panelOnline.classList.remove('hidden');
       if (joinInput) joinInput.value = roomParam.toUpperCase();
+      // Prevent setupOnlineHost from running (don't create a host peer)
+      // Connect directly as guest
       this.connectToPeer(roomParam.toUpperCase());
     }
   }
@@ -4374,7 +4382,24 @@ class TennisGameEngine {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
           { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' }
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
         ]
       }
     };
@@ -4386,19 +4411,24 @@ class TennisGameEngine {
     const display = document.getElementById('room-code-display');
     if (display) display.innerText = this.roomCode;
 
+    const status = document.getElementById('host-status');
+    if (status) status.innerText = '⏳ Conectando al servidor de señalización...';
+
     try {
       this.peer = new Peer(this.roomCode, this.getPeerConfig());
 
-      this.peer.on('open', () => {
-        const status = document.getElementById('host-status');
-        if (status) status.innerText = '🟢 Sala abierta. Esperando que tu rival se una...';
+      this.peer.on('open', (id) => {
+        console.log('Host Peer open with ID:', id);
+        this.roomCode = id; // Ensure roomCode matches actual PeerJS ID
+        if (display) display.innerText = this.roomCode;
+        if (status) status.innerText = '🟢 Sala abierta. Comparte el código con tu rival.';
       });
 
       this.peer.on('connection', (conn) => {
         this.conn = conn;
         this.gameMode = 'online_host';
-        const status = document.getElementById('host-status');
-        if (status) status.innerText = '¡Rival conectado! Entrando a la pista central...';
+        this.isConnecting = false;
+        if (status) status.innerText = '🎾 ¡Rival conectado! Entrando a la pista central...';
 
         this.setupDataConnection();
 
@@ -4415,27 +4445,61 @@ class TennisGameEngine {
 
       this.peer.on('error', (err) => {
         console.warn('PeerJS Host Error:', err);
+        if (status) status.innerText = '❌ Error de conexión: ' + (err.type || err.message || 'Desconocido') + '. Recarga la página.';
+        this.isConnecting = false;
+      });
+
+      this.peer.on('disconnected', () => {
+        console.warn('PeerJS Host disconnected, attempting reconnect...');
+        if (status) status.innerText = '🔄 Reconectando al servidor...';
+        try { this.peer.reconnect(); } catch (e) {}
       });
     } catch (e) {
       console.warn('PeerJS init failed:', e);
+      if (status) status.innerText = '❌ No se pudo inicializar la conexión P2P. Recarga la página.';
     }
   }
 
   connectToPeer(code) {
-    if (typeof Peer === 'undefined') return;
+    if (typeof Peer === 'undefined') {
+      const joinStatus = document.getElementById('join-status');
+      if (joinStatus) joinStatus.innerText = '❌ PeerJS no está disponible. Recarga la página.';
+      return;
+    }
     const joinStatus = document.getElementById('join-status');
-    if (joinStatus) joinStatus.innerText = 'Conectando con la pista central...';
+    if (joinStatus) joinStatus.innerText = '⏳ Conectando con la sala ' + code + '...';
+
+    // Set connecting flag to prevent accidental AI start
+    this.isConnecting = true;
+    this.gameMode = 'online_guest'; // Set early to prevent Space/Enter from starting AI
+
+    // Clear any previous connection timeout
+    if (this._connectTimeout) clearTimeout(this._connectTimeout);
 
     try {
-      if (this.peer) this.peer.destroy();
+      if (this.peer) {
+        try { this.peer.destroy(); } catch (e) {}
+        this.peer = null;
+      }
       this.peer = new Peer(this.getPeerConfig());
 
+      // Connection timeout: 15 seconds
+      this._connectTimeout = setTimeout(() => {
+        if (this.isConnecting) {
+          this.isConnecting = false;
+          if (joinStatus) joinStatus.innerText = '⏰ Tiempo agotado. Verifica que el código sea correcto y que el anfitrión tenga la sala abierta.';
+        }
+      }, 15000);
+
       this.peer.on('open', () => {
+        console.log('Guest peer open, connecting to:', code);
         this.conn = this.peer.connect(code, { reliable: true });
 
         this.conn.on('open', () => {
+          clearTimeout(this._connectTimeout);
+          this.isConnecting = false;
           this.gameMode = 'online_guest';
-          if (joinStatus) joinStatus.innerText = '¡Conexión establecida!';
+          if (joinStatus) joinStatus.innerText = '🎾 ¡Conexión establecida con éxito!';
           this.setupDataConnection();
 
           setTimeout(() => {
@@ -4449,12 +4513,44 @@ class TennisGameEngine {
           }, 800);
         });
 
-        this.conn.on('error', () => {
-          if (joinStatus) joinStatus.innerText = 'Error al conectar con la sala de tenis.';
+        this.conn.on('error', (err) => {
+          clearTimeout(this._connectTimeout);
+          this.isConnecting = false;
+          console.warn('Conn error:', err);
+          if (joinStatus) joinStatus.innerText = '❌ Error: No se encontró la sala "' + code + '". Verifica el código.';
+        });
+
+        this.conn.on('close', () => {
+          if (!this.isPlaying) {
+            clearTimeout(this._connectTimeout);
+            this.isConnecting = false;
+            if (joinStatus) joinStatus.innerText = '❌ La conexión fue rechazada o la sala ya no existe.';
+          }
         });
       });
+
+      this.peer.on('error', (err) => {
+        clearTimeout(this._connectTimeout);
+        this.isConnecting = false;
+        console.warn('Guest Peer error:', err);
+        if (err.type === 'peer-unavailable') {
+          if (joinStatus) joinStatus.innerText = '❌ Sala "' + code + '" no encontrada. El anfitrión debe crear la sala primero.';
+        } else {
+          if (joinStatus) joinStatus.innerText = '❌ Error de conexión: ' + (err.type || 'Desconocido') + '. Intenta de nuevo.';
+        }
+      });
+
+      this.peer.on('disconnected', () => {
+        if (this.isConnecting) {
+          console.warn('Guest peer disconnected during connection');
+          if (joinStatus) joinStatus.innerText = '🔄 Conexión perdida, reintentando...';
+          try { this.peer.reconnect(); } catch (e) {}
+        }
+      });
     } catch (e) {
-      if (joinStatus) joinStatus.innerText = 'Error al inicializar Peer.';
+      this.isConnecting = false;
+      console.warn('PeerJS init failed:', e);
+      if (joinStatus) joinStatus.innerText = '❌ Error al inicializar conexión P2P. Recarga la página.';
     }
   }
 
@@ -6384,7 +6480,7 @@ class TennisGameEngine {
     const myGender = document.querySelector('.gender-btn.active')?.dataset.gender || 'male';
 
     if (!this.peer) {
-      this.peer = new Peer({ config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+      this.peer = new Peer(this.getPeerConfig());
     }
 
     this.conn = this.peer.connect(code, { reliable: true });
