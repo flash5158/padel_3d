@@ -194,59 +194,67 @@ body, html {
   color: #94a3b8;
 }
 
-/* Center Announcement Banner */
+/* Center Announcement Banner — repositioned to top-center below scoreboard to keep play area clear */
 #center-announcement {
-  align-self: center;
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%) scale(1);
   text-align: center;
-  background: linear-gradient(135deg, rgba(8, 14, 26, 0.92), rgba(15, 23, 42, 0.95));
-  backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 16px 44px;
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 35px var(--glass-glow);
-  transform: scale(1);
+  background: linear-gradient(135deg, rgba(8, 14, 26, 0.88), rgba(15, 23, 42, 0.92));
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  padding: 12px 36px;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(0, 162, 255, 0.15);
+  z-index: 20;
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
 }
 
 #center-announcement.hidden {
   opacity: 0;
-  transform: scale(0.85);
+  transform: translateX(-50%) scale(0.88);
   pointer-events: none;
 }
 
 #announcement-title {
   font-family: var(--font-title);
-  font-size: 38px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: 2px;
   color: #fff;
-  text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+  text-shadow: 0 0 14px rgba(0, 240, 255, 0.5);
 }
 
 #announcement-sub {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--champagne-gold);
   letter-spacing: 1px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
-/* Hitbox Sweet-Spot Timing Badge */
+/* Hitbox Sweet-Spot Timing Badge — fixed top-right to never block ball flight path */
 .timing-badge {
-  align-self: center;
-  background: rgba(8, 16, 30, 0.92);
-  backdrop-filter: blur(16px);
+  position: fixed;
+  top: 84px;
+  right: 26px;
+  background: rgba(8, 16, 30, 0.90);
+  backdrop-filter: blur(14px);
   border: 1px solid var(--padel-yellow);
-  padding: 7px 22px;
-  border-radius: 30px;
+  padding: 6px 18px;
+  border-radius: 24px;
   font-family: var(--font-tech);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--padel-yellow);
-  box-shadow: 0 0 24px rgba(216, 255, 0, 0.35);
+  box-shadow: 0 0 18px rgba(216, 255, 0, 0.30);
   transform: translateY(0);
-  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 18;
+  pointer-events: none;
 }
 
 .timing-badge.perfect {
@@ -273,12 +281,18 @@ body, html {
   pointer-events: none;
 }
 
-/* Bottom Left: Shot Gauge & Power */
+/* Bottom Left: Shot Gauge & Power — narrower, semi-transparent so ball isn't blocked */
 .bottom-left-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 260px;
+  gap: 6px;
+  width: 220px;
+  opacity: 0.82;
+  transition: opacity 0.3s ease;
+}
+
+.bottom-left-panel:hover {
+  opacity: 1;
 }
 
 .shot-selector {
@@ -348,19 +362,24 @@ body, html {
   border-radius: 8px;
 }
 
-/* Bottom Center: Serve Banner */
+/* Bottom Center: Serve Banner — fixed at bottom to keep court center clear */
 .serve-prompt-banner {
-  align-self: center;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--champagne-gold);
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 18, 34, 0.82);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(229, 192, 123, 0.65);
   color: #fff;
-  padding: 9px 24px;
-  border-radius: 30px;
-  font-size: 13px;
+  padding: 8px 22px;
+  border-radius: 24px;
+  font-size: 12px;
   letter-spacing: 0.5px;
-  box-shadow: 0 0 24px var(--gold-glow);
-  animation: pulse-banner 1.6s infinite;
+  box-shadow: 0 0 18px rgba(229, 192, 123, 0.22);
+  animation: pulse-banner 1.8s infinite;
+  z-index: 18;
+  pointer-events: none;
 }
 
 .serve-prompt-banner.hidden {

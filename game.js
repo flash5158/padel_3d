@@ -3623,6 +3623,12 @@ class TennisGameEngine {
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.camShake = isSmash ? 0.35 : (isSweetSpot ? 0.16 : 0.08);
 
+    // Racket Impact Recoil Visual (kick on ball contact)
+    const hitterChar = hitter === 'player' ? this.player : this.ai;
+    if (hitterChar) {
+      hitterChar.racketImpactRecoil = isSmash ? 0.38 : (isSweetSpot ? 0.22 : 0.14);
+    }
+
     this.shotType = 'DRIVE';
     document.getElementById('current-shot').innerText = 'DRIVE';
     this.updateHUD();
@@ -4149,6 +4155,14 @@ class TennisGameEngine {
       char.model.rotation.x = 0;
     }
     char.model.rotation.y = isAI ? 0 : Math.PI;
+
+    // Racket Impact Recoil: animate a wrist-kick on hit contact
+    if (char.racketImpactRecoil && char.racketImpactRecoil > 0) {
+      if (limbs.racket) limbs.racket.rotation.x = -char.racketImpactRecoil;
+      char.racketImpactRecoil = Math.max(0, char.racketImpactRecoil - dt * 2.4);
+    } else {
+      char.racketImpactRecoil = 0;
+    }
   }
 
   // --- Smooth Camera System ---
@@ -4265,10 +4279,24 @@ class TennisGameEngine {
         for (let i = 0; i < pos.count; i++) {
           const u = pos.getX(i);
           const v = pos.getY(i);
-          const wave = Math.sin(u * 0.12 + time * 2.2) * Math.cos(v * 0.15 + time * 1.8) * 0.45;
-          pos.setZ(i, wave);
+          // Multi-frequency Gerstner-style wave displacement
+          const w1 = Math.sin(u * 0.11 + time * 2.0) * 0.40;
+          const w2 = Math.cos(v * 0.14 + time * 1.55) * 0.28;
+          const w3 = Math.sin(u * 0.25 - v * 0.18 + time * 3.1) * 0.16;
+          const w4 = Math.cos(u * 0.38 + v * 0.30 + time * 4.5) * 0.08;
+          pos.setZ(i, w1 + w2 + w3 + w4);
         }
         pos.needsUpdate = true;
+        // Animate water normal map offset for ripple movement
+        if (this.oceanMesh.material.normalMap) {
+          this.oceanMesh.material.normalMap.offset.set(time * 0.016, time * 0.012);
+        }
+      }
+      // Animate shoreline foam alpha lapping
+      if (this.shorelineFoam) {
+        const foamAlpha = 0.55 + Math.sin(time * 1.4) * 0.22 + Math.sin(time * 2.8 + 0.9) * 0.12;
+        this.shorelineFoam.material.opacity = THREE.MathUtils.clamp(foamAlpha, 0.22, 0.85);
+        this.shorelineFoam.position.z = -13.5 + Math.sin(time * 1.1) * 0.65;
       }
       if (this.tikiTorches && this.tikiTorches.length > 0) {
         for (let i = 0; i < this.tikiTorches.length; i++) {
