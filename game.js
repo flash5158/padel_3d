@@ -10,6 +10,18 @@
 class TennisAudioPro {
   constructor() {
     this.ctx = null;
+    this.musicEnabled = true;
+    try {
+      const savedMusic = localStorage.getItem('padel_music_enabled');
+      if (savedMusic !== null) this.musicEnabled = (savedMusic === 'true');
+    } catch (e) {}
+    this.musicGain = null;
+    this.musicPlaying = false;
+    this.musicTimer = null;
+    this.stepIndex = 0;
+    this.nextStepTime = 0;
+    this.bpm = 124;
+    this.stepDuration = 60 / 124 / 4; // 16th note = 0.12096s
   }
 
   init() {
@@ -20,6 +32,7 @@ class TennisAudioPro {
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
+    this.updateMusicUI();
   }
 
   // Crisp Tennis Racket String Impact Pop (Polyester / Gut String Bed)
@@ -194,6 +207,254 @@ class TennisAudioPro {
       osc.connect(g); g.connect(this.ctx.destination);
       osc.start(t); osc.stop(t + 3.2);
     });
+  }
+
+  // --- High-Energy Sports Synthwave / Arcade Music Engine (124 BPM) ---
+  startMusic() {
+    this.init();
+    if (!this.ctx) return;
+    if (this.musicPlaying) return;
+    if (!this.musicEnabled) return;
+
+    this.musicPlaying = true;
+    this.stepIndex = 0;
+    this.nextStepTime = this.ctx.currentTime + 0.05;
+
+    if (!this.musicGain) {
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+      this.musicGain.connect(this.ctx.destination);
+    } else {
+      this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, this.ctx.currentTime);
+      this.musicGain.gain.linearRampToValueAtTime(0.22, this.ctx.currentTime + 0.25);
+    }
+
+    if (this.musicTimer) clearInterval(this.musicTimer);
+    this.musicTimer = setInterval(() => this.musicScheduler(), 25);
+    this.updateMusicUI();
+  }
+
+  stopMusic() {
+    if (!this.musicPlaying) return;
+    this.musicPlaying = false;
+    if (this.musicTimer) {
+      clearInterval(this.musicTimer);
+      this.musicTimer = null;
+    }
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.musicGain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.20);
+    }
+    this.updateMusicUI();
+  }
+
+  toggleMusic() {
+    this.musicEnabled = !this.musicEnabled;
+    try {
+      localStorage.setItem('padel_music_enabled', this.musicEnabled ? 'true' : 'false');
+    } catch (e) {}
+    if (this.musicEnabled) {
+      this.startMusic();
+    } else {
+      this.stopMusic();
+    }
+    this.updateMusicUI();
+    return this.musicEnabled;
+  }
+
+  updateMusicUI() {
+    const hudMusicIcon = document.getElementById('hud-music-icon');
+    const hudMusicText = document.getElementById('hud-music-text');
+    const hudMusicBtn  = document.getElementById('btn-toggle-music');
+    if (hudMusicBtn) {
+      if (this.musicEnabled) {
+        hudMusicBtn.classList.remove('muted');
+        if (hudMusicIcon) hudMusicIcon.innerText = '🎵';
+        if (hudMusicText) hudMusicText.innerText = 'MÚSICA ON';
+      } else {
+        hudMusicBtn.classList.add('muted');
+        if (hudMusicIcon) hudMusicIcon.innerText = '🔇';
+        if (hudMusicText) hudMusicText.innerText = 'MÚSICA OFF';
+      }
+    }
+  }
+
+  musicScheduler() {
+    if (!this.ctx || !this.musicPlaying || !this.musicEnabled) return;
+    // Lookahead loop
+    while (this.nextStepTime < this.ctx.currentTime + 0.12) {
+      this.playStep(this.stepIndex, this.nextStepTime);
+      this.stepIndex = (this.stepIndex + 1) % 64;
+      this.nextStepTime += this.stepDuration;
+    }
+  }
+
+  playStep(step, time) {
+    if (!this.ctx || !this.musicGain) return;
+    const bar = Math.floor(step / 16);
+    const barStep = step % 16;
+
+    // 1. KICK DRUM: Punchy, pumping four-on-the-floor
+    if (barStep % 4 === 0) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(145, time);
+      osc.frequency.exponentialRampToValueAtTime(38, time + 0.08);
+      g.gain.setValueAtTime(0.72, time);
+      g.gain.exponentialRampToValueAtTime(0.001, time + 0.085);
+      osc.connect(g); g.connect(this.musicGain);
+      osc.start(time); osc.stop(time + 0.085);
+    }
+
+    // 2. SNARE / CLAP: Beats 2 and 4 (barStep 4 and 12)
+    if (barStep === 4 || barStep === 12) {
+      const bSize = Math.floor(this.ctx.sampleRate * 0.075);
+      const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bSize * 0.26));
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = b;
+      const nf = this.ctx.createBiquadFilter();
+      nf.type = 'highpass';
+      nf.frequency.setValueAtTime(1050, time);
+      const ng = this.ctx.createGain();
+      ng.gain.setValueAtTime(0.38, time);
+      ng.gain.exponentialRampToValueAtTime(0.001, time + 0.075);
+      noise.connect(nf); nf.connect(ng); ng.connect(this.musicGain);
+      noise.start(time);
+
+      const snOsc = this.ctx.createOscillator();
+      const snG = this.ctx.createGain();
+      snOsc.type = 'triangle';
+      snOsc.frequency.setValueAtTime(220, time);
+      snOsc.frequency.exponentialRampToValueAtTime(95, time + 0.05);
+      snG.gain.setValueAtTime(0.32, time);
+      snG.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+      snOsc.connect(snG); snG.connect(this.musicGain);
+      snOsc.start(time); snOsc.stop(time + 0.05);
+    }
+
+    // 3. HI-HATS: Offbeat Open Hats & 16th Closed Hats
+    const isOpen = (barStep % 4 === 2);
+    const isClosed = (barStep % 2 === 0);
+    if (isOpen || isClosed) {
+      const dur = isOpen ? 0.075 : 0.032;
+      const bSize = Math.floor(this.ctx.sampleRate * dur);
+      const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1);
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = b;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(8000, time);
+      f.Q.value = 4.2;
+      const g = this.ctx.createGain();
+      const hatVol = isOpen ? 0.20 : 0.085;
+      g.gain.setValueAtTime(hatVol, time);
+      g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+      noise.connect(f); f.connect(g); g.connect(this.musicGain);
+      noise.start(time);
+    }
+
+    // 4. BASSLINE: Driving 16th-note synthwave bass groove
+    const bassPatterns = [
+      // Bar 0: Em (E2)
+      [82.4, 82.4, 0, 82.4, 98.0, 0, 82.4, 0, 73.4, 0, 82.4, 0, 123.5, 0, 98.0, 0],
+      // Bar 1: C (C2)
+      [65.4, 65.4, 0, 65.4, 82.4, 0, 65.4, 0, 98.0, 0, 65.4, 0, 130.8, 0, 98.0, 0],
+      // Bar 2: G (G1 / G2)
+      [49.0, 49.0, 0, 49.0, 73.4, 0, 49.0, 0, 98.0, 0, 49.0, 0, 73.4, 0, 92.5, 0],
+      // Bar 3: D (D2)
+      [73.4, 73.4, 0, 73.4, 92.5, 0, 73.4, 0, 110.0, 0, 73.4, 0, 146.8, 0, 110.0, 0]
+    ];
+    const bassFreq = bassPatterns[bar][barStep];
+    if (bassFreq > 0) {
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(bassFreq, time);
+
+      filter.type = 'lowpass';
+      filter.Q.value = 5.2;
+      filter.frequency.setValueAtTime(bassFreq * 4.2, time);
+      filter.frequency.exponentialRampToValueAtTime(bassFreq * 1.6, time + 0.10);
+
+      g.gain.setValueAtTime(0.36, time);
+      g.gain.exponentialRampToValueAtTime(0.001, time + 0.11);
+
+      osc.connect(filter); filter.connect(g); g.connect(this.musicGain);
+      osc.start(time); osc.stop(time + 0.11);
+    }
+
+    // 5. CATCHY LEAD ARPEGGIO / HOOK: Highly addictive uplifting synth melody
+    const leadPatterns = [
+      // Bar 0: Em
+      [493.9, 659.3, 784.0, 987.8, 880.0, 784.0, 740.0, 659.3, 784.0, 493.9, 659.3, 784.0, 987.8, 1174.7, 987.8, 784.0],
+      // Bar 1: C
+      [523.3, 659.3, 784.0, 1046.5, 987.8, 784.0, 659.3, 784.0, 523.3, 659.3, 784.0, 1046.5, 1318.5, 1174.7, 1046.5, 987.8],
+      // Bar 2: G
+      [587.3, 784.0, 987.8, 1174.7, 1046.5, 987.8, 880.0, 784.0, 987.8, 587.3, 784.0, 987.8, 1174.7, 1318.5, 1174.7, 987.8],
+      // Bar 3: D
+      [440.0, 587.3, 740.0, 880.0, 784.0, 740.0, 659.3, 740.0, 440.0, 587.3, 740.0, 880.0, 1480.0, 1318.5, 1174.7, 1480.0]
+    ];
+    const leadFreq = leadPatterns[bar][barStep];
+    if (leadFreq > 0) {
+      const osc1 = this.ctx.createOscillator();
+      const osc2 = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const g = this.ctx.createGain();
+
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(leadFreq, time);
+      osc2.type = 'sawtooth';
+      osc2.frequency.setValueAtTime(leadFreq * 1.002, time);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2600, time);
+      filter.Q.value = 3.5;
+
+      g.gain.setValueAtTime(0.16, time);
+      g.gain.exponentialRampToValueAtTime(0.001, time + 0.10);
+
+      osc1.connect(filter); osc2.connect(filter);
+      filter.connect(g); g.connect(this.musicGain);
+
+      osc1.start(time); osc2.start(time);
+      osc1.stop(time + 0.10); osc2.stop(time + 0.10);
+    }
+
+    // 6. SYNTH PAD: Warm background chord sustained on the 1st step of each bar
+    if (barStep === 0) {
+      const chords = [
+        [164.8, 196.0, 246.9, 293.7], // Em7
+        [130.8, 164.8, 196.0, 246.9], // Cmaj7
+        [98.0, 146.8, 196.0, 220.0],  // Gadd9
+        [146.8, 185.0, 220.0, 329.6]  // Dadd9
+      ];
+      const chord = chords[bar];
+      chord.forEach(f => {
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f, time);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(850, time);
+
+        const dur = this.stepDuration * 16;
+        g.gain.setValueAtTime(0.001, time);
+        g.gain.linearRampToValueAtTime(0.038, time + 0.35);
+        g.gain.exponentialRampToValueAtTime(0.001, time + dur - 0.05);
+
+        osc.connect(filter); filter.connect(g); g.connect(this.musicGain);
+        osc.start(time); osc.stop(time + dur);
+      });
+    }
   }
 }
 
@@ -2810,14 +3071,19 @@ class TennisGameEngine {
   initInputs() {
     window.addEventListener('keydown', (e) => {
       // Don't intercept game shortcuts or record keys if typing in input field
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        if (e.code === 'Enter') {
+          document.activeElement.blur();
+          this.applyProfileAndStart('ai');
+        }
+        return;
+      }
 
       this.keys[e.key.toLowerCase()] = true;
       this.audio.init();
 
       if (!this.isPlaying && (e.code === 'Space' || e.code === 'Enter')) {
-        document.getElementById('start-screen').classList.add('fade-out');
-        this.isPlaying = true;
+        this.applyProfileAndStart('ai');
         return;
       }
 
@@ -2836,7 +3102,13 @@ class TennisGameEngine {
       if (e.key === '2') this.setCameraMode('broadcast');
       if (e.key === '3') this.setCameraMode('top');
 
+      // M toggles Addictive Music On/Off
       if (e.key.toLowerCase() === 'm') {
+        this.audio.toggleMusic();
+      }
+
+      // V cycles arenas/maps
+      if (e.key.toLowerCase() === 'v') {
         this.cycleMap();
       }
 
@@ -2846,6 +3118,7 @@ class TennisGameEngine {
     });
 
     window.addEventListener('keyup', (e) => {
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
       this.keys[e.key.toLowerCase()] = false;
       if (e.code === 'Space') {
         this.handleActionRelease();
@@ -2853,11 +3126,12 @@ class TennisGameEngine {
     });
 
     window.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.overlay-modal') || e.target.closest('.cam-btn')) return;
+      if (e.target.closest('.overlay-modal') || e.target.closest('button') || e.target.closest('input')) return;
       this.handleActionPress();
     });
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
+      if (e.target.closest('.overlay-modal') || e.target.closest('button') || e.target.closest('input')) return;
       this.handleActionRelease();
     });
   }
@@ -2913,26 +3187,70 @@ class TennisGameEngine {
     }
   }
 
-  initUI() {
-    document.getElementById('btn-play').addEventListener('click', () => {
-      this.audio.init();
-      // Capture lobby profile (nickname + gender)
-      window.playerNickname = (document.getElementById('player-nickname')?.value || 'Player').trim() || 'Player';
-      window.playerGender   = document.querySelector('.gender-btn.active')?.dataset.gender || 'male';
-      // Rebuild player model with correct gender
-      if (this.player.model) {
-        this.scene.remove(this.player.model);
-        this.player.model    = this.createProAthlete(0x00f0ff, 0xffffff, '#00f0ff', '7', false, window.playerGender);
-        this.player.nickname = window.playerNickname;
-        this.player.gender   = window.playerGender;
-        this.scene.add(this.player.model);
-        const nick = window.playerNickname.toUpperCase().substring(0, 10);
-        document.getElementById('hud-player-name').innerText = nick + (window.playerGender === 'female' ? ' ♀' : ' ♂');
-      }
-      document.getElementById('start-screen').classList.add('fade-out');
-      this.isPlaying = true;
-    });
+  applyProfileAndStart(mode = 'ai') {
+    this.gameMode = mode;
+    this.audio.init();
 
+    // Capture lobby profile (nickname + gender)
+    const nickInput = document.getElementById('player-nickname');
+    window.playerNickname = (nickInput?.value || window.playerNickname || 'CAMPEÓN').trim() || 'CAMPEÓN';
+    window.playerGender   = document.querySelector('.gender-btn.active')?.dataset.gender || window.playerGender || 'male';
+
+    try {
+      localStorage.setItem('padel_tennis_nickname', window.playerNickname);
+      localStorage.setItem('padel_tennis_gender', window.playerGender);
+    } catch (e) {}
+
+    // Rebuild player model with selected gender
+    if (this.player.model) {
+      this.scene.remove(this.player.model);
+      this.player.model    = this.createProAthlete(0x00f0ff, 0xffffff, '#00f0ff', '7', false, window.playerGender);
+      this.player.nickname = window.playerNickname;
+      this.player.gender   = window.playerGender;
+      this.scene.add(this.player.model);
+    }
+
+    const hudPlayerName = document.getElementById('hud-player-name');
+    if (hudPlayerName) {
+      const nick = window.playerNickname.toUpperCase().substring(0, 10);
+      hudPlayerName.innerText = nick + (window.playerGender === 'female' ? ' ♀' : ' ♂');
+    }
+
+    const startScreen = document.getElementById('start-screen');
+    if (startScreen) startScreen.classList.add('fade-out');
+    this.isPlaying = true;
+
+    // Start Addictive Synthwave Music!
+    this.audio.startMusic();
+  }
+
+  initUI() {
+    // Restore saved nickname and gender from localStorage
+    try {
+      const savedNick = localStorage.getItem('padel_tennis_nickname');
+      if (savedNick) {
+        window.playerNickname = savedNick;
+        const nickInput = document.getElementById('player-nickname');
+        if (nickInput) nickInput.value = savedNick;
+      }
+      const savedGender = localStorage.getItem('padel_tennis_gender');
+      if (savedGender) {
+        window.playerGender = savedGender;
+        document.querySelectorAll('.gender-btn').forEach(b => {
+          b.classList.toggle('active', b.dataset.gender === savedGender);
+        });
+      }
+    } catch (e) {}
+
+    // Singleplayer start button
+    const btnPlay = document.getElementById('btn-play');
+    if (btnPlay) {
+      btnPlay.addEventListener('click', () => {
+        this.applyProfileAndStart('ai');
+      });
+    }
+
+    // Camera perspective buttons
     document.querySelectorAll('.cam-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         this.setCameraMode(e.currentTarget.dataset.cam);
@@ -2940,24 +3258,25 @@ class TennisGameEngine {
     });
 
     // Gender toggle buttons (Lobby)
-    window.playerGender = 'male';
     document.querySelectorAll('.gender-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         window.playerGender = btn.dataset.gender || 'male';
+        try { localStorage.setItem('padel_tennis_gender', window.playerGender); } catch (e) {}
       });
     });
 
-    // Nickname live preview
+    // Nickname input handling
     const nickInput = document.getElementById('player-nickname');
     if (nickInput) {
       nickInput.addEventListener('input', () => {
-        window.playerNickname = nickInput.value.trim() || 'Player';
+        window.playerNickname = nickInput.value.trim() || 'CAMPEÓN';
+        try { localStorage.setItem('padel_tennis_nickname', window.playerNickname); } catch (e) {}
       });
     }
 
-
+    // Map selection cards
     document.querySelectorAll('.map-card').forEach(card => {
       card.addEventListener('click', () => {
         const selectedMap = card.dataset.map;
@@ -2972,6 +3291,14 @@ class TennisGameEngine {
     if (btnSwitchMap) {
       btnSwitchMap.addEventListener('click', () => {
         this.cycleMap();
+      });
+    }
+
+    // In-game HUD Quick Music Toggle Button
+    const btnToggleMusic = document.getElementById('btn-toggle-music');
+    if (btnToggleMusic) {
+      btnToggleMusic.addEventListener('click', () => {
+        this.audio.toggleMusic();
       });
     }
   }
@@ -3515,9 +3842,9 @@ class TennisGameEngine {
       targetX = -this.servingSide * 1.05; // Aim down the 'T' center line
     }
 
-    // Landing depth safely centered in service box (Z = -3.9m to -4.2m)
-    const targetZ = -4.1;
-    const flightTime = 0.64; // Professional 185 km/h serve speed
+    // Landing depth safely centered in service box (Z = -3.8m)
+    const targetZ = -3.8;
+    const flightTime = 0.68; // Professional crisp serve speed
 
     // Overhead contact point (apex of serve toss)
     this.ball.pos.y = 2.45;
@@ -3527,9 +3854,9 @@ class TennisGameEngine {
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
 
-    // Guaranteed Net Clearance (Net is 0.914m; we enforce y_net >= 1.35m)
+    // Guaranteed Net Clearance (Net is 0.914m; we enforce y_net >= 1.30m)
     const timeToNet = (0 - this.ball.pos.z) / vz;
-    const vy = (1.35 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
+    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
 
     this.ball.vel.set(vx, vy, vz);
     this.ball.spin.set(16.0, 0, 0); // Heavy forward topspin kick pulling ball down
@@ -3558,7 +3885,7 @@ class TennisGameEngine {
     if (sideChoice < 0.35) targetX = this.servingSide * 3.15; // wide
     else if (sideChoice > 0.70) targetX = this.servingSide * 1.05; // down the T
 
-    const targetZ = 4.1;
+    const targetZ = 3.8;
     const flightTime = 0.68;
 
     this.ball.pos.y = 2.45;
@@ -3569,7 +3896,7 @@ class TennisGameEngine {
     const vz = (targetZ - this.ball.pos.z) / flightTime;
 
     const timeToNet = (0 - this.ball.pos.z) / vz;
-    const vy = (1.35 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
+    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
 
     this.ball.vel.set(vx, vy, vz);
     this.ball.spin.set(-16.0, 0, 0);
@@ -3970,11 +4297,33 @@ class TennisGameEngine {
           this.handleServiceFault('Fuera del cuadro de saque');
           return;
         }
+
+        // Valid serve first bounce inside diagonal service box
+        this.ball.hitGroundInCourt = true;
+        this.ball.bounceCount = 1;
+        return;
       }
 
-      // Rule B: RALLY IN-PLAY BOUNDARIES (Singles Court: |X| <= 4.115m, |Z| <= 11.885m)
-      const inSinglesX = Math.abs(this.ball.pos.x) <= this.HALF_W;
-      const inSinglesZ = Math.abs(this.ball.pos.z) <= this.HALF_L;
+      // Rule B: Double Bounce Rule
+      // If ball already bounced inside the court once, any subsequent ground bounce is a double bounce point for the hitter
+      if (this.ball.hitGroundInCourt) {
+        const winner = this.ball.lastHitter || (currentSide === 'player' ? 'ai' : 'player');
+        this.awardPoint(winner, 'Doble bote en pista');
+        return;
+      }
+
+      // Rule C: First bounce in rally (this.rally > 0 && !this.ball.hitGroundInCourt)
+      // Own court bounce fault:
+      if (this.ball.lastHitter && this.ball.lastHitter === currentSide) {
+        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
+        this.awardPoint(winner, 'Bote en campo propio (Falta)');
+        return;
+      }
+
+      // Rally in-play singles boundaries (touching line is IN)
+      const lineTol = 0.22;
+      const inSinglesX = Math.abs(this.ball.pos.x) <= this.HALF_W + lineTol;
+      const inSinglesZ = Math.abs(this.ball.pos.z) <= this.HALF_L + lineTol;
 
       if (!inSinglesX || !inSinglesZ) {
         const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
@@ -3982,22 +4331,8 @@ class TennisGameEngine {
         return;
       }
 
-      // Own court bounce fault:
-      if (this.ball.lastHitter && this.ball.lastHitter === currentSide && this.ball.bounceCount === 0) {
-        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, 'Bote en campo propio (Falta)');
-        return;
-      }
-
       this.ball.hitGroundInCourt = true;
-      this.ball.bounceCount++;
-
-      // Double bounce rule
-      if (this.ball.bounceCount >= 2) {
-        const winner = (currentSide === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, 'Doble bote en pista');
-        return;
-      }
+      this.ball.bounceCount = 1;
     }
 
     // Synchronize Ball & Shadow

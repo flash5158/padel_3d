@@ -26,7 +26,7 @@
         <!-- Player 1 -->
         <div class="team-row" id="team-player">
           <div class="serve-indicator" id="serve-player">🎾</div>
-          <div class="team-name">TÚ (PRO)</div>
+          <div class="team-name" id="hud-player-name">TÚ (PRO)</div>
           <div class="set-score" id="sets-player">0</div>
           <div class="game-score" id="games-player">0</div>
           <div class="points-badge" id="pts-player">0</div>
@@ -34,7 +34,7 @@
         <!-- Player 2 (AI / Rival) -->
         <div class="team-row" id="team-ai">
           <div class="serve-indicator" id="serve-ai"></div>
-          <div class="team-name">RIVAL (PRO)</div>
+          <div class="team-name" id="hud-ai-name">RIVAL (PRO)</div>
           <div class="set-score" id="sets-ai">0</div>
           <div class="game-score" id="games-ai">0</div>
           <div class="points-badge" id="pts-ai">0</div>
@@ -93,9 +93,13 @@
       </div>
 
       <div class="hud-control-row">
-        <button class="map-quick-btn" id="btn-switch-map" title="Cambiar Escenario [M]">
+        <button class="map-quick-btn" id="btn-switch-map" title="Cambiar Escenario">
           <span id="current-map-icon">🏟️</span>
           <span id="current-map-name">ARENA PRO</span>
+        </button>
+        <button class="music-quick-btn" id="btn-toggle-music" title="Activar/Desactivar Música">
+          <span id="hud-music-icon">🎵</span>
+          <span id="hud-music-text">MÚSICA</span>
         </button>
       </div>
 
@@ -157,6 +161,36 @@
               <p>Piedra Imperial • Torii • Lluvia Sakura</p>
             </div>
             <div class="map-glow"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player Customization Section (Nickname & Gender) -->
+      <div class="player-custom-section">
+        <div class="section-badge">
+          <span class="pulse-dot-small"></span>
+          <span>PERFIL DEL JUGADOR</span>
+        </div>
+        <div class="custom-controls-grid">
+          <div class="nickname-box">
+            <label for="player-nickname">TU NOMBRE / NICKNAME</label>
+            <div class="input-glow-wrapper">
+              <span class="input-icon">👤</span>
+              <input type="text" id="player-nickname" placeholder="Tu Nombre..." maxlength="12" value="CAMPEÓN" autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+          <div class="gender-box">
+            <label>SELECCIÓN DE ATLETA</label>
+            <div class="gender-toggle-group">
+              <button type="button" class="gender-btn active" data-gender="male" id="gender-btn-male">
+                <span class="gender-icon">♂️</span>
+                <span class="gender-text">HOMBRE</span>
+              </button>
+              <button type="button" class="gender-btn" data-gender="female" id="gender-btn-female">
+                <span class="gender-icon">♀️</span>
+                <span class="gender-text">MUJER</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

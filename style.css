@@ -448,6 +448,41 @@ body, html {
   transform: scale(0.96);
 }
 
+.music-quick-btn {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--primary-cyan);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-family: var(--font-tech);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.25);
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.music-quick-btn:hover {
+  transform: translateY(-2px);
+  border-color: #38bdf8;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.50);
+}
+
+.music-quick-btn:active {
+  transform: scale(0.96);
+}
+
+.music-quick-btn.muted {
+  border-color: rgba(255, 255, 255, 0.20);
+  color: #94a3b8;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
 .camera-controls {
   display: flex;
   flex-direction: column;
