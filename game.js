@@ -4264,14 +4264,18 @@ class TennisGameEngine {
   initMultiplayer() {
     const tabAI = document.getElementById('tab-mode-ai');
     const tabOnline = document.getElementById('tab-mode-online');
+    const tabTourn = document.getElementById('tab-mode-tournament');
     const tabLocal = document.getElementById('tab-mode-local');
     const panelAI = document.getElementById('mode-panel-ai');
     const panelOnline = document.getElementById('mode-panel-online');
+    const panelTourn = document.getElementById('mode-panel-tournament');
     const panelLocal = document.getElementById('mode-panel-local');
 
     const setModeTab = (mode) => {
-      if (tabAI) [tabAI, tabOnline, tabLocal].forEach(t => t.classList.remove('active'));
-      if (panelAI) [panelAI, panelOnline, panelLocal].forEach(p => p.classList.add('hidden'));
+      const allTabs = [tabAI, tabOnline, tabTourn, tabLocal];
+      const allPanels = [panelAI, panelOnline, panelTourn, panelLocal];
+      allTabs.forEach(t => t?.classList.remove('active'));
+      allPanels.forEach(p => p?.classList.add('hidden'));
 
       if (mode === 'ai') {
         this.gameMode = 'ai';
@@ -4282,6 +4286,11 @@ class TennisGameEngine {
         if (tabOnline) tabOnline.classList.add('active');
         if (panelOnline) panelOnline.classList.remove('hidden');
         this.setupOnlineHost();
+      } else if (mode === 'tournament') {
+        this.gameMode = 'tournament_host';
+        if (tabTourn) tabTourn.classList.add('active');
+        if (panelTourn) panelTourn.classList.remove('hidden');
+        this.setupTournamentHost();
       } else if (mode === 'local') {
         this.gameMode = 'local';
         if (tabLocal) tabLocal.classList.add('active');
@@ -4291,6 +4300,7 @@ class TennisGameEngine {
 
     if (tabAI) tabAI.addEventListener('click', () => setModeTab('ai'));
     if (tabOnline) tabOnline.addEventListener('click', () => setModeTab('online'));
+    if (tabTourn) tabTourn.addEventListener('click', () => setModeTab('tournament'));
     if (tabLocal) tabLocal.addEventListener('click', () => setModeTab('local'));
 
     // Local 2-Player Start Button
@@ -6208,15 +6218,7 @@ class TennisGameEngine {
     const panelOnline = document.getElementById('mode-panel-online');
     const panelLocal = document.getElementById('mode-panel-local');
 
-    if (tabTourn) {
-      tabTourn.addEventListener('click', () => {
-        [tabAI, tabOnline, tabLocal, tabTourn].forEach(t => t?.classList.remove('active'));
-        [panelAI, panelOnline, panelLocal, panelTourn].forEach(p => p?.classList.add('hidden'));
-        tabTourn.classList.add('active');
-        if (panelTourn) panelTourn.classList.remove('hidden');
-        this.setupTournamentHost();
-      });
-    }
+// tabTourn listener unified in initMultiplayer()
 
     // Fill Tournament with AI Pros
     const btnFillAI = document.getElementById('btn-fill-tournament-ai');
