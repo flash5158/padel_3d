@@ -2,7 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tennis 3D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#030712">
+  <link rel="manifest" href="manifest.json">
   <title>Grand Slam Tennis 3D - Pro Tour Edition</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,6 +106,10 @@
         <button class="music-quick-btn" id="btn-toggle-music" title="Activar/Desactivar Música">
           <span id="hud-music-icon">🎵</span>
           <span id="hud-music-text">MÚSICA</span>
+        </button>
+        <button class="ctrl-quick-btn" id="btn-toggle-controls" title="Cambiar Controles (Táctil / PC)">
+          <span id="hud-ctrl-icon">📱</span>
+          <span id="hud-ctrl-text">CONTROLES</span>
         </button>
       </div>
 
@@ -205,11 +215,34 @@
         </div>
       </div>
 
+      <!-- Controls Selection Section: Auto / Mobile Touch / PC Keyboard -->
+      <div class="controls-settings-section">
+        <div class="section-badge">
+          <span class="pulse-dot-small"></span>
+          <span>CONFIGURACIÓN DE CONTROLES</span>
+        </div>
+        <div class="controls-toggle-group">
+          <button type="button" class="control-pref-btn active" data-control="auto" id="ctrl-btn-auto">
+            <span class="ctrl-icon">🤖</span>
+            <span class="ctrl-text">AUTOMÁTICO</span>
+          </button>
+          <button type="button" class="control-pref-btn" data-control="mobile" id="ctrl-btn-mobile">
+            <span class="ctrl-icon">📱</span>
+            <span class="ctrl-text">MÓVIL / IPAD</span>
+          </button>
+          <button type="button" class="control-pref-btn" data-control="pc" id="ctrl-btn-pc">
+            <span class="ctrl-icon">⌨️</span>
+            <span class="ctrl-text">TECLADO (PC)</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Mode Switcher Tabs -->
       <div class="mode-tabs">
-        <button class="mode-tab-btn active" id="tab-mode-ai" data-mode="ai">🏆 Modo Individual</button>
-        <button class="mode-tab-btn" id="tab-mode-online" data-mode="online">🌐 Multijugador Online (P2P)</button>
-        <button class="mode-tab-btn" id="tab-mode-local" data-mode="local">👥 2 Jugadores Local</button>
+        <button class="mode-tab-btn active" id="tab-mode-ai" data-mode="ai">👤 Individual</button>
+        <button class="mode-tab-btn" id="tab-mode-online" data-mode="online">🌐 1v1 Online</button>
+        <button class="mode-tab-btn" id="tab-mode-tournament" data-mode="tournament">🏆 Torneo Online</button>
+        <button class="mode-tab-btn" id="tab-mode-local" data-mode="local">👥 2J Local</button>
       </div>
 
       <!-- Mode Content: AI -->
@@ -277,6 +310,143 @@
         </button>
       </div>
 
+      <!-- Mode Content: Online Tournament (4+ Players with World Rotation) -->
+      <div id="mode-panel-tournament" class="mode-panel hidden">
+        <div class="tournament-glass-card">
+          <div class="tournament-header">
+            <h4>TORNEO MULTIJUGADOR GRAND SLAM</h4>
+            <p>Sala de 4 jugadores compitiendo en sets simultáneos en mundos distintos. Tras cada set, los jugadores rotan de escenario y rival hasta definir al Campeón.</p>
+          </div>
+          
+          <div class="tournament-lobby-grid">
+            <div class="tournament-col">
+              <h5>CREAR SALA DE TORNEO</h5>
+              <div class="room-code-box">
+                <span id="tournament-code-display">Generando sala...</span>
+                <button id="btn-copy-tournament-code" class="btn-copy">Copiar Enlace</button>
+              </div>
+
+              <div class="tournament-slots-container">
+                <div class="slots-header-row">
+                  <span>JUGADORES EN SALA (<span id="tournament-slot-count">1</span>/4)</span>
+                  <span class="pulse-dot-small"></span>
+                </div>
+                <div id="tournament-players-list" class="tournament-players-list">
+                  <!-- Dynamically rendered slots -->
+                </div>
+              </div>
+
+              <div class="tournament-host-actions">
+                <button type="button" id="btn-fill-tournament-ai" class="btn-secondary-sm">
+                  <span>🤖 Completar Cupos con IAs Pro</span>
+                </button>
+                <button type="button" id="btn-start-tournament" class="btn-luxury-start" disabled>
+                  <span>INICIAR TORNEO ROTATORIO</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="tournament-divider"></div>
+
+            <div class="tournament-col">
+              <h5>UNIRSE A TORNEO</h5>
+              <p>Ingresa el código del torneo proporcionado por el organizador:</p>
+              <div class="join-row">
+                <input type="text" id="join-tournament-input" placeholder="TORNEO-XXXX" maxlength="15" autocomplete="off" spellcheck="false">
+                <button type="button" id="btn-join-tournament" class="btn-join">Unirse</button>
+              </div>
+              <div id="tournament-join-status" class="online-status"></div>
+
+              <div class="tournament-rules-box">
+                <h6>🏆 SISTEMA DE ROTACIÓN DE MUNDOS:</h6>
+                <ul>
+                  <li><strong>Ronda 1</strong>: Partidos simultáneos en <em>Arena Pro</em> 🏟️ y <em>Playa Paraíso</em> 🏖️</li>
+                  <li><strong>Rotación</strong>: Los ganadores avanzan a la Gran Final en <em>La Casa Blanca</em> 🏛️</li>
+                  <li><strong>3er Puesto</strong>: Se disputa en el <em>Templo Zen</em> ⛩️</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- In-Game Mobile Virtual Touch Controls Overlay -->
+  <div id="mobile-controls" class="mobile-controls-overlay hidden">
+    <!-- Virtual 360 Thumbstick (Bottom-Left) -->
+    <div id="touch-joystick-zone" class="touch-joystick-zone">
+      <div id="joystick-base" class="joystick-base">
+        <div id="joystick-knob" class="joystick-knob"></div>
+        <div class="joystick-crosshair">
+          <span class="j-dir j-up">▲</span>
+          <span class="j-dir j-down">▼</span>
+          <span class="j-dir j-left">◀</span>
+          <span class="j-dir j-right">▶</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Hit Button & Shot Selector (Bottom-Right) -->
+    <div id="touch-action-zone" class="touch-action-zone">
+      <div class="touch-shot-selector">
+        <button type="button" class="touch-shot-btn active" data-shot="DRIVE">DRIVE</button>
+        <button type="button" class="touch-shot-btn" data-shot="GLOBO">GLOBO</button>
+        <button type="button" class="touch-shot-btn" data-shot="SMASH">SMASH</button>
+        <button type="button" class="touch-shot-btn" data-shot="SLICE">SLICE</button>
+      </div>
+      <div id="touch-hit-btn" class="touch-hit-btn" role="button" aria-label="Golpear pelota">
+        <div class="touch-hit-pulse"></div>
+        <span class="touch-hit-icon">🎾</span>
+        <span class="touch-hit-text">GOLPE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tournament Bracket & Standings Modal -->
+  <div id="tournament-modal" class="overlay-modal hidden">
+    <div class="modal-card tournament-card">
+      <div class="modal-ambient-glow"></div>
+      <div class="tournament-bracket-header">
+        <div class="brand-pill">
+          <span class="gold-star">✦</span>
+          <span>GRAND SLAM ROTATION SYSTEM</span>
+          <span class="gold-star">✦</span>
+        </div>
+        <h2 id="tournament-bracket-title">CUADRO DE TORNEO</h2>
+        <p id="tournament-bracket-subtitle">Ronda 1 en progreso</p>
+      </div>
+
+      <div id="tournament-bracket-tree" class="tournament-bracket-tree">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="tournament-standings-box">
+        <h4>TABLA GENERAL DE POSICIONES</h4>
+        <table class="tournament-table">
+          <thead>
+            <tr>
+              <th>POS</th>
+              <th>JUGADOR</th>
+              <th>SETS</th>
+              <th>JUEGOS</th>
+              <th>ESTADO</th>
+            </tr>
+          </thead>
+          <tbody id="tournament-standings-body">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="tournament-modal-actions">
+        <button type="button" id="btn-resume-tournament-match" class="btn-luxury-start">
+          <span>IR AL SIGUIENTE SET / MUNDO</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 

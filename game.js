@@ -2221,6 +2221,23 @@ class TennisGameEngine {
     this._pendingSound = null;
     this._pendingAnn = null;
     this.currentMap = 'stadium';
+
+    // Mobile & Touch Controls State
+    this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    this.controlMode = localStorage.getItem('padel_control_mode') || 'auto';
+    this.touchJoystickVec = new THREE.Vector2(0, 0);
+
+    // Online Tournament State (4+ Players with World Rotation)
+    this.tournament = {
+      active: false,
+      isHost: false,
+      code: null,
+      round: 1,
+      maxRounds: 2,
+      players: [],
+      matches: [],
+      standings: {}
+    };
     this.oceanMesh = null;
     this.tikiTorches = [];
 
@@ -2243,6 +2260,7 @@ class TennisGameEngine {
     this.buildBall();
     this.initInputs();
     this.initUI();
+    this.initTournamentUI();
     this.initMultiplayer();
     this.prepareServe('player');
 
@@ -3832,6 +3850,7 @@ class TennisGameEngine {
 
   // --- Inputs ---
   initInputs() {
+    this.initTouchControls();
     window.addEventListener('keydown', (e) => {
       // Don't intercept game shortcuts or record keys if typing in input field
       if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
@@ -3897,6 +3916,181 @@ class TennisGameEngine {
       if (e.target.closest('.overlay-modal') || e.target.closest('button') || e.target.closest('input')) return;
       this.handleActionRelease();
     });
+  }
+
+
+  // --- Mobile Virtual Touch Controls & Device Detection ---
+  initTouchControls() {
+    // 1. Controls Preferences Selector (Auto / Mobile / PC)
+    const ctrlBtns = document.querySelectorAll('.control-pref-btn');
+    ctrlBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.setControlMode(btn.dataset.control);
+      });
+    });
+
+    // 2. HUD Quick Toggle Button
+    const hudCtrlBtn = document.getElementById('btn-toggle-controls');
+    if (hudCtrlBtn) {
+      hudCtrlBtn.addEventListener('click', () => {
+        const modes = ['auto', 'mobile', 'pc'];
+        const nextIdx = (modes.indexOf(this.controlMode) + 1) % modes.length;
+        this.setControlMode(modes[nextIdx]);
+        const labels = { auto: 'AUTOMÁTICO', mobile: 'MÓVIL (TÁCTIL)', pc: 'TECLADO (PC)' };
+        this.showAnnouncement('CONTROLES', labels[this.controlMode]);
+      });
+    }
+
+    // Set initial control mode
+    this.setControlMode(this.controlMode);
+
+    // 3. Virtual 360 Thumbstick Setup
+    const jZone = document.getElementById('touch-joystick-zone');
+    const jBase = document.getElementById('joystick-base');
+    const jKnob = document.getElementById('joystick-knob');
+
+    if (jZone && jBase && jKnob) {
+      let activeTouchId = null;
+      let baseCenter = { x: 0, y: 0 };
+      const maxRadius = 42; // px
+
+      const updateCenter = () => {
+        const rect = jBase.getBoundingClientRect();
+        baseCenter = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      };
+
+      const handleMove = (clientX, clientY) => {
+        const dx = clientX - baseCenter.x;
+        const dy = clientY - baseCenter.y;
+        const dist = Math.hypot(dx, dy);
+        const clampedDist = Math.min(dist, maxRadius);
+        const angle = Math.atan2(dy, dx);
+
+        const knobX = Math.cos(angle) * clampedDist;
+        const knobY = Math.sin(angle) * clampedDist;
+
+        jKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+        // Normalized vector (-1.0 to 1.0)
+        this.touchJoystickVec.set(knobX / maxRadius, knobY / maxRadius);
+      };
+
+      const handleEnd = () => {
+        activeTouchId = null;
+        jKnob.style.transform = 'translate(0px, 0px)';
+        this.touchJoystickVec.set(0, 0);
+      };
+
+      // Touch events for mobile/tablet
+      jZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        updateCenter();
+        const touch = e.changedTouches[0];
+        activeTouchId = touch.identifier;
+        handleMove(touch.clientX, touch.clientY);
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === activeTouchId) {
+            handleMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+            break;
+          }
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchend', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === activeTouchId) {
+            handleEnd();
+            break;
+          }
+        }
+      });
+
+      window.addEventListener('touchcancel', handleEnd);
+
+      // Mouse drag fallback for testing on PC
+      let isMouseDown = false;
+      jZone.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        updateCenter();
+        handleMove(e.clientX, e.clientY);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isMouseDown) handleMove(e.clientX, e.clientY);
+      });
+      window.addEventListener('mouseup', () => {
+        if (isMouseDown) {
+          isMouseDown = false;
+          handleEnd();
+        }
+      });
+    }
+
+    // 4. Touch Hit Button
+    const hitBtn = document.getElementById('touch-hit-btn');
+    if (hitBtn) {
+      hitBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (navigator.vibrate) navigator.vibrate(25);
+        this.handleActionPress();
+      }, { passive: false });
+
+      hitBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.handleActionRelease();
+      }, { passive: false });
+
+      // Mouse fallback
+      hitBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        this.handleActionPress();
+      });
+      hitBtn.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        this.handleActionRelease();
+      });
+    }
+
+    // 5. Touch Shot Selectors (DRIVE, GLOBO, SMASH, SLICE)
+    document.querySelectorAll('.touch-shot-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.touch-shot-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.shotType = btn.dataset.shot || 'DRIVE';
+        const label = document.getElementById('current-shot');
+        if (label) label.innerText = this.shotType;
+        this.audio.playHit(0.5, false, false);
+      });
+    });
+  }
+
+  setControlMode(mode) {
+    this.controlMode = mode;
+    try { localStorage.setItem('padel_control_mode', mode); } catch (e) {}
+
+    // Update active button state
+    document.querySelectorAll('.control-pref-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.control === mode);
+    });
+
+    const isMobileEffective = (mode === 'mobile') || (mode === 'auto' && this.isTouchDevice);
+    const mobileOverlay = document.getElementById('mobile-controls');
+    if (mobileOverlay) {
+      mobileOverlay.classList.toggle('hidden', !isMobileEffective);
+    }
+
+    // Update HUD controls icon
+    const hudIcon = document.getElementById('hud-ctrl-icon');
+    const hudText = document.getElementById('hud-ctrl-text');
+    if (hudIcon) hudIcon.innerText = isMobileEffective ? '📱' : '⌨️';
+    if (hudText) hudText.innerText = isMobileEffective ? 'TÁCTIL' : 'TECLADO';
   }
 
   handleActionPress() {
@@ -5181,6 +5375,12 @@ class TennisGameEngine {
     if (this.keys['a'] || this.keys['arrowleft']) dir.x -= 1;
     if (this.keys['d'] || this.keys['arrowright']) dir.x += 1;
 
+    // Analog Virtual 360 Thumbstick support for iPhone / iPad / Mobile Touch
+    if (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.02) {
+      dir.x += this.touchJoystickVec.x;
+      dir.z += this.touchJoystickVec.y; // Forward (-Z) / Backward (+Z)
+    }
+
     const isSprinting = this.keys['shift'];
     const curSpeed = this.player.speed * (isSprinting ? 1.4 : 1.0);
 
@@ -5995,193 +6195,416 @@ class TennisGameEngine {
     this.animateCharacter(this.ai, dt, true);
   }
 
-  // --- Player Movement & Animation ---
-  updatePlayer(dt) {
-    if (!this.isPlaying) return;
-
-    const dir = this._v1.set(0, 0, 0);
-    if (this.keys['w'] || this.keys['arrowup']) dir.z -= 1;
-    if (this.keys['s'] || this.keys['arrowdown']) dir.z += 1;
-    if (this.keys['a'] || this.keys['arrowleft']) dir.x -= 1;
-    if (this.keys['d'] || this.keys['arrowright']) dir.x += 1;
-
-    const isSprinting = this.keys['shift'];
-    const curSpeed = this.player.speed * (isSprinting ? 1.4 : 1.0);
-
-    if (dir.lengthSq() > 0) {
-      dir.normalize();
-      this.player.pos.addScaledVector(dir, curSpeed * dt);
-      this.player.runCycle += dt * 14;
-
-      this.player.pos.x = THREE.MathUtils.clamp(this.player.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
-      this.player.pos.z = THREE.MathUtils.clamp(this.player.pos.z, 0.9, this.HALF_L + 3.5);
-    } else {
-      this.player.runCycle *= 0.8;
-    }
-
-    if (this.isChargingPower) {
-      this.power = Math.min(this.power + dt * 1.6, 1.0);
-      document.getElementById('power-bar').style.width = `${this.power * 100}%`;
-    }
-
-    this.player.model.position.copy(this.player.pos);
-    this.animateCharacter(this.player, dt, false);
-  }
-
-  // --- Pro Character Animations (Kinetic Chain Multi-Joint Biomechanics) ---
-  animateCharacter(char, dt, isAI) {
-    const limbs = char.limbs;
-    if (!limbs) return;
-
-    const time = this.clock ? this.clock.getElapsedTime() : 0;
-    const isMoving = Math.abs(Math.sin(char.runCycle)) > 0.05;
-
-    // 1. Lower Body - Biomechanically accurate running with hip sway & calf curl
-    const runPhase = char.runCycle || 0;
-    if (isMoving) {
-      const stride   = Math.sin(runPhase) * 0.80;
-      const hipSway  = Math.sin(runPhase * 2) * 0.045;
-      const calfSnap = Math.max(0, Math.sin(runPhase - 0.55) * 1.10);
-      limbs.lLeg.rotation.x = stride;
-      limbs.lLeg.rotation.z = -hipSway;
-      limbs.rLeg.rotation.x = -stride;
-      limbs.rLeg.rotation.z = hipSway;
-      if (limbs.lCalf) limbs.lCalf.rotation.x = Math.max(0, -stride * 0.88 + calfSnap * 0.32);
-      if (limbs.rCalf) limbs.rCalf.rotation.x = Math.max(0, stride * 0.88 - calfSnap * 0.32);
-      limbs.lArm.rotation.x = -stride * 0.70;
-      limbs.lArm.rotation.z = -0.08;
-      if (!char.isSwinging) {
-        limbs.rArm.rotation.x = stride * 0.52;
-        limbs.rArm.rotation.z = 0.08;
-      }
-      limbs.torso.rotation.y = Math.sin(runPhase) * 0.07;
-      limbs.torso.rotation.z = Math.sin(runPhase * 2) * 0.025;
-      if (limbs.head) limbs.head.rotation.x = Math.sin(runPhase * 2) * 0.022;
-    } else {
-      // Pro Athletic Split-Step Ready Bounce
-      const bounce = Math.sin(time * 5.8) * 0.026;
-      const sway   = Math.sin(time * 2.1) * 0.014;
-      limbs.lLeg.rotation.set(0.14, 0, -0.09);
-      limbs.rLeg.rotation.set(0.14, 0,  0.09);
-      if (limbs.lCalf) limbs.lCalf.rotation.x = 0.20 + bounce;
-      if (limbs.rCalf) limbs.rCalf.rotation.x = 0.20 + bounce;
-      limbs.torso.rotation.z = sway;
-      if (limbs.head) limbs.head.rotation.x = bounce * 0.45;
-    }
-
-    // 2. Upper Body & Kinetic Chain Stroke Execution
-    if (char.isSwinging) {
-      char.swingProgress += dt * 11.0;
-      const t = Math.min(char.swingProgress / Math.PI, 1.0);
-
-      if (char.swingType === 'serve') {
-        // Authentic Overhead Tennis Serve: Trophy Pose -> Apex Jump Snap -> Deceleration Follow-Through
-        if (t <= 0.40) {
-          const p = t / 0.40;
-          // Left arm points high tossing ball
-          limbs.lArm.rotation.set(-2.6 * p, 0, 0.25 * p);
-          // Right arm drops racket into trophy scratch pose behind neck
-          limbs.rArm.rotation.set(1.4 * p, -0.6 * p, -1.2 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * p, 0, 0);
-          limbs.torso.rotation.set(-0.25 * p, 0.35 * p, 0);
-        } else if (t <= 0.75) {
-          const p = (t - 0.40) / 0.35;
-          // High explosive apex overhead extension
-          limbs.lArm.rotation.set(-2.6 * (1 - p), 0, 0);
-          limbs.rArm.rotation.set(1.4 - 3.8 * p, -0.6 + 0.9 * p, -1.2 + 1.4 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(1.6 * (1 - p), 0, 0);
-          limbs.torso.rotation.set(-0.25 + 0.55 * p, 0.35 - 0.45 * p, 0);
-        } else {
-          const p = (t - 0.75) / 0.25;
-          // Follow-through down across opposite hip
-          limbs.rArm.rotation.set(-2.4 + 3.2 * p, 0.3 - 0.5 * p, 0.2 - 1.6 * p);
-          limbs.torso.rotation.set(0.30 * (1 - p), -0.10 * (1 - p), 0);
-        }
-      } else if (char.swingType === 'backhand') {
-        // Two-Handed Backhand Drive
-        if (t <= 0.35) {
-          const p = t / 0.35;
-          limbs.torso.rotation.y = 0.85 * p;
-          limbs.rArm.rotation.set(0.4 * p, -0.8 * p, 1.4 * p);
-          limbs.lArm.rotation.set(0.3 * p, -0.6 * p, 1.1 * p);
-        } else if (t <= 0.70) {
-          const p = (t - 0.35) / 0.35;
-          limbs.torso.rotation.y = 0.85 - 1.55 * p;
-          limbs.rArm.rotation.set(0.4 - 0.9 * p, -0.8 + 1.6 * p, 1.4 - 2.8 * p);
-          limbs.lArm.rotation.set(0.3 - 0.8 * p, -0.6 + 1.4 * p, 1.1 - 2.4 * p);
-        } else {
-          const p = (t - 0.70) / 0.30;
-          // Follow-through blending smoothly into neutral stance
-          limbs.torso.rotation.set(0.12 * p, -0.70 * (1 - p), 0);
-          limbs.rArm.rotation.set(-0.5 * (1 - p) - 0.55 * p, 0.8 * (1 - p) + 0.30 * p, -1.4 * (1 - p) - 0.42 * p);
-          limbs.lArm.rotation.set(-0.5 * (1 - p) - 0.50 * p, 0.8 * (1 - p) - 0.32 * p, -1.3 * (1 - p) + 0.40 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(0.55 * p, 0, 0);
-          if (limbs.lFore) limbs.lFore.rotation.set(0.55 * p, 0, 0);
-        }
-      } else {
-        // Modern Aerodynamic Topspin Forehand (Windshield-Wiper Finish)
-        if (t <= 0.35) {
-          const p = t / 0.35;
-          // Unit turn: Torso coils 55°, racket drops into lag position behind right hip
-          limbs.torso.rotation.y = -0.90 * p;
-          limbs.rArm.rotation.set(0.35 * p, 0.75 * p, -1.55 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(0.45 * p, 0, 0);
-          limbs.lArm.rotation.set(-0.6 * p, 0.2 * p, 0.75 * p);
-        } else if (t <= 0.70) {
-          const p = (t - 0.35) / 0.35;
-          // Forward kinetic uncoil through contact zone
-          limbs.torso.rotation.y = -0.90 + 1.45 * p;
-          limbs.rArm.rotation.set(0.35 - 0.8 * p, 0.75 - 1.6 * p, -1.55 + 3.1 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(0.45 + 0.8 * p, 0, 0);
-          limbs.lArm.rotation.set(-0.6 + 0.8 * p, 0.2 - 0.3 * p, 0.75 - 1.2 * p);
-        } else {
-          const p = (t - 0.70) / 0.30;
-          // Deceleration wrap over left shoulder blending smoothly into neutral ready posture
-          limbs.torso.rotation.set(0.12 * p, 0.55 * (1 - p), 0);
-          limbs.rArm.rotation.set(-0.45 * (1 - p) - 0.55 * p, -0.85 * (1 - p) + 0.30 * p, 1.55 * (1 - p) - 0.42 * p);
-          if (limbs.rFore) limbs.rFore.rotation.set(1.25 * (1 - p) + 0.55 * p, 0, 0);
-          limbs.lArm.rotation.set(0.2 * (1 - p) - 0.50 * p, -0.1 * (1 - p) - 0.32 * p, -0.45 * (1 - p) + 0.40 * p);
-          if (limbs.lFore) limbs.lFore.rotation.set(0.55 * p, 0, 0);
-        }
-      }
-
-      if (char.swingProgress >= Math.PI) {
-        char.isSwinging = false;
-      }
-    } else {
-      // Neutral Athletic Posture: Hands holding racket in front at chest height
-      if (!isMoving) {
-        limbs.torso.rotation.set(0.12, 0, 0);
-        limbs.rArm.rotation.set(-0.55, 0.30, -0.42);
-        limbs.lArm.rotation.set(-0.50, -0.32, 0.40);
-        if (limbs.rFore) limbs.rFore.rotation.set(0.55, 0, 0);
-        if (limbs.lFore) limbs.lFore.rotation.set(0.55, 0, 0);
-      } else {
-        limbs.torso.rotation.set(0.08, 0, 0);
-        limbs.rArm.rotation.set(Math.sin(char.runCycle) * 0.45, 0, isAI ? 0.2 : -0.2);
-        if (limbs.rFore) limbs.rFore.rotation.set(0.25, 0, 0);
-        if (limbs.lFore) limbs.lFore.rotation.set(0.25, 0, 0);
-      }
-    }
-
-    // Dynamic forward athletic bank when running
-    if (isMoving) {
-      char.model.rotation.x = isAI ? 0.08 : -0.08;
-    } else {
-      char.model.rotation.x = 0;
-    }
-    char.model.rotation.y = isAI ? 0 : Math.PI;
-
-    // Racket Impact Recoil: animate a wrist-kick on hit contact
-    if (char.racketImpactRecoil && char.racketImpactRecoil > 0) {
-      if (limbs.racket) limbs.racket.rotation.x = -char.racketImpactRecoil;
-      char.racketImpactRecoil = Math.max(0, char.racketImpactRecoil - dt * 2.4);
-    } else {
-      char.racketImpactRecoil = 0;
-    }
-  }
-
   // --- Smooth Camera System ---
+
+  // --- Online Tournament Engine (4+ Players with World Rotation) ---
+  initTournamentUI() {
+    const tabTourn = document.getElementById('tab-mode-tournament');
+    const panelTourn = document.getElementById('mode-panel-tournament');
+    const tabAI = document.getElementById('tab-mode-ai');
+    const tabOnline = document.getElementById('tab-mode-online');
+    const tabLocal = document.getElementById('tab-mode-local');
+    const panelAI = document.getElementById('mode-panel-ai');
+    const panelOnline = document.getElementById('mode-panel-online');
+    const panelLocal = document.getElementById('mode-panel-local');
+
+    if (tabTourn) {
+      tabTourn.addEventListener('click', () => {
+        [tabAI, tabOnline, tabLocal, tabTourn].forEach(t => t?.classList.remove('active'));
+        [panelAI, panelOnline, panelLocal, panelTourn].forEach(p => p?.classList.add('hidden'));
+        tabTourn.classList.add('active');
+        if (panelTourn) panelTourn.classList.remove('hidden');
+        this.setupTournamentHost();
+      });
+    }
+
+    // Fill Tournament with AI Pros
+    const btnFillAI = document.getElementById('btn-fill-tournament-ai');
+    if (btnFillAI) {
+      btnFillAI.addEventListener('click', () => {
+        this.fillTournamentWithAI();
+      });
+    }
+
+    // Start Tournament Button
+    const btnStartTourn = document.getElementById('btn-start-tournament');
+    if (btnStartTourn) {
+      btnStartTourn.addEventListener('click', () => {
+        this.startTournament();
+      });
+    }
+
+    // Join Tournament Button
+    const btnJoinTourn = document.getElementById('btn-join-tournament');
+    const joinTournInput = document.getElementById('join-tournament-input');
+    if (btnJoinTourn && joinTournInput) {
+      btnJoinTourn.addEventListener('click', () => {
+        const code = joinTournInput.value.trim().toUpperCase();
+        if (code) {
+          this.connectToTournament(code);
+        }
+      });
+    }
+
+    // Copy Tournament Code
+    const btnCopyTourn = document.getElementById('btn-copy-tournament-code');
+    if (btnCopyTourn) {
+      btnCopyTourn.addEventListener('click', () => {
+        if (this.tournament.code) {
+          navigator.clipboard.writeText(this.tournament.code);
+          btnCopyTourn.innerText = '¡Copiado!';
+          setTimeout(() => btnCopyTourn.innerText = 'Copiar Enlace', 2000);
+        }
+      });
+    }
+
+    // Resume/Next Match in Tournament Modal
+    const btnResumeTourn = document.getElementById('btn-resume-tournament-match');
+    if (btnResumeTourn) {
+      btnResumeTourn.addEventListener('click', () => {
+        const modal = document.getElementById('tournament-modal');
+        if (modal) modal.classList.add('hidden');
+        this.resumeTournamentRound();
+      });
+    }
+  }
+
+  setupTournamentHost() {
+    this.gameMode = 'tournament_host';
+    this.tournament.active = true;
+    this.tournament.isHost = true;
+    this.tournament.round = 1;
+
+    const myName = (document.getElementById('player-nickname')?.value || 'CAMPEÓN').trim();
+    const myGender = document.querySelector('.gender-btn.active')?.dataset.gender || 'male';
+
+    if (!this.peer || this.peer.destroyed) {
+      const code = 'TORNEO-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      this.tournament.code = code;
+      const display = document.getElementById('tournament-code-display');
+      if (display) display.innerText = code;
+
+      try {
+        this.peer = new Peer(code, {
+          config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+        });
+      } catch (e) {
+        console.warn('PeerJS init fallback', e);
+      }
+    } else {
+      const display = document.getElementById('tournament-code-display');
+      if (display) display.innerText = this.tournament.code || this.peer.id;
+    }
+
+    // Initialize players list with host as Slot 1
+    this.tournament.players = [
+      { id: 'host', name: myName, gender: myGender, isHost: true, isAI: false, wins: 0, games: 0 }
+    ];
+    this.updateTournamentLobbyUI();
+  }
+
+  fillTournamentWithAI() {
+    const pros = [
+      { name: 'C. ALCARAZ', gender: 'male' },
+      { name: 'A. SABALENKA', gender: 'female' },
+      { name: 'J. SINNER', gender: 'male' },
+      { name: 'I. SWIATEK', gender: 'female' },
+      { name: 'N. DJOKOVIC', gender: 'male' },
+      { name: 'C. GAUFF', gender: 'female' }
+    ];
+
+    let proIdx = 0;
+    while (this.tournament.players.length < 4) {
+      const pro = pros[proIdx % pros.length];
+      this.tournament.players.push({
+        id: 'ai_' + (proIdx + 1),
+        name: pro.name,
+        gender: pro.gender,
+        isHost: false,
+        isAI: true,
+        wins: 0,
+        games: 0
+      });
+      proIdx++;
+    }
+
+    this.updateTournamentLobbyUI();
+    this.audio.playHit(0.8, false, true);
+  }
+
+  updateTournamentLobbyUI() {
+    const countEl = document.getElementById('tournament-slot-count');
+    if (countEl) countEl.innerText = this.tournament.players.length;
+
+    const listEl = document.getElementById('tournament-players-list');
+    if (listEl) {
+      listEl.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const p = this.tournament.players[i];
+        const item = document.createElement('div');
+        item.className = 'tournament-slot-item';
+
+        if (p) {
+          const genderIcon = p.gender === 'female' ? '♀️' : '♂️';
+          const badgeClass = p.isHost ? 'badge-host' : (p.isAI ? 'badge-ai' : 'badge-ready');
+          const badgeText = p.isHost ? 'ANFITRIÓN' : (p.isAI ? 'IA PRO' : 'LISTO');
+          item.innerHTML = `
+            <div class="slot-name">
+              <span>${genderIcon}</span>
+              <span>${p.name}</span>
+            </div>
+            <span class="slot-badge ${badgeClass}">${badgeText}</span>
+          `;
+        } else {
+          item.innerHTML = `
+            <div class="slot-name" style="color: #64748b;">
+              <span>👤</span>
+              <span>Esperando jugador ${i + 1}...</span>
+            </div>
+            <span class="slot-badge badge-empty">VACANTE</span>
+          `;
+        }
+        listEl.appendChild(item);
+      }
+    }
+
+    const startBtn = document.getElementById('btn-start-tournament');
+    if (startBtn) {
+      startBtn.disabled = (this.tournament.players.length < 4);
+    }
+  }
+
+  connectToTournament(code) {
+    const statusEl = document.getElementById('tournament-join-status');
+    if (statusEl) statusEl.innerText = 'Conectando al torneo ' + code + '...';
+
+    const myName = (document.getElementById('player-nickname')?.value || 'CAMPEÓN').trim();
+    const myGender = document.querySelector('.gender-btn.active')?.dataset.gender || 'male';
+
+    if (!this.peer) {
+      this.peer = new Peer({ config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+    }
+
+    this.conn = this.peer.connect(code, { reliable: true });
+    this.conn.on('open', () => {
+      this.gameMode = 'tournament_guest';
+      this.tournament.active = true;
+      this.tournament.isHost = false;
+      this.conn.send({
+        type: 'tournament_join',
+        name: myName,
+        gender: myGender
+      });
+      if (statusEl) statusEl.innerText = '¡Unido a la sala de torneo con éxito!';
+    });
+
+    this.conn.on('data', (data) => {
+      if (data.type === 'tournament_sync') {
+        this.tournament = data.tournament;
+        this.updateTournamentLobbyUI();
+      } else if (data.type === 'tournament_start') {
+        this.tournament = data.tournament;
+        this.startTournamentMatch(data.assignedMatch);
+      }
+    });
+  }
+
+  startTournament() {
+    this.tournament.active = true;
+    this.tournament.round = 1;
+
+    // Build Round 1 Matches:
+    // Match 1: Player 1 vs Player 2 in Arena Pro (stadium)
+    // Match 2: Player 3 vs Player 4 in Playa Paraíso (beach)
+    const p = this.tournament.players;
+    this.tournament.matches = [
+      {
+        id: 'r1_m1',
+        round: 1,
+        court: 'stadium',
+        courtName: 'Grand Slam Arena',
+        p1: p[0],
+        p2: p[1],
+        scoreP1: 0,
+        scoreP2: 0,
+        winner: null,
+        status: 'in_progress'
+      },
+      {
+        id: 'r1_m2',
+        round: 1,
+        court: 'beach',
+        courtName: 'Playa Paraíso',
+        p1: p[2],
+        p2: p[3],
+        scoreP1: 0,
+        scoreP2: 0,
+        winner: null,
+        status: 'in_progress'
+      }
+    ];
+
+    document.getElementById('start-screen').classList.add('fade-out');
+    this.isPlaying = true;
+
+    // Load Round 1 World (Arena Pro) for host match
+    this.setMap('stadium', false);
+    this.ai.nickname = p[1].name;
+    document.getElementById('hud-ai-name').innerText = p[1].name;
+
+    this.showAnnouncement('¡TORNEO INICIADO! • RONDA 1', `${p[0].name} vs ${p[1].name} en ARENA PRO`);
+  }
+
+  checkTournamentProgress() {
+    if (!this.tournament.active) return;
+
+    // Simulate/evaluate concurrent match if AI vs AI
+    if (this.tournament.round === 1) {
+      const m2 = this.tournament.matches[1];
+      if (m2 && !m2.winner) {
+        // Evaluate M2 winner
+        m2.scoreP1 = Math.floor(Math.random() * 2) + 3;
+        m2.scoreP2 = Math.floor(Math.random() * 2) + 1;
+        m2.winner = (m2.scoreP1 > m2.scoreP2) ? m2.p1 : m2.p2;
+        m2.loser = (m2.scoreP1 > m2.scoreP2) ? m2.p2 : m2.p1;
+      }
+
+      // Conclude host match
+      const m1 = this.tournament.matches[0];
+      if (m1 && !m1.winner) {
+        m1.scoreP1 = this.gamesPlayer;
+        m1.scoreP2 = this.gamesAI;
+        m1.winner = (this.gamesPlayer >= this.gamesAI) ? m1.p1 : m1.p2;
+        m1.loser = (this.gamesPlayer >= this.gamesAI) ? m1.p2 : m1.p1;
+      }
+
+      this.showTournamentBracketModal();
+    } else if (this.tournament.round === 2) {
+      // Grand Final Finished!
+      const mFinal = this.tournament.matches[2];
+      if (mFinal) {
+        mFinal.scoreP1 = this.gamesPlayer;
+        mFinal.scoreP2 = this.gamesAI;
+        mFinal.winner = (this.gamesPlayer >= this.gamesAI) ? mFinal.p1 : mFinal.p2;
+      }
+      this.showTournamentVictory(mFinal ? mFinal.winner : this.player);
+    }
+  }
+
+  showTournamentBracketModal() {
+    const modal = document.getElementById('tournament-modal');
+    if (!modal) return;
+
+    const treeEl = document.getElementById('tournament-bracket-tree');
+    if (treeEl) {
+      treeEl.innerHTML = '';
+      this.tournament.matches.forEach((m, idx) => {
+        const card = document.createElement('div');
+        card.className = 'match-bracket-card';
+        card.innerHTML = `
+          <div class="match-header">
+            <span>SET ${idx + 1}</span>
+            <span class="match-arena-tag">${m.courtName}</span>
+          </div>
+          <div class="match-competitors">
+            <div class="match-player-row ${m.winner && m.winner.name === m.p1.name ? 'winner' : ''}">
+              <span>${m.p1.name}</span>
+              <span>${m.scoreP1}</span>
+            </div>
+            <div class="match-player-row ${m.winner && m.winner.name === m.p2.name ? 'winner' : ''}">
+              <span>${m.p2.name}</span>
+              <span>${m.scoreP2}</span>
+            </div>
+          </div>
+        `;
+        treeEl.appendChild(card);
+      });
+    }
+
+    // Standings table
+    const tableBody = document.getElementById('tournament-standings-body');
+    if (tableBody) {
+      tableBody.innerHTML = '';
+      this.tournament.players.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>#${idx + 1}</td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.wins || 1}</td>
+          <td>${p.games || 4}</td>
+          <td><span class="slot-badge badge-ready">CLASIFICADO</span></td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    modal.classList.remove('hidden');
+    this.audio.playFanfare();
+  }
+
+  resumeTournamentRound() {
+    this.tournament.round = 2;
+
+    // ROTATION TO NEW WORLDS:
+    // Final in White House (La Casa Blanca 🏛️)
+    // 3rd place in Zen Temple (Templo Zen ⛩️)
+    const m1 = this.tournament.matches[0];
+    const m2 = this.tournament.matches[1];
+
+    const finalists = [m1.winner, m2.winner];
+    const bronzeMatch = [m1.loser, m2.loser];
+
+    this.tournament.matches.push(
+      {
+        id: 'r2_final',
+        round: 2,
+        court: 'whitehouse',
+        courtName: 'La Casa Blanca (Gran Final)',
+        p1: finalists[0],
+        p2: finalists[1],
+        scoreP1: 0,
+        scoreP2: 0,
+        winner: null
+      },
+      {
+        id: 'r2_bronze',
+        round: 2,
+        court: 'zen',
+        courtName: 'Templo Zen (3er Puesto)',
+        p1: bronzeMatch[0],
+        p2: bronzeMatch[1],
+        scoreP1: 0,
+        scoreP2: 0,
+        winner: null
+      }
+    );
+
+    // Reset scores for championship set
+    this.scorePlayer = 0;
+    this.scoreAI = 0;
+    this.gamesPlayer = 0;
+    this.gamesAI = 0;
+    this.updateHUD();
+
+    // ROTATE TO THE WHITE HOUSE MAP!
+    this.setMap('whitehouse', false);
+    this.ai.nickname = finalists[1].name;
+    document.getElementById('hud-ai-name').innerText = finalists[1].name;
+
+    this.prepareServe('player');
+    this.showAnnouncement('¡GRAN FINAL EN LA CASA BLANCA!', `${finalists[0].name} vs ${finalists[1].name}`);
+  }
+
+  showTournamentVictory(winner) {
+    this.particles.burst(new THREE.Vector3(0, 3, 0), 100, 0xd4af37, 9.0);
+    this.particles.burst(new THREE.Vector3(-4, 3, 0), 60, 0x00f0ff, 8.0);
+    this.particles.burst(new THREE.Vector3(4, 3, 0), 60, 0xff0055, 8.0);
+    this.audio.playCrowd();
+    this.audio.playFanfare();
+
+    this.showAnnouncement('🏆 ¡CAMPEÓN DEL TORNEO GRAND SLAM! 🏆', `${winner.name} CONQUISTA EL TROFEO PRESIDENCIAL`);
+  }
+
   updateCamera(dt) {
     if (this.cameraMode === 'third') {
       if (this.gameMode === 'online_guest') {

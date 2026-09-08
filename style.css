@@ -1109,3 +1109,551 @@ kbd {
   color: #475569;
   font-weight: 400;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   MOBILE VIRTUAL TOUCH CONTROLS & HUD CONTROLS TOGGLE
+   ───────────────────────────────────────────────────────────── */
+
+.ctrl-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.35);
+  border-radius: 12px;
+  padding: 6px 12px;
+  color: #fff;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.ctrl-quick-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--primary-cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.controls-settings-section {
+  margin-top: 14px;
+}
+
+.controls-toggle-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.control-pref-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.70);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: #94a3b8;
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.control-pref-btn:hover {
+  border-color: rgba(0, 240, 255, 0.5);
+  color: #fff;
+}
+
+.control-pref-btn.active {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(2, 132, 199, 0.4));
+  border-color: var(--primary-cyan);
+  color: #ffffff;
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+}
+
+/* In-Game Mobile Controls Overlay */
+.mobile-controls-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 850;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.mobile-controls-overlay.hidden {
+  display: none !important;
+}
+
+/* Virtual 360 Thumbstick (Bottom-Left) */
+.touch-joystick-zone {
+  position: relative;
+  width: 136px;
+  height: 136px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.joystick-base {
+  width: 136px;
+  height: 136px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(15, 23, 42, 0.75), rgba(4, 8, 16, 0.85));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 2.5px solid rgba(0, 240, 255, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 18px rgba(0, 240, 255, 0.15);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-knob {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #00f0ff 0%, #0284c7 70%, #0369a1 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 41px;
+  left: 41px;
+  pointer-events: none;
+  transform: translate(0px, 0px);
+  transition: transform 0.04s ease-out;
+}
+
+.joystick-crosshair {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-dir {
+  position: absolute;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 800;
+}
+.j-up { top: 6px; }
+.j-down { bottom: 6px; }
+.j-left { left: 8px; }
+.j-right { right: 8px; }
+
+/* Action Hit Button & Shot Selector (Bottom-Right) */
+.touch-action-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.touch-shot-selector {
+  display: flex;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 3px 6px;
+  backdrop-filter: blur(12px);
+}
+
+.touch-shot-btn {
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  padding: 5px 9px;
+  font-family: var(--font-tech);
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.touch-shot-btn.active {
+  background: var(--primary-cyan);
+  color: #020617;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.touch-hit-btn {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff2a55 0%, #dc2626 65%, #991b1b 100%);
+  border: 3.5px solid #ffffff;
+  box-shadow: 0 0 26px rgba(255, 42, 85, 0.75), inset 0 2px 6px rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-hit-btn:active {
+  transform: scale(0.92);
+  box-shadow: 0 0 36px rgba(255, 42, 85, 1.0);
+  background: radial-gradient(circle, #ff5577 0%, #ef4444 65%, #b91c1c 100%);
+}
+
+.touch-hit-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.touch-hit-text {
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   ONLINE TOURNAMENT STYLES (BRACKET & ROTATION)
+   ───────────────────────────────────────────────────────────── */
+
+.tournament-glass-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(8, 16, 30, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 18px;
+  backdrop-filter: blur(16px);
+}
+
+.tournament-header h4 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, #fef08a, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 4px;
+}
+
+.tournament-header p {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.tournament-lobby-grid {
+  display: flex;
+  gap: 18px;
+}
+
+.tournament-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-col h5 {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #e2e8f0;
+}
+
+.tournament-divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.tournament-slots-container {
+  background: rgba(4, 8, 16, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.slots-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.tournament-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tournament-slot-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-family: var(--font-tech);
+  font-size: 12px;
+}
+
+.slot-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.slot-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.badge-host { background: rgba(245, 158, 11, 0.25); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-ready { background: rgba(34, 197, 94, 0.25); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.4); }
+.badge-ai { background: rgba(168, 85, 247, 0.25); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+.badge-empty { background: rgba(148, 163, 184, 0.15); color: #64748b; }
+
+.tournament-host-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tournament-rules-box {
+  background: rgba(4, 8, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 11px;
+}
+
+.tournament-rules-box h6 {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 800;
+  color: #fef08a;
+  margin-bottom: 6px;
+}
+
+.tournament-rules-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #cbd5e1;
+}
+
+/* Tournament Live Bracket Modal */
+.tournament-card {
+  max-width: 680px !important;
+}
+
+.tournament-bracket-header h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+  margin: 6px 0 2px;
+}
+
+.tournament-bracket-header p {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.tournament-bracket-tree {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.match-bracket-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #94a3b8;
+}
+
+.match-arena-tag {
+  color: #00f0ff;
+}
+
+.match-competitors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.match-player-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: rgba(4, 8, 16, 0.6);
+  border-radius: 6px;
+  font-family: var(--font-tech);
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.match-player-row.winner {
+  background: rgba(34, 197, 94, 0.25);
+  border: 1px solid rgba(74, 222, 128, 0.5);
+  color: #4ade80;
+}
+
+.tournament-standings-box {
+  background: rgba(8, 16, 30, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.tournament-standings-box h4 {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #e2e8f0;
+  margin-bottom: 8px;
+}
+
+.tournament-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-tech);
+  font-size: 12px;
+}
+
+.tournament-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tournament-table td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #f8fafc;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   RESPONSIVE MEDIA QUERIES FOR MOBILE & TABLETS (iOS & Android)
+   ───────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .modal-card {
+    padding: 18px 16px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .game-title {
+    font-size: 28px;
+    letter-spacing: 2px;
+  }
+
+  .game-subtitle {
+    font-size: 11px;
+  }
+
+  .map-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px;
+  }
+
+  .mode-tabs {
+    flex-wrap: wrap;
+  }
+
+  .mode-tab-btn {
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+
+  .tournament-lobby-grid {
+    flex-direction: column;
+  }
+
+  .tournament-divider {
+    height: 1px;
+    width: 100%;
+  }
+
+  .bottom-right-panel {
+    bottom: 16px;
+    right: 16px;
+    scale: 0.88;
+    transform-origin: bottom right;
+  }
+
+  .top-bar {
+    padding: 10px 14px;
+  }
+
+  .scoreboard-widget {
+    scale: 0.90;
+    transform-origin: top center;
+  }
+}
