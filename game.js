@@ -581,7 +581,7 @@ const TextureFactory = {
     return tex;
   },
 
-  // 3. Official Grand Slam Hard Court (DecoTurf Australian / US Open Blue with Crisp Lines)
+  // 3. Official Grand Slam Hard Court (DecoTurf Australian / US Open Blue with EA SPORTS Stencils)
   createTurfTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -589,66 +589,87 @@ const TextureFactory = {
     const ctx = canvas.getContext('2d');
 
     // Outer Court: Deep Tournament US Open Forest Green
-    ctx.fillStyle = '#0e4a36';
+    ctx.fillStyle = '#0a3d2c';
     ctx.fillRect(0, 0, 1024, 2048);
 
+    // Mown strip contrast bands in perimeter
+    for (let y = 0; y < 2048; y += 128) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+      ctx.fillRect(0, y, 1024, 64);
+    }
+
     // Coordinate Mapping (Tennis Court: Length 23.77m, Width 10.97m)
-    const scaleX = 1024 / 16.0; // 16m total canvas width representation
-    const scaleY = 2048 / 30.0; // 30m total canvas length representation
+    const scaleX = 1024 / 16.0;
+    const scaleY = 2048 / 30.0;
     const toCanvasX = (x) => 512 + x * scaleX;
     const toCanvasY = (z) => 1024 + z * scaleY;
 
-    // Inner Court Rectangle (DecoTurf Australian Open Pacific Blue)
-    const doublesW = 5.485; // half width (10.97m total)
-    const courtHalfL = 11.885; // half length (23.77m total)
+    // Inner Court Rectangle (DecoTurf Electric Royal Blue)
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
 
     const xL = toCanvasX(-doublesW);
     const xR = toCanvasX(doublesW);
     const yT = toCanvasY(-courtHalfL);
     const yB = toCanvasY(courtHalfL);
 
-    ctx.fillStyle = '#164dbf'; // Official DecoTurf Electric Royal Blue
+    ctx.fillStyle = '#144ec2';
     ctx.fillRect(xL, yT, xR - xL, yB - yT);
 
     // Micro Acrylic Surface Grit Texture (high density stipple)
-    for (let i = 0; i < 130000; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.07)';
+    for (let i = 0; i < 150000; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)';
       ctx.fillRect(Math.random() * 1024, Math.random() * 2048, 2, 2);
     }
 
     // Subtle Expansion Seams in Acrylic Layer
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
     ctx.lineWidth = 2;
     for (let y = yT + 120; y < yB; y += 180) {
       ctx.beginPath(); ctx.moveTo(xL, y); ctx.lineTo(xR, y); ctx.stroke();
     }
 
-    // Official Baseline Stencil Markings (Grand Slam Tournament)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.font = '900 36px sans-serif';
+    // Baseline Athletic Rubber Skid Marks (where pro athletes slide & pivot)
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    [-1, 1].forEach(side => {
+      const baseZ = side < 0 ? yT + 25 : yB - 25;
+      for (let s = -180; s <= 180; s += 60) {
+        ctx.beginPath();
+        ctx.arc(512 + s, baseZ, 35 + Math.abs(s) * 0.08, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+      }
+    });
+
+    // Official EA SPORTS & Tournament Stencil Markings
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.font = '900 34px sans-serif';
     ctx.textAlign = 'center';
     // North baseline text
     ctx.save();
-    ctx.translate(512, yT - 48);
+    ctx.translate(512, yT - 46);
     ctx.rotate(Math.PI);
-    ctx.fillText('• ATP TOUR 500 • WORLD FINALS •', 0, 0);
+    ctx.fillText('• EA SPORTS™ GRAND SLAM PRO TOUR •', 0, 0);
     ctx.restore();
     // South baseline text
-    ctx.fillText('• ATP TOUR 500 • WORLD FINALS •', 512, yB + 64);
+    ctx.fillText('• EA SPORTS™ GRAND SLAM PRO TOUR •', 512, yB + 62);
 
-    // Grand Slam Tournament Center Crest (Subtle watermark)
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = 5;
+    // Center Court EA SPORTS Crest
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(512, 1024, 150, 0, Math.PI * 2);
+    ctx.arc(512, 1024, 155, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.font = '900 44px sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.40)';
+    ctx.font = '900 42px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('GRAND SLAM TOUR', 512, 1038);
+    ctx.fillText('EA SPORTS™', 512, 1012);
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('GRAND SLAM OPEN', 512, 1046);
 
-    // Regulation White Chalk Lines
+    // Regulation White Chalk Lines with Beveled Edge
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 8;
     ctx.lineCap = 'square';
@@ -693,7 +714,127 @@ const TextureFactory = {
     return tex;
   },
 
-  // 4. Pro Tennis Athlete Athletic Jersey Texture
+  // Normal Map for Hard Court (Fine Acrylic Stipple & Raised Painted Chalk Line Relief)
+  createTurfNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Base Normal (0.5, 0.5, 1.0) in RGB
+    ctx.fillStyle = '#8080ff';
+    ctx.fillRect(0, 0, 512, 1024);
+
+    // High frequency micro-grit normal perturbations
+    for (let i = 0; i < 40000; i++) {
+      const nx = 120 + Math.floor(Math.random() * 18);
+      const ny = 120 + Math.floor(Math.random() * 18);
+      ctx.fillStyle = `rgb(${nx}, ${ny}, 255)`;
+      ctx.fillRect(Math.random() * 512, Math.random() * 1024, 2, 2);
+    }
+
+    const scaleX = 512 / 16.0;
+    const scaleY = 1024 / 30.0;
+    const toCanvasX = (x) => 256 + x * scaleX;
+    const toCanvasY = (z) => 512 + z * scaleY;
+
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    // Embossed edge on regulation lines
+    ctx.strokeStyle = '#9090ff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
+    ctx.beginPath();
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.moveTo(256, yS1); ctx.lineTo(256, yS2);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
+  },
+
+  // Roughness Map for Hard Court (Contrast between rough acrylic and smooth satin painted chalk lines)
+  createTurfRoughnessMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Base rough acrylic surface (~0.76 roughness -> 195 gray)
+    ctx.fillStyle = 'rgb(195, 195, 195)';
+    ctx.fillRect(0, 0, 512, 1024);
+
+    const scaleX = 512 / 16.0;
+    const scaleY = 1024 / 30.0;
+    const toCanvasX = (x) => 256 + x * scaleX;
+    const toCanvasY = (z) => 512 + z * scaleY;
+
+    const doublesW = 5.485;
+    const courtHalfL = 11.885;
+    const xL = toCanvasX(-doublesW);
+    const xR = toCanvasX(doublesW);
+    const yT = toCanvasY(-courtHalfL);
+    const yB = toCanvasY(courtHalfL);
+
+    // Lines are smooth satin chalk paint (~0.35 roughness -> 90 gray)
+    ctx.strokeStyle = 'rgb(90, 90, 90)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(xL, yT, xR - xL, yB - yT);
+
+    const singlesW = 4.115;
+    const sL = toCanvasX(-singlesW);
+    const sR = toCanvasX(singlesW);
+    ctx.beginPath();
+    ctx.moveTo(sL, yT); ctx.lineTo(sL, yB);
+    ctx.moveTo(sR, yT); ctx.lineTo(sR, yB);
+    ctx.stroke();
+
+    const sZ = 6.40;
+    const yS1 = toCanvasY(-sZ);
+    const yS2 = toCanvasY(sZ);
+    ctx.beginPath();
+    ctx.moveTo(sL, yS1); ctx.lineTo(sR, yS1);
+    ctx.moveTo(sL, yS2); ctx.lineTo(sR, yS2);
+    ctx.moveTo(256, yS1); ctx.lineTo(256, yS2);
+    ctx.stroke();
+
+    // Baseline rubber skid marks (smoother polished sheen)
+    ctx.strokeStyle = 'rgb(65, 65, 65)';
+    ctx.lineWidth = 6;
+    [-1, 1].forEach(side => {
+      const baseZ = side < 0 ? yT + 12 : yB - 12;
+      for (let s = -90; s <= 90; s += 30) {
+        ctx.beginPath();
+        ctx.arc(256 + s, baseZ, 18, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    });
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 4;
+    return tex;
+  },
+
+  // 4. Pro Tennis Athlete Athletic Jersey Texture with EA SPORTS Crest
   createJerseyTexture(baseColorHex, accentColorHex, numberStr, isAI) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -704,11 +845,11 @@ const TextureFactory = {
     ctx.fillStyle = baseColorHex;
     ctx.fillRect(0, 0, 512, 512);
 
-    // Technical Aero Fabric Mesh
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    for (let y = 0; y < 512; y += 8) {
-      for (let x = 0; x < 512; x += 8) {
-        const ox = (y % 16 === 0) ? 4 : 0;
+    // Technical Aero Fabric Honeycomb / Micro-Mesh
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    for (let y = 0; y < 512; y += 6) {
+      for (let x = 0; x < 512; x += 6) {
+        const ox = (y % 12 === 0) ? 3 : 0;
         ctx.fillRect(x + ox, y, 2, 2);
       }
     }
@@ -716,27 +857,34 @@ const TextureFactory = {
     // Dynamic Flank Racing Stripes
     ctx.fillStyle = accentColorHex;
     ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(65, 0); ctx.lineTo(100, 512); ctx.lineTo(0, 512);
+    ctx.moveTo(0, 0); ctx.lineTo(70, 0); ctx.lineTo(105, 512); ctx.lineTo(0, 512);
     ctx.fill();
 
     ctx.beginPath();
-    ctx.moveTo(512, 0); ctx.lineTo(512 - 65, 0); ctx.lineTo(512 - 100, 512); ctx.lineTo(512, 512);
+    ctx.moveTo(512, 0); ctx.lineTo(512 - 70, 0); ctx.lineTo(512 - 105, 512); ctx.lineTo(512, 512);
     ctx.fill();
 
-    // Tournament Crest
+    // Tournament & EA SPORTS Chest Crests
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 32px sans-serif';
+    ctx.font = '900 28px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('GRAND SLAM', 256, 110);
+    ctx.fillText('EA SPORTS™', 256, 95);
 
-    ctx.fillStyle = accentColorHex;
-    ctx.fillRect(196, 122, 120, 5);
+    ctx.fillStyle = '#ff0055';
+    ctx.fillRect(190, 105, 132, 4);
 
-    // Player Number
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = '700 18px sans-serif';
+    ctx.fillText('GRAND SLAM PRO', 256, 130);
+
+    // Player Number with 3D Depth Outline
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.font = '900 130px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(numberStr, 258, 332);
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = '900 120px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(numberStr, 256, 320);
+    ctx.fillText(numberStr, 256, 330);
 
     const tex = new THREE.CanvasTexture(canvas);
     return tex;
@@ -2006,6 +2154,7 @@ class ParticleSystem {
     this.particles = [];
     this.sakuraParticles = [];
     this.ballTrail = [];
+    this.chalkParticles = [];
     this.geo = new THREE.SphereGeometry(0.045, 6, 6);
   }
 
@@ -2024,12 +2173,39 @@ class ParticleSystem {
     }
   }
 
-  spawnBallTrail(pos, colorHex = 0x00f0ff) {
+  spawnBallTrail(pos, colorHex = 0x00f0ff, scaleMult = 1.0) {
     const mat = new THREE.MeshBasicMaterial({ color: colorHex, transparent: true, opacity: 0.85 });
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), mat);
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.065 * scaleMult, 8, 8), mat);
     mesh.position.copy(pos);
     this.scene.add(mesh);
-    this.ballTrail.push({ mesh, life: 0.22, maxLife: 0.22 });
+    this.ballTrail.push({ mesh, life: 0.24, maxLife: 0.24 });
+  }
+
+  spawnChalkPuff(pos) {
+    const chalkGeo = new THREE.PlaneGeometry(0.18, 0.18);
+    const chalkMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    for (let i = 0; i < 16; i++) {
+      const mesh = new THREE.Mesh(chalkGeo, chalkMat.clone());
+      mesh.position.set(
+        pos.x + (Math.random() - 0.5) * 0.25,
+        0.04 + Math.random() * 0.08,
+        pos.z + (Math.random() - 0.5) * 0.25
+      );
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      this.scene.add(mesh);
+      const vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 1.6,
+        0.6 + Math.random() * 1.4,
+        (Math.random() - 0.5) * 1.6
+      );
+      this.chalkParticles.push({ mesh, vel, life: 0.45, maxLife: 0.45, rotSpeed: Math.random() * 4 - 2 });
+    }
   }
 
   initSakura(count = 45) {
@@ -2114,6 +2290,25 @@ class ParticleSystem {
         sp.mesh.position.y = 10 + Math.random() * 4;
         sp.mesh.position.x = (Math.random() - 0.5) * 36;
         sp.mesh.position.z = (Math.random() - 0.5) * 44;
+      }
+    }
+
+    // 4. White Chalk Puff Particles on Line Bounces
+    for (let i = this.chalkParticles.length - 1; i >= 0; i--) {
+      const cp = this.chalkParticles[i];
+      cp.life -= dt;
+      cp.mesh.position.addScaledVector(cp.vel, dt);
+      cp.vel.y -= 2.2 * dt;
+      cp.mesh.rotation.z += cp.rotSpeed * dt;
+      const progress = Math.max(0, cp.life / cp.maxLife);
+      const scale = 1.0 + (1.0 - progress) * 2.8;
+      cp.mesh.scale.set(scale, scale, scale);
+      cp.mesh.material.opacity = progress * 0.75;
+      if (cp.life <= 0) {
+        this.scene.remove(cp.mesh);
+        cp.mesh.geometry.dispose();
+        if (cp.mesh.material) cp.mesh.material.dispose();
+        this.chalkParticles.splice(i, 1);
       }
     }
   }
@@ -2307,16 +2502,124 @@ class TennisGameEngine {
     this.sun.shadow.bias = -0.0006;
     this.scene.add(this.sun);
 
+    // High-Impact Athletic Rim Light (Cool Cyan-White backlight for athletes)
+    this.rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.85);
+    this.rimLight.position.set(0, 10, -20);
+    this.scene.add(this.rimLight);
+
     // Groups for Court and Environment
     this.courtGroup = new THREE.Group();
     this.environmentGroup = new THREE.Group();
     this.scene.add(this.courtGroup);
     this.scene.add(this.environmentGroup);
 
+    // EA SPORTS Broadcast Post-Processing Pipeline
+    try {
+      this.usePostProcessing = true;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      this.postScene = new THREE.Scene();
+      this.postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      this.renderTarget = new THREE.WebGLRenderTarget(w, h, {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        format: THREE.RGBAFormat,
+        stencilBuffer: false
+      });
+
+      this.postMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          tDiffuse: { value: this.renderTarget.texture },
+          uResolution: { value: new THREE.Vector2(w, h) },
+          uTime: { value: 0 },
+          uVignetteStrength: { value: 0.32 },
+          uContrast: { value: 1.15 },
+          uSaturation: { value: 1.18 },
+          uExposure: { value: 1.05 }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0.0, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D tDiffuse;
+          uniform vec2 uResolution;
+          uniform float uTime;
+          uniform float uVignetteStrength;
+          uniform float uContrast;
+          uniform float uSaturation;
+          uniform float uExposure;
+          varying vec2 vUv;
+
+          vec3 rgb2hsv(vec3 c) {
+            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+          }
+
+          vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+          }
+
+          void main() {
+            vec2 uv = vUv;
+            vec2 centerDist = uv - vec2(0.5);
+            float distSq = dot(centerDist, centerDist);
+
+            // Subtle optical chromatic aberration (4K Broadcast lens simulation)
+            vec2 caOffset = centerDist * distSq * 0.005;
+            float r = texture2D(tDiffuse, uv + caOffset).r;
+            float g = texture2D(tDiffuse, uv).g;
+            float b = texture2D(tDiffuse, uv - caOffset).b;
+            vec3 color = vec3(r, g, b);
+
+            // Broadcast Exposure
+            color *= uExposure;
+
+            // S-Curve Contrast (EA Sports Frostbite punchy look)
+            color = (color - 0.5) * uContrast + 0.5;
+
+            // Sports Broadcast Saturation Boost
+            vec3 hsv = rgb2hsv(max(color, vec3(0.0)));
+            hsv.y = clamp(hsv.y * uSaturation, 0.0, 1.0);
+            color = hsv2rgb(hsv);
+
+            // Lens Vignette (subtle peripheral falloff)
+            float vignette = 1.0 - smoothstep(0.35, 0.75, distSq * 1.5) * uVignetteStrength;
+            color *= vignette;
+
+            gl_FragColor = vec4(color, 1.0);
+          }
+        `,
+        depthWrite: false,
+        depthTest: false
+      });
+
+      this.postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.postMaterial);
+      this.postScene.add(this.postQuad);
+    } catch (e) {
+      console.warn("Post-processing fallback:", e);
+      this.usePostProcessing = false;
+    }
+
     window.addEventListener('resize', () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      if (this.renderTarget) {
+        this.renderTarget.setSize(window.innerWidth, window.innerHeight);
+        if (this.postMaterial && this.postMaterial.uniforms && this.postMaterial.uniforms.uResolution) {
+          this.postMaterial.uniforms.uResolution.value.set(window.innerWidth, window.innerHeight);
+        }
+      }
     });
   }
 
@@ -2379,6 +2682,8 @@ class TennisGameEngine {
     }
 
     let courtTex;
+    let courtNormal = null;
+    let courtRoughness = null;
     let outerColor;
     let postMat;
 
@@ -2396,6 +2701,8 @@ class TennisGameEngine {
       postMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.22, metalness: 0.90 }); // 24K Presidential Brass
     } else {
       courtTex = TextureFactory.createTurfTexture();
+      courtNormal = TextureFactory.createTurfNormalMap();
+      courtRoughness = TextureFactory.createTurfRoughnessMap();
       outerColor = 0x050c18;
       postMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.92, roughness: 0.2 });
     }
@@ -2404,8 +2711,11 @@ class TennisGameEngine {
     const courtGeo = new THREE.PlaneGeometry(16.0, 30.0);
     const courtMat = new THREE.MeshStandardMaterial({
       map: courtTex,
-      roughness: mapId === 'beach' ? 0.92 : (mapId === 'zen' ? 0.62 : 0.76),
-      metalness: mapId === 'zen' ? 0.12 : 0.05
+      normalMap: courtNormal,
+      normalScale: courtNormal ? new THREE.Vector2(0.35, 0.35) : null,
+      roughnessMap: courtRoughness,
+      roughness: mapId === 'beach' ? 0.92 : (mapId === 'zen' ? 0.62 : 0.74),
+      metalness: mapId === 'zen' ? 0.12 : 0.06
     });
     const court = new THREE.Mesh(courtGeo, courtMat);
     court.rotation.x = -Math.PI / 2;
@@ -2843,12 +3153,14 @@ class TennisGameEngine {
     jCanvas.width = 512; jCanvas.height = 256;
     const jctx = jCanvas.getContext('2d');
     jctx.fillStyle = '#020617'; jctx.fillRect(0, 0, 512, 256);
-    jctx.fillStyle = '#00f0ff'; jctx.font = 'bold 34px sans-serif';
-    jctx.fillText('GRAND SLAM PRO TOUR', 30, 60);
-    jctx.fillStyle = '#f59e0b'; jctx.font = 'bold 50px sans-serif';
-    jctx.fillText('LIVE MATCH • 4K', 30, 130);
-    jctx.fillStyle = '#94a3b8'; jctx.font = '26px sans-serif';
-    jctx.fillText('CENTRE COURT • ROLEX TIME', 30, 195);
+    jctx.fillStyle = '#ff0055'; jctx.font = '900 24px sans-serif';
+    jctx.fillText('EA SPORTS™', 24, 42);
+    jctx.fillStyle = '#00f0ff'; jctx.font = 'bold 22px sans-serif';
+    jctx.fillText('• GRAND SLAM 4K', 190, 42);
+    jctx.fillStyle = '#f59e0b'; jctx.font = 'bold 44px sans-serif';
+    jctx.fillText('LIVE MATCH • 4K', 24, 115);
+    jctx.fillStyle = '#94a3b8'; jctx.font = '22px sans-serif';
+    jctx.fillText('CENTRE COURT • ROLEX TIME', 24, 160);
     const jScreenTex = new THREE.CanvasTexture(jCanvas);
     const jScreenMat = new THREE.MeshBasicMaterial({ map: jScreenTex });
     [-1, 1].forEach(side => {
@@ -2862,6 +3174,9 @@ class TennisGameEngine {
     });
     jumbotron.add(jBox);
     this.environmentGroup.add(jumbotron);
+    this.jumbotronCanvas = jCanvas;
+    this.jumbotronCtx = jctx;
+    this.jumbotronTex = jScreenTex;
 
     const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 });
     const seatBlue = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 });
@@ -2938,19 +3253,24 @@ class TennisGameEngine {
     benchGroup.add(b1, b2);
     this.environmentGroup.add(benchGroup);
 
-    // LED Ribbon Banners
+    // LED Ribbon Banners (Animated UVs)
     const ledCanvas = document.createElement('canvas');
     ledCanvas.width = 1024; ledCanvas.height = 128;
     const lctx = ledCanvas.getContext('2d');
     lctx.fillStyle = '#06101e';
     lctx.fillRect(0, 0, 1024, 128);
+    lctx.fillStyle = '#ff0055';
+    lctx.font = '900 36px sans-serif';
+    lctx.fillText('EA SPORTS™', 20, 78);
     lctx.fillStyle = '#00f0ff';
-    lctx.font = '900 38px sans-serif';
-    lctx.fillText('GRAND SLAM TOUR • ROLEX • EMIRATES • WILSON • HEAD', 15, 78);
-    const ledTex = new THREE.CanvasTexture(ledCanvas);
-    ledTex.wrapS = THREE.RepeatWrapping;
-    ledTex.repeat.set(3, 1);
-    const ledMat = new THREE.MeshBasicMaterial({ map: ledTex });
+    lctx.font = '900 36px sans-serif';
+    lctx.fillText('• GRAND SLAM PRO TOUR •', 260, 78);
+    lctx.fillStyle = '#f59e0b';
+    lctx.fillText('ROLEX • EMIRATES • WILSON', 740, 78);
+    this.ledTex = new THREE.CanvasTexture(ledCanvas);
+    this.ledTex.wrapS = THREE.RepeatWrapping;
+    this.ledTex.repeat.set(3, 1);
+    const ledMat = new THREE.MeshBasicMaterial({ map: this.ledTex });
     const ledGeo = new THREE.PlaneGeometry(34, 1.0);
 
     const ledLeft = new THREE.Mesh(ledGeo, ledMat);
@@ -2961,7 +3281,21 @@ class TennisGameEngine {
     ledRight.rotation.y = -Math.PI / 2;
     this.environmentGroup.add(ledLeft, ledRight);
 
-    // 4 Corner Floodlight Towers with Volumetric Cones
+    // Lens Flare Glare Billboard Texture for Floodlights
+    const flareCanvas = document.createElement('canvas');
+    flareCanvas.width = flareCanvas.height = 128;
+    const fctx = flareCanvas.getContext('2d');
+    const grad = fctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    grad.addColorStop(0.25, 'rgba(180, 230, 255, 0.7)');
+    grad.addColorStop(0.6, 'rgba(0, 180, 255, 0.2)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    fctx.fillStyle = grad;
+    fctx.fillRect(0, 0, 128, 128);
+    const flareTex = new THREE.CanvasTexture(flareCanvas);
+    const flareMat = new THREE.SpriteMaterial({ map: flareTex, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.85 });
+
+    // 4 Corner Floodlight Towers with Volumetric Cones & Glare Flares
     const lightTowers = [
       { x: -13.0, z: -18.0 }, { x: 13.0, z: -18.0 },
       { x: -13.0, z: 18.0 }, { x: 13.0, z: 18.0 }
@@ -2977,6 +3311,10 @@ class TennisGameEngine {
       const bank = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.8, 0.9), new THREE.MeshBasicMaterial({ color: 0xffffff }));
       bank.position.set(t.x, 15.2, t.z);
 
+      const flare = new THREE.Sprite(flareMat);
+      flare.position.set(t.x * 0.92, 15.3, t.z * 0.92);
+      flare.scale.set(6.5, 6.5, 1.0);
+
       const cone = new THREE.Mesh(
         new THREE.ConeGeometry(4.2, 17, 16, 1, true),
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false })
@@ -2984,8 +3322,10 @@ class TennisGameEngine {
       cone.position.set(t.x * 0.7, 7.5, t.z * 0.7);
       cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), new THREE.Vector3(-t.x, -15, -t.z).normalize());
 
-      this.environmentGroup.add(truss, bank, cone);
+      this.environmentGroup.add(truss, bank, flare, cone);
     });
+
+    this.initCrowdFlashes();
 
     // Spaceframe Roof Trusses
     for (let z = -15; z <= 15; z += 7.5) {
@@ -2993,6 +3333,151 @@ class TennisGameEngine {
       beam.position.set(0, 16, z);
       this.environmentGroup.add(beam);
     }
+  }
+
+  // --- EA SPORTS Dynamic Crowd Camera Flashes & Television Graphics ---
+  initCrowdFlashes() {
+    this.crowdFlashes = [];
+    const flashGeo = new THREE.PlaneGeometry(0.55, 0.55);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    grad.addColorStop(0.35, 'rgba(180, 240, 255, 0.85)');
+    grad.addColorStop(0.7, 'rgba(0, 180, 255, 0.25)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    const flashTex = new THREE.CanvasTexture(canvas);
+    const flashMat = new THREE.MeshBasicMaterial({
+      map: flashTex,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    for (let i = 0; i < 20; i++) {
+      const mesh = new THREE.Mesh(flashGeo, flashMat.clone());
+      mesh.visible = false;
+      this.environmentGroup.add(mesh);
+      this.crowdFlashes.push({ mesh, life: 0, maxLife: 0.12 });
+    }
+  }
+
+  updateCrowdFlashes(dt) {
+    if (this.currentMap !== 'stadium' || !this.crowdFlashes) return;
+
+    // Trigger random spectator flashes during active points & fast rallies
+    const flashProb = (this.ball && this.ball.vel && this.ball.vel.lengthSq() > 300) ? 0.28 : 0.09;
+    if (this.pointActive && Math.random() < flashProb) {
+      const flash = this.crowdFlashes.find(f => f.life <= 0);
+      if (flash) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const row = Math.floor(Math.random() * 8);
+        const s = (Math.random() - 0.5) * 32;
+        const xBase = side * 13.5 + side * (row * 1.45);
+        const yBase = row * 0.70 + 1.68;
+        flash.mesh.position.set(xBase + (Math.random() - 0.5) * 0.4, yBase, s);
+        flash.mesh.lookAt(this.camera.position);
+        flash.life = flash.maxLife;
+        flash.mesh.visible = true;
+      }
+    }
+
+    for (let i = 0; i < this.crowdFlashes.length; i++) {
+      const f = this.crowdFlashes[i];
+      if (f.life > 0) {
+        f.life -= dt;
+        const progress = Math.max(0, f.life / f.maxLife);
+        const scale = 1.0 + (1.0 - progress) * 2.8;
+        f.mesh.scale.set(scale, scale, scale);
+        f.mesh.material.opacity = progress;
+        if (f.life <= 0) {
+          f.mesh.visible = false;
+        }
+      }
+    }
+  }
+
+  updateJumbotronScreen(alertTitle = null, alertSub = null) {
+    if (!this.jumbotronCtx || !this.jumbotronTex) return;
+    const ctx = this.jumbotronCtx;
+    ctx.fillStyle = '#020617';
+    ctx.fillRect(0, 0, 512, 256);
+
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(6, 6, 500, 244);
+
+    ctx.fillStyle = '#ff0055';
+    ctx.font = '900 24px sans-serif';
+    ctx.fillText('EA SPORTS™', 24, 42);
+
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('• GRAND SLAM 4K', 190, 42);
+
+    if (alertTitle) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '900 46px sans-serif';
+      ctx.fillText(alertTitle, 24, 118);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText(alertSub || '', 24, 164);
+    } else {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 36px sans-serif';
+      ctx.fillText(`TÚ  ${this.scorePlayer} - ${this.scoreAI}  RIVAL`, 24, 112);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(`SETS: ${this.setsPlayer}-${this.setsAI}  |  JUEGOS: ${this.gamesPlayer}-${this.gamesAI}`, 24, 158);
+    }
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText(`RALLY: ${this.rally} GOLPES  •  ROLEX OFFICIAL TIME`, 24, 215);
+
+    this.jumbotronTex.needsUpdate = true;
+  }
+
+  triggerBroadcastWipe(callback = null) {
+    const wipe = document.getElementById('broadcast-wipe');
+    if (!wipe) {
+      if (callback) callback();
+      return;
+    }
+    wipe.classList.remove('hidden');
+    void wipe.offsetWidth;
+    wipe.classList.add('active-wipe');
+
+    setTimeout(() => {
+      if (callback) callback();
+    }, 450);
+
+    setTimeout(() => {
+      wipe.classList.remove('active-wipe');
+      setTimeout(() => {
+        wipe.classList.add('hidden');
+      }, 400);
+    }, 1100);
+  }
+
+  triggerRadarGun(speedKmH, playerName) {
+    const radar = document.getElementById('radar-gun-popup');
+    const speedEl = document.getElementById('radar-speed-num');
+    const tagEl = document.getElementById('radar-player-tag');
+    if (!radar || !speedEl) return;
+
+    speedEl.innerText = speedKmH;
+    if (tagEl) tagEl.innerText = playerName || 'SERVICIO';
+    radar.classList.remove('hidden');
+
+    if (this._radarTimeout) clearTimeout(this._radarTimeout);
+    this._radarTimeout = setTimeout(() => {
+      radar.classList.add('hidden');
+    }, 2800);
   }
 
   // 2. Playa Paraíso (Tropical Beach Resort Sunset Setting)
@@ -4967,6 +5452,9 @@ class TennisGameEngine {
     this.startSwingAnimation(this.player, 'serve');
     this.particles.burst(this.ball.pos, 28, 0x00f0ff, 4.5);
 
+    const serveSpeedKmH = Math.round(this.ball.vel.length() * 3.6);
+    this.triggerRadarGun(serveSpeedKmH, 'TÚ (PRO)');
+
     const sLabel = (this.serveFaultCount === 0) ? '1ER SAQUE' : '2DO SAQUE';
     this.showAnnouncement(`¡${sLabel}!`, 'Saque limpio y potente');
     this.showTimingFeedback('SWEET SPOT • SERVICIO', 'perfect');
@@ -5006,6 +5494,9 @@ class TennisGameEngine {
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.ai, 'serve');
     this.particles.burst(this.ball.pos, 28, 0xff2a55, 4.5);
+
+    const aiServeSpeed = Math.round(this.ball.vel.length() * 3.6);
+    this.triggerRadarGun(aiServeSpeed, 'RIVAL (PRO)');
   }
 
   // --- Hitbox & Shot Execution ---
@@ -5264,6 +5755,9 @@ class TennisGameEngine {
     document.getElementById('sets-player').innerText = this.setsPlayer;
     document.getElementById('sets-ai').innerText = this.setsAI;
     document.getElementById('rally-count').innerText = this.rally;
+    if (this.currentMap === 'stadium') {
+      this.updateJumbotronScreen();
+    }
   }
 
   showAnnouncement(title, sub) {
@@ -5275,7 +5769,10 @@ class TennisGameEngine {
       if (s) s.innerText = sub;
       el.classList.remove('hidden');
       clearTimeout(this.annTimeout);
-      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2000);
+      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2200);
+    }
+    if (this.currentMap === 'stadium') {
+      this.updateJumbotronScreen(title, sub);
     }
     if (this.gameMode === 'online_host') {
       this._pendingAnn = { title, sub };
@@ -5288,9 +5785,10 @@ class TennisGameEngine {
 
     this.ball.prevPos.copy(this.ball.pos);
 
-    // Gravity & Air Drag
-    const GRAVITY = -9.8;
-    this.ball.vel.y += GRAVITY * dt;
+    // Gravity
+    this.ball.vel.y -= 9.8 * dt;
+
+    // Atmospheric Drag
     this.ball.vel.x *= (1 - 0.02 * dt);
     this.ball.vel.z *= (1 - 0.02 * dt);
 
@@ -5304,10 +5802,11 @@ class TennisGameEngine {
     const speedKmH = Math.round(this.ball.vel.length() * 3.6);
     document.getElementById('ball-speed').innerHTML = `${speedKmH} <small>km/h</small>`;
 
-    // Fast Shot Motion Trail
-    if (this.ball.vel.lengthSq() > 280) {
-      const trailColor = (this.ball.lastHitter === 'player') ? 0x00f0ff : 0xff2a55;
-      this.particles.spawnBallTrail(this.ball.pos, trailColor);
+    // Fast Shot Motion Trail with Dual Speed Thresholds
+    if (this.ball.vel.lengthSq() > 180) {
+      const isUltra = (this.ball.vel.lengthSq() > 380);
+      const trailColor = (this.ball.lastHitter === 'player') ? (isUltra ? 0x00ffff : 0x38bdf8) : (isUltra ? 0xff2a55 : 0xf43f5e);
+      this.particles.spawnBallTrail(this.ball.pos, trailColor, isUltra ? 1.4 : 1.0);
     }
 
     // 1. Continuous Collision Detection (CCD) Net Check
@@ -5357,6 +5856,18 @@ class TennisGameEngine {
         this.particles.burst(this.ball.pos, 12, 0xffb6c1, 2.3);
       } else {
         this.particles.burst(this.ball.pos, 9, 0x88ccff, 2.0);
+
+        // EA SPORTS: Line chalk puff explosion on boundary/service line impacts
+        const bZ = Math.abs(this.ball.pos.z);
+        const bX = Math.abs(this.ball.pos.x);
+        const isNearBaseline = Math.abs(bZ - this.HALF_L) < 0.28;
+        const isNearServiceLine = Math.abs(bZ - this.SERVICE_Z) < 0.25;
+        const isNearSideline = Math.abs(bX - this.HALF_W) < 0.25 || Math.abs(bX - this.DOUBLES_HALF_W) < 0.25;
+        const isNearCenterLine = bX < 0.18 && bZ <= this.SERVICE_Z;
+
+        if (isNearBaseline || isNearServiceLine || isNearSideline || isNearCenterLine) {
+          this.particles.spawnChalkPuff(this.ball.pos);
+        }
       }
 
       const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
@@ -6336,12 +6847,16 @@ class TennisGameEngine {
     ctx.restore();
   }
 
-  // --- Main Animation Loop ---
   animate() {
     requestAnimationFrame(() => this.animate());
     const dt = Math.min(this.clock.getDelta(), 0.05);
 
     this.particles.update(dt);
+    this.updateCrowdFlashes(dt);
+
+    if (this.currentMap === 'stadium' && this.ledTex) {
+      this.ledTex.offset.x -= dt * 0.08;
+    }
 
     // Dynamic Environment Animations
       // White House American Flag Dynamic Wind Wave
@@ -6437,7 +6952,17 @@ class TennisGameEngine {
       this.drawMinimap();
     }
 
-    this.renderer.render(this.scene, this.camera);
+    if (this.usePostProcessing && this.renderTarget && this.postScene) {
+      if (this.postMaterial && this.postMaterial.uniforms && this.postMaterial.uniforms.uTime) {
+        this.postMaterial.uniforms.uTime.value = this.clock.getElapsedTime();
+      }
+      this.renderer.setRenderTarget(this.renderTarget);
+      this.renderer.render(this.scene, this.camera);
+      this.renderer.setRenderTarget(null);
+      this.renderer.render(this.postScene, this.postCamera);
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
 

@@ -23,9 +23,15 @@
   <div id="hud">
     <!-- Top Bar: Official Broadcast Scoreboard -->
     <header class="top-bar">
-      <div class="brand-badge">
-        <span class="live-dot"></span>
-        <span class="brand-text">GRAND SLAM TOUR</span>
+      <div class="brand-badge ea-broadcast-badge">
+        <div class="ea-sports-logo-pill">
+          <span class="ea-logo-text">EA</span>
+          <span class="ea-sports-text">SPORTS™</span>
+        </div>
+        <div class="ea-tour-info">
+          <span class="live-dot"></span>
+          <span class="brand-text">GRAND SLAM 4K HDR</span>
+        </div>
       </div>
 
       <div class="scoreboard-widget">
@@ -466,6 +472,26 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- EA SPORTS Broadcast Transition Wipe Overlay -->
+  <div id="broadcast-wipe" class="broadcast-wipe-layer pointer-none hidden">
+    <div class="wipe-blade wipe-blade-left"></div>
+    <div class="wipe-blade wipe-blade-right"></div>
+    <div class="wipe-center-content">
+      <div class="wipe-logo-circle">
+        <span class="wipe-ea-bold">EA</span>
+        <span class="wipe-sports-bold">SPORTS™</span>
+      </div>
+      <div class="wipe-event-text">GRAND SLAM PRO TOUR</div>
+    </div>
+  </div>
+
+  <!-- Realtime Speed Gun Radar Popup -->
+  <div id="radar-gun-popup" class="radar-gun-card pointer-none hidden">
+    <div class="radar-top-tag">RADAR OFICIAL • SERVICIO</div>
+    <div class="radar-speed-display"><span id="radar-speed-num">0</span> <small>KM/H</small></div>
+    <div class="radar-sub-tag" id="radar-player-tag">TÚ (PRO)</div>
   </div>
 
   <!-- Libraries & Game Engine -->
