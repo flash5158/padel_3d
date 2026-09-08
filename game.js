@@ -27,66 +27,136 @@ class TennisAudioPro {
   init() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AC();
+      if (AC) this.ctx = new AC();
     }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
     }
     this.updateMusicUI();
+
+    if (!this._unlocked) {
+      this._unlocked = true;
+      const unlock = () => {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener('pointerdown', unlock, { passive: true });
+      window.addEventListener('touchstart', unlock, { passive: true });
+      window.addEventListener('keydown', unlock, { passive: true });
+    }
   }
 
-  // Crisp Tennis Racket String Impact Pop (Polyester / Gut String Bed)
+  ensureAudio() {
+    if (!this.ctx) this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  // Professional Acoustic Racket Strike (Sub-Bass Body Thump + Carbon Frame Resonance + String Snap)
   playHit(power = 1.0, isSmash = false, isSweetSpot = false) {
+    this.ensureAudio();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
 
-    // High tension string ping
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    osc.type = 'triangle';
-    const startFreq = isSmash ? 580 : (isSweetSpot ? 490 : 380);
-    osc.frequency.setValueAtTime(startFreq, t);
-    osc.frequency.exponentialRampToValueAtTime(75, t + 0.09);
+    // 1. SUB-BASS BODY PUNCH (40 Hz - 140 Hz) - Gives tangible acoustic weight
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    subOsc.type = 'sine';
+    const subStart = isSmash ? 145 : (isSweetSpot ? 125 : 105);
+    const subEnd = isSmash ? 32 : 40;
+    const subDur = isSmash ? 0.16 : 0.10;
+    subOsc.frequency.setValueAtTime(subStart, t);
+    subOsc.frequency.exponentialRampToValueAtTime(subEnd, t + subDur);
+    subGain.gain.setValueAtTime(1.2 * Math.min(1.5, power), t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + subDur);
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(t);
+    subOsc.stop(t + subDur);
 
-    g.gain.setValueAtTime(0.9 * Math.min(1.3, power), t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
-    osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.09);
+    // 2. GRAPHITE / CARBON FRAME RESONANCE (850 Hz - 1100 Hz, Q 4.2)
+    const frameOsc = this.ctx.createOscillator();
+    const frameFilter = this.ctx.createBiquadFilter();
+    const frameGain = this.ctx.createGain();
+    frameOsc.type = 'triangle';
+    frameOsc.frequency.setValueAtTime(isSmash ? 980 : (isSweetSpot ? 920 : 840), t);
+    frameOsc.frequency.exponentialRampToValueAtTime(160, t + 0.08);
+    frameFilter.type = 'bandpass';
+    frameFilter.frequency.value = isSmash ? 1050 : 920;
+    frameFilter.Q.value = 4.2;
+    frameGain.gain.setValueAtTime(0.85 * Math.min(1.4, power), t);
+    frameGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+    frameOsc.connect(frameFilter);
+    frameFilter.connect(frameGain);
+    frameGain.connect(this.ctx.destination);
+    frameOsc.start(t);
+    frameOsc.stop(t + 0.08);
 
-    // String snap transient / friction whoosh
-    const bSize = Math.floor(this.ctx.sampleRate * 0.04);
+    // 3. HIGH-TENSION POLYESTER / GUT STRING SNAP (Noise Burst)
+    const bSize = Math.floor(this.ctx.sampleRate * 0.045);
     const b = this.ctx.createBuffer(1, bSize, this.ctx.sampleRate);
     const d = b.getChannelData(0);
-    for (let i = 0; i < bSize; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bSize * 0.25));
+    for (let i = 0; i < bSize; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bSize * 0.22));
+    }
     const noise = this.ctx.createBufferSource();
     noise.buffer = b;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = isSmash ? 4200 : (isSweetSpot ? 3400 : 2600);
-    filter.Q.value = 3.5;
-
-    const ng = this.ctx.createGain();
-    ng.gain.setValueAtTime(0.65 * power, t);
-    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    noise.connect(filter); filter.connect(ng); ng.connect(this.ctx.destination);
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.value = isSmash ? 4400 : (isSweetSpot ? 3600 : 2800);
+    noiseFilter.Q.value = 3.2;
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.75 * power, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
     noise.start(t);
+
+    // 4. CANNON SUB-HARMONIC BOOM (Smash special punch)
+    if (isSmash) {
+      const boomOsc = this.ctx.createOscillator();
+      const boomGain = this.ctx.createGain();
+      boomOsc.type = 'sine';
+      boomOsc.frequency.setValueAtTime(60, t);
+      boomOsc.frequency.exponentialRampToValueAtTime(24, t + 0.22);
+      boomGain.gain.setValueAtTime(1.0, t);
+      boomGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      boomOsc.connect(boomGain);
+      boomGain.connect(this.ctx.destination);
+      boomOsc.start(t);
+      boomOsc.stop(t + 0.22);
+    }
+
+    // 5. MOBILE PHYSICAL HAPTICS (Real in-hand strike vibration)
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        if (isSmash) navigator.vibrate([28, 30, 50]);
+        else if (isSweetSpot) navigator.vibrate([22, 28]);
+        else navigator.vibrate(18);
+      } catch (e) {}
+    }
   }
 
-  // Hard Court Tennis Ball Bounce (Thud)
+  // Hard Court Tennis Ball Bounce (Rubber Core Compression + Felt Friction)
   playBounce(v = 1.0) {
+    this.ensureAudio();
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const g = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(165, t);
-    osc.frequency.exponentialRampToValueAtTime(36, t + 0.075);
+    osc.frequency.setValueAtTime(185, t);
+    osc.frequency.exponentialRampToValueAtTime(32, t + 0.085);
 
-    g.gain.setValueAtTime(Math.min(0.50 * v, 0.60), t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
-    osc.connect(g); g.connect(this.ctx.destination);
-    osc.start(t); osc.stop(t + 0.075);
+    g.gain.setValueAtTime(Math.min(0.72 * v, 0.85), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.085);
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.085);
   }
 
   // Electronic Line-Calling "OUT!" Tone / Umpire Whistle
@@ -831,6 +901,89 @@ const TextureFactory = {
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.anisotropy = 4;
+    return tex;
+  },
+
+  // Sand Ripple Micro-Normal Map for Beach Paraíso
+  createBeachSandNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(512, 512);
+    const data = imgData.data;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 512; x++) {
+        const idx = (y * 512 + x) * 4;
+        const grain = (Math.random() - 0.5) * 0.20;
+        const nx = Math.floor(128 + Math.cos(x * 0.10) * 32 + grain * 38);
+        const ny = Math.floor(128 + Math.sin(y * 0.08) * 24 + grain * 38);
+        data[idx] = THREE.MathUtils.clamp(nx, 0, 255);
+        data[idx + 1] = THREE.MathUtils.clamp(ny, 0, 255);
+        data[idx + 2] = 255;
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6, 10);
+    return tex;
+  },
+
+  // Flagstone Paver Normal Map for Zen Temple Court
+  createZenStoneNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(512, 512);
+    const data = imgData.data;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 512; x++) {
+        const idx = (y * 512 + x) * 4;
+        const seamX = (x % 64 < 3 || x % 64 > 61) ? -42 : 0;
+        const seamY = (y % 64 < 3 || y % 64 > 61) ? -42 : 0;
+        const noise = (Math.random() - 0.5) * 22;
+        data[idx] = THREE.MathUtils.clamp(Math.floor(128 + seamX + noise), 0, 255);
+        data[idx + 1] = THREE.MathUtils.clamp(Math.floor(128 + seamY + noise), 0, 255);
+        data[idx + 2] = 255;
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(5, 8);
+    return tex;
+  },
+
+  // Grass Blade / Striped Turf Normal Map for White House South Lawn
+  createWhiteHouseGrassNormalMap() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(512, 512);
+    const data = imgData.data;
+    for (let y = 0; y < 512; y++) {
+      for (let x = 0; x < 512; x++) {
+        const idx = (y * 512 + x) * 4;
+        const stripe = ((Math.floor(y / 32) % 2) === 0 ? 1 : -1) * 18;
+        const blade = Math.sin(x * 0.7 + y * 0.35) * 14;
+        data[idx] = THREE.MathUtils.clamp(Math.floor(128 + blade), 0, 255);
+        data[idx + 1] = THREE.MathUtils.clamp(Math.floor(128 + stripe), 0, 255);
+        data[idx + 2] = 255;
+        data[idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(6, 12);
     return tex;
   },
 
@@ -2155,7 +2308,25 @@ class ParticleSystem {
     this.sakuraParticles = [];
     this.ballTrail = [];
     this.chalkParticles = [];
+    this.impactRings = [];
     this.geo = new THREE.SphereGeometry(0.045, 6, 6);
+  }
+
+  spawnImpactRing(pos, colorHex = 0x00f0ff) {
+    const ringGeo = new THREE.RingGeometry(0.12, 0.28, 24);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: colorHex,
+      transparent: true,
+      opacity: 0.95,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const mesh = new THREE.Mesh(ringGeo, ringMat);
+    mesh.position.copy(pos);
+    mesh.rotation.x = -Math.PI / 2;
+    this.scene.add(mesh);
+    this.impactRings.push({ mesh, life: 0.22, maxLife: 0.22 });
   }
 
   burst(pos, count = 18, colorHex = 0xffea00, speedScale = 3.5) {
@@ -2309,6 +2480,22 @@ class ParticleSystem {
         cp.mesh.geometry.dispose();
         if (cp.mesh.material) cp.mesh.material.dispose();
         this.chalkParticles.splice(i, 1);
+      }
+    }
+
+    // 5. Sweet-Spot & Smash Shockwave Rings
+    for (let i = this.impactRings.length - 1; i >= 0; i--) {
+      const r = this.impactRings[i];
+      r.life -= dt;
+      const progress = 1.0 - Math.max(0, r.life / r.maxLife);
+      const scale = 1.0 + progress * 7.5;
+      r.mesh.scale.set(scale, scale, scale);
+      r.mesh.material.opacity = (1.0 - progress) * 0.95;
+      if (r.life <= 0) {
+        this.scene.remove(r.mesh);
+        r.mesh.geometry.dispose();
+        if (r.mesh.material) r.mesh.material.dispose();
+        this.impactRings.splice(i, 1);
       }
     }
   }
@@ -2584,6 +2771,34 @@ class TennisGameEngine {
             // Broadcast Exposure
             color *= uExposure;
 
+            // Broadcast Bloom Radiance Pass (Highlights > 0.65 emit soft athletic glow)
+            vec2 texel = 1.0 / uResolution;
+            vec3 bloom = vec3(0.0);
+            
+            // Tight halo (4 diagonal samples)
+            vec3 s1 = texture2D(tDiffuse, uv + vec2(2.5, 2.5) * texel).rgb;
+            vec3 s2 = texture2D(tDiffuse, uv + vec2(-2.5, 2.5) * texel).rgb;
+            vec3 s3 = texture2D(tDiffuse, uv + vec2(2.5, -2.5) * texel).rgb;
+            vec3 s4 = texture2D(tDiffuse, uv + vec2(-2.5, -2.5) * texel).rgb;
+            vec3 sAvg = (s1 + s2 + s3 + s4) * 0.25;
+            float sLum = dot(sAvg, vec3(0.299, 0.587, 0.114));
+            if (sLum > 0.65) {
+              bloom += max(vec3(0.0), sAvg - 0.65) * 0.70;
+            }
+
+            // Wide ambient halo (4 cross samples)
+            vec3 w1 = texture2D(tDiffuse, uv + vec2(5.5, 0.0) * texel).rgb;
+            vec3 w2 = texture2D(tDiffuse, uv + vec2(-5.5, 0.0) * texel).rgb;
+            vec3 w3 = texture2D(tDiffuse, uv + vec2(0.0, 5.5) * texel).rgb;
+            vec3 w4 = texture2D(tDiffuse, uv + vec2(0.0, -5.5) * texel).rgb;
+            vec3 wAvg = (w1 + w2 + w3 + w4) * 0.25;
+            float wLum = dot(wAvg, vec3(0.299, 0.587, 0.114));
+            if (wLum > 0.70) {
+              bloom += max(vec3(0.0), wAvg - 0.70) * 0.40;
+            }
+
+            color += bloom * 1.30;
+
             // S-Curve Contrast (EA Sports Frostbite punchy look)
             color = (color - 0.5) * uContrast + 0.5;
 
@@ -2656,6 +2871,27 @@ class TennisGameEngine {
     if (mapId === 'beach') this.audio.playBeachWave();
     else if (mapId === 'zen') this.audio.playZenBell();
 
+    // Dynamic Adaptive Athletic Rim Lighting per Arena
+    if (this.rimLight) {
+      if (mapId === 'beach') {
+        this.rimLight.color.setHex(0xff9944);
+        this.rimLight.intensity = 1.20;
+        this.rimLight.position.set(-15, 12, -20);
+      } else if (mapId === 'zen') {
+        this.rimLight.color.setHex(0xfbcfe8);
+        this.rimLight.intensity = 0.85;
+        this.rimLight.position.set(10, 14, -18);
+      } else if (mapId === 'whitehouse') {
+        this.rimLight.color.setHex(0xfff8ee);
+        this.rimLight.intensity = 0.75;
+        this.rimLight.position.set(0, 20, -22);
+      } else {
+        this.rimLight.color.setHex(0x7dd3fc);
+        this.rimLight.intensity = 0.95;
+        this.rimLight.position.set(0, 14, -22);
+      }
+    }
+
     this.showAnnouncement(`PISTA: ${info.name}`, 'Nuevo escenario cargado');
 
     if (broadcast && this.gameMode === 'online_host' && this.conn && this.conn.open) {
@@ -2689,14 +2925,17 @@ class TennisGameEngine {
 
     if (mapId === 'beach') {
       courtTex = TextureFactory.createBeachSandTexture();
+      courtNormal = TextureFactory.createBeachSandNormalMap();
       outerColor = 0xc89858;
       postMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6, metalness: 0.1 });
     } else if (mapId === 'zen') {
       courtTex = TextureFactory.createZenStoneTexture();
+      courtNormal = TextureFactory.createZenStoneNormalMap();
       outerColor = 0x0f131a;
       postMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.35, metalness: 0.3 });
     } else if (mapId === 'whitehouse') {
       courtTex = TextureFactory.createWhiteHouseTurfTexture();
+      courtNormal = TextureFactory.createWhiteHouseGrassNormalMap();
       outerColor = 0x14532d;
       postMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.22, metalness: 0.90 }); // 24K Presidential Brass
     } else {
@@ -2712,10 +2951,10 @@ class TennisGameEngine {
     const courtMat = new THREE.MeshStandardMaterial({
       map: courtTex,
       normalMap: courtNormal,
-      normalScale: courtNormal ? new THREE.Vector2(0.35, 0.35) : null,
+      normalScale: courtNormal ? new THREE.Vector2(0.40, 0.40) : null,
       roughnessMap: courtRoughness,
-      roughness: mapId === 'beach' ? 0.92 : (mapId === 'zen' ? 0.62 : 0.74),
-      metalness: mapId === 'zen' ? 0.12 : 0.06
+      roughness: mapId === 'beach' ? 0.90 : (mapId === 'zen' ? 0.58 : (mapId === 'whitehouse' ? 0.78 : 0.72)),
+      metalness: mapId === 'zen' ? 0.14 : (mapId === 'whitehouse' ? 0.08 : 0.05)
     });
     const court = new THREE.Mesh(courtGeo, courtMat);
     court.rotation.x = -Math.PI / 2;
@@ -2776,8 +3015,14 @@ class TennisGameEngine {
         else obj.material.dispose();
       }
     }
+    this.crowdFlashes = [];
     this.tikiTorches = [];
     this.oceanMesh = null;
+    this.shorelineFoam = null;
+    this.jumbotronCanvas = null;
+    this.jumbotronCtx = null;
+    this.jumbotronTex = null;
+    this.whiteHouseFlag = null;
 
     if (mapId === 'beach') {
       this.buildBeachEnvironment();
@@ -5451,6 +5696,8 @@ class TennisGameEngine {
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.player, 'serve');
     this.particles.burst(this.ball.pos, 28, 0x00f0ff, 4.5);
+    this.particles.spawnImpactRing(this.ball.pos, 0x00f0ff);
+    this.camShake = 0.28;
 
     const serveSpeedKmH = Math.round(this.ball.vel.length() * 3.6);
     this.triggerRadarGun(serveSpeedKmH, 'TÚ (PRO)');
@@ -5494,6 +5741,8 @@ class TennisGameEngine {
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
     this.startSwingAnimation(this.ai, 'serve');
     this.particles.burst(this.ball.pos, 28, 0xff2a55, 4.5);
+    this.particles.spawnImpactRing(this.ball.pos, 0xff2a55);
+    this.camShake = 0.20;
 
     const aiServeSpeed = Math.round(this.ball.vel.length() * 3.6);
     this.triggerRadarGun(aiServeSpeed, 'RIVAL (PRO)');
@@ -5590,6 +5839,7 @@ class TennisGameEngine {
       extraArc = -0.5;
       this.showAnnouncement('¡SMASH DIRECTO!', 'Remate ganador por encima de la red');
       this.particles.burst(this.ball.pos, 35, 0xff0055, 6.0);
+      this.particles.spawnImpactRing(this.ball.pos, 0xff0055);
     } else if (isLob) {
       flightTime = 1.65;
       extraArc = 6.4;
@@ -5604,6 +5854,7 @@ class TennisGameEngine {
       if (isSweetSpot) {
         flightTime = 0.90;
         this.particles.burst(this.ball.pos, 28, 0x00ffaa, 4.8);
+        this.particles.spawnImpactRing(this.ball.pos, 0x00ffaa);
       } else {
         this.particles.burst(this.ball.pos, 15, 0xffea00, 3.0);
       }
@@ -5621,7 +5872,7 @@ class TennisGameEngine {
 
     this.audio.playHit(power, isSmash, isSweetSpot);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.camShake = isSmash ? 0.35 : (isSweetSpot ? 0.16 : 0.08);
+    this.camShake = isSmash ? 0.45 : (isSweetSpot ? 0.24 : 0.10 * power);
 
     // Racket Impact Recoil Visual (kick on ball contact)
     const hitterChar = hitter === 'player' ? this.player : this.ai;
