@@ -2227,6 +2227,8 @@ class TennisGameEngine {
     this.isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     this.controlMode = localStorage.getItem('padel_control_mode') || 'auto';
     this.touchJoystickVec = new THREE.Vector2(0, 0);
+    this.touchSprinting = false;
+    this._ballTrail = [];
 
     // Online Tournament State (4+ Players with World Rotation)
     this.tournament = {
@@ -3947,7 +3949,7 @@ class TennisGameEngine {
     // Set initial control mode
     this.setControlMode(this.controlMode);
 
-    // 3. Virtual 360 Thumbstick Setup
+    // 3. Fluid Floating Thumbstick Setup
     const jZone = document.getElementById('touch-joystick-zone');
     const jBase = document.getElementById('joystick-base');
     const jKnob = document.getElementById('joystick-knob');
@@ -3955,14 +3957,24 @@ class TennisGameEngine {
     if (jZone && jBase && jKnob) {
       let activeTouchId = null;
       let baseCenter = { x: 0, y: 0 };
-      const maxRadius = 42; // px
+      const maxRadius = 46; // px
 
-      const updateCenter = () => {
-        const rect = jBase.getBoundingClientRect();
-        baseCenter = {
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2
-        };
+      const resetBasePosition = () => {
+        jBase.style.left = '28px';
+        jBase.style.bottom = '28px';
+        jBase.style.top = 'auto';
+        jBase.classList.remove('active');
+      };
+
+      const setBaseToPoint = (clientX, clientY) => {
+        const zoneRect = jZone.getBoundingClientRect();
+        const relX = clientX - zoneRect.left;
+        const relY = clientY - zoneRect.top;
+        jBase.style.left = `${relX - 70}px`;
+        jBase.style.top = `${relY - 70}px`;
+        jBase.style.bottom = 'auto';
+        jBase.classList.add('active');
+        baseCenter = { x: clientX, y: clientY };
       };
 
       const handleMove = (clientX, clientY) => {
@@ -3984,14 +3996,17 @@ class TennisGameEngine {
         activeTouchId = null;
         jKnob.style.transform = 'translate(0px, 0px)';
         this.touchJoystickVec.set(0, 0);
+        setTimeout(() => {
+          if (activeTouchId === null) resetBasePosition();
+        }, 500);
       };
 
       // Touch events for mobile/tablet
       jZone.addEventListener('touchstart', (e) => {
         e.preventDefault();
-        updateCenter();
         const touch = e.changedTouches[0];
         activeTouchId = touch.identifier;
+        setBaseToPoint(touch.clientX, touch.clientY);
         handleMove(touch.clientX, touch.clientY);
       }, { passive: false });
 
@@ -4021,7 +4036,7 @@ class TennisGameEngine {
       let isMouseDown = false;
       jZone.addEventListener('mousedown', (e) => {
         isMouseDown = true;
-        updateCenter();
+        setBaseToPoint(e.clientX, e.clientY);
         handleMove(e.clientX, e.clientY);
       });
       window.addEventListener('mousemove', (e) => {
@@ -4035,43 +4050,61 @@ class TennisGameEngine {
       });
     }
 
-    // 4. Touch Hit Button
-    const hitBtn = document.getElementById('touch-hit-btn');
-    if (hitBtn) {
-      hitBtn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (navigator.vibrate) navigator.vibrate(25);
-        this.handleActionPress();
-      }, { passive: false });
+    // 4. Ergonomic Arcade Action Cluster (Hit/Drive, Globo, Smash, Slice, Sprint)
+    const bindTouchAction = (btnId, shotType) => {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
 
-      hitBtn.addEventListener('touchend', (e) => {
+      const onPress = (e) => {
         e.preventDefault();
-        this.handleActionRelease();
-      }, { passive: false });
-
-      // Mouse fallback
-      hitBtn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
+        e.stopPropagation();
+        if (shotType) {
+          this.shotType = shotType;
+          const label = document.getElementById('current-shot');
+          if (label) label.innerText = shotType;
+        }
+        if (navigator.vibrate) navigator.vibrate(22);
         this.handleActionPress();
-      });
-      hitBtn.addEventListener('mouseup', (e) => {
+      };
+
+      const onRelease = (e) => {
         e.preventDefault();
+        e.stopPropagation();
         this.handleActionRelease();
-      });
+      };
+
+      btn.addEventListener('touchstart', onPress, { passive: false });
+      btn.addEventListener('touchend', onRelease, { passive: false });
+      btn.addEventListener('touchcancel', onRelease);
+      btn.addEventListener('mousedown', onPress);
+      btn.addEventListener('mouseup', onRelease);
+    };
+
+    bindTouchAction('touch-hit-btn', 'DRIVE');
+    bindTouchAction('touch-btn-globo', 'GLOBO');
+    bindTouchAction('touch-btn-smash', 'SMASH');
+    bindTouchAction('touch-btn-slice', 'SLICE');
+
+    // Dedicated Sprint Button (Press / Hold)
+    const sprintBtn = document.getElementById('touch-btn-sprint');
+    if (sprintBtn) {
+      const startSprint = (e) => {
+        e.preventDefault();
+        this.touchSprinting = true;
+        sprintBtn.classList.add('active');
+        if (navigator.vibrate) navigator.vibrate(15);
+      };
+      const endSprint = (e) => {
+        e.preventDefault();
+        this.touchSprinting = false;
+        sprintBtn.classList.remove('active');
+      };
+      sprintBtn.addEventListener('touchstart', startSprint, { passive: false });
+      sprintBtn.addEventListener('touchend', endSprint, { passive: false });
+      sprintBtn.addEventListener('touchcancel', endSprint);
+      sprintBtn.addEventListener('mousedown', startSprint);
+      sprintBtn.addEventListener('mouseup', endSprint);
     }
-
-    // 5. Touch Shot Selectors (DRIVE, GLOBO, SMASH, SLICE)
-    document.querySelectorAll('.touch-shot-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.touch-shot-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.shotType = btn.dataset.shot || 'DRIVE';
-        const label = document.getElementById('current-shot');
-        if (label) label.innerText = this.shotType;
-        this.audio.playHit(0.5, false, false);
-      });
-    });
   }
 
   setControlMode(mode) {
@@ -4846,7 +4879,9 @@ class TennisGameEngine {
 
       if (promptEl) {
         promptEl.classList.remove('hidden');
-        promptEl.innerHTML = `<span>${serveLabel}: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong></span>`;
+        const isMobile = (this.controlMode === 'mobile') || (this.controlMode === 'auto' && this.isTouchDevice);
+        const actionPrompt = isMobile ? 'Toca <strong>[GOLPE]</strong> • Apunta con el Joystick' : 'Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong>';
+        promptEl.innerHTML = `<span>${serveLabel}: ${actionPrompt}</span>`;
       }
       document.getElementById('serve-player').innerText = '🎾';
       document.getElementById('serve-ai').innerText = '';
@@ -4867,7 +4902,9 @@ class TennisGameEngine {
       } else if (this.gameMode === 'online_guest') {
         if (promptEl) {
           promptEl.classList.remove('hidden');
-          promptEl.innerHTML = `<span>Tu Saque (${serveLabel}): Presiona <strong>[ESPACIO / CLIC]</strong></span>`;
+          const isMobile = (this.controlMode === 'mobile') || (this.controlMode === 'auto' && this.isTouchDevice);
+          const actionPrompt = isMobile ? 'Toca <strong>[GOLPE]</strong> • Apunta con el Joystick' : 'Presiona <strong>[ESPACIO / CLIC]</strong>';
+          promptEl.innerHTML = `<span>Tu Saque (${serveLabel}): ${actionPrompt}</span>`;
         }
       } else if (this.gameMode === 'online_host') {
         if (promptEl) {
@@ -4900,9 +4937,9 @@ class TennisGameEngine {
     // When this.servingSide === 1: Opponent box is X in [-4.115, 0]. Default center is -2.10m.
     // When this.servingSide === -1: Opponent box is X in [0, 4.115]. Default center is +2.10m.
     let targetX = -this.servingSide * 2.10;
-    if (this.keys['a'] || this.keys['arrowleft']) {
+    if (this.keys['a'] || this.keys['arrowleft'] || (this.touchJoystickVec && this.touchJoystickVec.x < -0.25)) {
       targetX = -this.servingSide * 3.15; // Aim wide towards sideline
-    } else if (this.keys['d'] || this.keys['arrowright']) {
+    } else if (this.keys['d'] || this.keys['arrowright'] || (this.touchJoystickVec && this.touchJoystickVec.x > 0.25)) {
       targetX = -this.servingSide * 1.05; // Aim down the 'T' center line
     }
 
@@ -5043,9 +5080,13 @@ class TennisGameEngine {
     // Directional aim within tennis singles boundaries (+/-4.115m)
     let targetX = (Math.random() - 0.5) * 4.5;
     if (hitter === 'player') {
-      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.1;
-      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.1;
-      else if (timingOffset < -0.3) targetX *= -1.2;
+      if (this.keys['a'] || this.keys['arrowleft'] || (this.touchJoystickVec && this.touchJoystickVec.x < -0.22)) {
+        targetX = -3.1;
+      } else if (this.keys['d'] || this.keys['arrowright'] || (this.touchJoystickVec && this.touchJoystickVec.x > 0.22)) {
+        targetX = 3.1;
+      } else if (timingOffset < -0.3) {
+        targetX *= -1.2;
+      }
     }
     targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.5, this.HALF_W - 0.5);
 
@@ -5487,8 +5528,8 @@ class TennisGameEngine {
       dir.z += this.touchJoystickVec.y; // Forward (-Z) / Backward (+Z)
     }
 
-    const isSprinting = this.keys['shift'];
-    const curSpeed = this.player.speed * (isSprinting ? 1.4 : 1.0);
+    const isSprinting = this.keys['shift'] || this.touchSprinting || (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.72);
+    const curSpeed = this.player.speed * (isSprinting ? 1.45 : 1.0);
 
     if (dir.lengthSq() > 0) {
       dir.normalize();
@@ -5645,663 +5686,6 @@ class TennisGameEngine {
       }
     }
   }
-
-  setCameraMode(mode) {
-
-    this.cameraMode = mode;
-    document.querySelectorAll('.cam-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.cam === mode);
-    });
-  }
-
-  // --- Official Tennis Serve System (Behind Baseline to Diagonal Service Box) ---
-  prepareServe(server) {
-    this.pointActive = false;
-    this.server = server;
-    this.ball.vel.set(0, 0, 0);
-    this.ball.spin.set(0, 0, 0);
-    this.ball.bounceCount = 0;
-    this.ball.hitGroundInCourt = false;
-    this.ball.lastHitter = null;
-    this.rally = 0;
-    this.updateHUD();
-
-    const promptEl = document.getElementById('serve-prompt');
-    const serveLabel = (this.serveFaultCount === 0) ? '1ER SERVICIO' : '2DO SERVICIO';
-
-    if (server === 'player') {
-      // Server behind baseline at Z = 12.2m
-      const serveX = this.servingSide * 1.8;
-      this.player.pos.set(serveX, 0, 12.2);
-      this.ball.pos.set(serveX + 0.35, 1.1, 11.8);
-      this.ai.pos.set(-this.servingSide * 2.5, 0, -12.2);
-
-      if (promptEl) {
-        promptEl.classList.remove('hidden');
-        promptEl.innerHTML = `<span>${serveLabel}: Presiona <strong>[ESPACIO]</strong> o <strong>[CLIC]</strong></span>`;
-      }
-      document.getElementById('serve-player').innerText = '🎾';
-      document.getElementById('serve-ai').innerText = '';
-    } else {
-      // Rival / AI / Guest Server behind baseline at Z = -12.2m
-      const serveX = -this.servingSide * 1.8;
-      this.ai.pos.set(serveX, 0, -12.2);
-      this.ball.pos.set(serveX - 0.35, 1.1, -11.8);
-      this.player.pos.set(this.servingSide * 2.5, 0, 12.2);
-      document.getElementById('serve-player').innerText = '';
-      document.getElementById('serve-ai').innerText = '🎾';
-
-      if (this.gameMode === 'local') {
-        if (promptEl) {
-          promptEl.classList.remove('hidden');
-          promptEl.innerHTML = `<span>J2 (${serveLabel}): Presiona <strong>[ENTER]</strong></span>`;
-        }
-      } else if (this.gameMode === 'online_guest') {
-        if (promptEl) {
-          promptEl.classList.remove('hidden');
-          promptEl.innerHTML = `<span>Tu Saque (${serveLabel}): Presiona <strong>[ESPACIO / CLIC]</strong></span>`;
-        }
-      } else if (this.gameMode === 'online_host') {
-        if (promptEl) {
-          promptEl.classList.remove('hidden');
-          promptEl.innerHTML = `<span>Esperando Saque del Rival (${serveLabel})...</span>`;
-        }
-      } else {
-        // Solo vs AI
-        if (promptEl) promptEl.classList.add('hidden');
-        setTimeout(() => {
-          if (!this.pointActive && this.server === 'ai') {
-            this.executeAIServe();
-          }
-        }, 1400);
-      }
-    }
-  }
-
-  // Execute Overhead Tennis Serve with Realistic Biomechanics & Guaranteed Clearance
-  executeServe() {
-    this.pointActive = true;
-    const promptEl = document.getElementById('serve-prompt');
-    if (promptEl) promptEl.classList.add('hidden');
-    this.ball.lastHitter = 'player';
-    this.ball.bounceCount = 0;
-    this.ball.hitGroundInCourt = false;
-
-    // Directional Aim within the diagonal legal service box:
-    // Box boundaries: Z in [-6.40m, 0], X on opposite diagonal side
-    // When this.servingSide === 1: Opponent box is X in [-4.115, 0]. Default center is -2.10m.
-    // When this.servingSide === -1: Opponent box is X in [0, 4.115]. Default center is +2.10m.
-    let targetX = -this.servingSide * 2.10;
-    if (this.keys['a'] || this.keys['arrowleft']) {
-      targetX = -this.servingSide * 3.15; // Aim wide towards sideline
-    } else if (this.keys['d'] || this.keys['arrowright']) {
-      targetX = -this.servingSide * 1.05; // Aim down the 'T' center line
-    }
-
-    // Landing depth safely centered in service box (Z = -3.8m)
-    const targetZ = -3.8;
-    const flightTime = 0.68; // Professional crisp serve speed
-
-    // Overhead contact point (apex of serve toss)
-    this.ball.pos.y = 2.45;
-    this.ball.pos.x = this.player.pos.x + 0.22;
-    this.ball.pos.z = 11.4;
-
-    const vx = (targetX - this.ball.pos.x) / flightTime;
-    const vz = (targetZ - this.ball.pos.z) / flightTime;
-
-    // Guaranteed Net Clearance (Net is 0.914m; we enforce y_net >= 1.30m)
-    const timeToNet = (0 - this.ball.pos.z) / vz;
-    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
-
-    this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(16.0, 0, 0); // Heavy forward topspin kick pulling ball down
-
-    this.audio.playHit(1.0, true, true);
-    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.startSwingAnimation(this.player, 'serve');
-    this.particles.burst(this.ball.pos, 28, 0x00f0ff, 4.5);
-
-    const sLabel = (this.serveFaultCount === 0) ? '1ER SAQUE' : '2DO SAQUE';
-    this.showAnnouncement(`¡${sLabel}!`, 'Saque limpio y potente');
-    this.showTimingFeedback('SWEET SPOT • SERVICIO', 'perfect');
-  }
-
-  executeAIServe() {
-    this.pointActive = true;
-    const promptEl = document.getElementById('serve-prompt');
-    if (promptEl) promptEl.classList.add('hidden');
-    this.ball.lastHitter = 'ai';
-    this.ball.bounceCount = 0;
-    this.ball.hitGroundInCourt = false;
-
-    // Diagonal service box on player side (Z in [0, 6.40m])
-    const sideChoice = Math.random();
-    let targetX = this.servingSide * 2.10;
-    if (sideChoice < 0.35) targetX = this.servingSide * 3.15; // wide
-    else if (sideChoice > 0.70) targetX = this.servingSide * 1.05; // down the T
-
-    const targetZ = 3.8;
-    const flightTime = 0.68;
-
-    this.ball.pos.y = 2.45;
-    this.ball.pos.x = this.ai.pos.x - 0.22;
-    this.ball.pos.z = -11.4;
-
-    const vx = (targetX - this.ball.pos.x) / flightTime;
-    const vz = (targetZ - this.ball.pos.z) / flightTime;
-
-    const timeToNet = (0 - this.ball.pos.z) / vz;
-    const vy = (1.30 - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
-
-    this.ball.vel.set(vx, vy, vz);
-    this.ball.spin.set(-16.0, 0, 0);
-
-    this.audio.playHit(1.0, true, true);
-    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.startSwingAnimation(this.ai, 'serve');
-    this.particles.burst(this.ball.pos, 28, 0xff2a55, 4.5);
-  }
-
-  // --- Hitbox & Shot Execution ---
-  triggerPlayerShot() {
-    this.isChargingPower = false;
-    const power = Math.max(0.45, this.power);
-    this.power = 0.55;
-    document.getElementById('power-bar').style.width = '0%';
-
-    // Tennis Rule 24: Receiver CANNOT volley the serve before it bounces in the service box!
-    if (this.rally === 0 && this.server !== 'player' && !this.ball.hitGroundInCourt) {
-      this.startSwingAnimation(this.player, 'forehand');
-      this.showTimingFeedback('¡DEBE BOTAR EN EL CUADRO! (REGLA DE SAQUE)', 'late');
-      this.audio.playAirSwing();
-      return;
-    }
-
-    this.player.limbs.racket.getWorldPosition(this._rHead);
-    this.player.racketHitbox.pos.copy(this._rHead);
-
-    const distToBody = this.player.pos.distanceTo(this.ball.pos);
-    const distToHead = this._rHead.distanceTo(this.ball.pos);
-    const timeOffset = (this.ball.pos.z - this.player.pos.z);
-
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
-    const canHit = (distToHead <= 1.45 || distToBody <= 1.95) &&
-                   this.ball.pos.z > 0.25 &&
-                   this.ball.lastHitter !== 'player' &&
-                   this.ball.pos.y >= 0.10;
-
-    if (canHit) {
-      const isSweetSpot = (distToHead <= 0.85 || isSmash) && Math.abs(timeOffset) < 0.35;
-      const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
-      this.startSwingAnimation(this.player, swingType);
-
-      let timingLabel = 'PERFECT • SWEET SPOT';
-      let timingClass = 'perfect';
-      if (!isSweetSpot) {
-        timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
-        timingClass = 'early';
-      }
-
-      this.showTimingFeedback(timingLabel, timingClass);
-      this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
-    } else {
-      this.startSwingAnimation(this.player, 'forehand');
-      if (distToBody < 3.2 && this.ball.lastHitter !== 'player') {
-        this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
-        this.audio.playAirSwing();
-      }
-    }
-  }
-
-  startSwingAnimation(char, type = 'forehand') {
-    char.isSwinging = true;
-    char.swingType = type;
-    char.swingProgress = 0;
-  }
-
-  executeHitWithHitbox(hitter, power, timingOffset, isSweetSpot) {
-    this.ball.lastHitter = hitter;
-    this.ball.bounceCount = 0;
-    this.ball.hitGroundInCourt = false;
-    this.rally++;
-
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
-    const isLob = (this.shotType === 'GLOBO');
-    const isSlice = (this.shotType === 'SLICE');
-
-    // Directional aim within tennis singles boundaries (+/-4.115m)
-    let targetX = (Math.random() - 0.5) * 4.5;
-    if (hitter === 'player') {
-      if (this.keys['a'] || this.keys['arrowleft']) targetX = -3.1;
-      else if (this.keys['d'] || this.keys['arrowright']) targetX = 3.1;
-      else if (timingOffset < -0.3) targetX *= -1.2;
-    }
-    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.5, this.HALF_W - 0.5);
-
-    let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.8) : (8.2 + Math.random() * 2.8);
-    let flightTime = 1.02;
-    let extraArc = 1.2;
-
-    if (isSmash) {
-      flightTime = 0.68;
-      extraArc = -0.5;
-      this.showAnnouncement('¡SMASH DIRECTO!', 'Remate ganador por encima de la red');
-      this.particles.burst(this.ball.pos, 35, 0xff0055, 6.0);
-    } else if (isLob) {
-      flightTime = 1.65;
-      extraArc = 6.4;
-      this.showAnnouncement('¡GLOBO AL FONDO!', 'Buscando la línea de fondo');
-      this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
-    } else if (isSlice) {
-      flightTime = 1.15;
-      extraArc = 0.4;
-      this.showAnnouncement('¡GOLPE CORTADO (SLICE)!', 'Bajo bote con efecto invertido');
-      this.particles.burst(this.ball.pos, 22, 0xa855f7, 3.5);
-    } else {
-      if (isSweetSpot) {
-        flightTime = 0.90;
-        this.particles.burst(this.ball.pos, 28, 0x00ffaa, 4.8);
-      } else {
-        this.particles.burst(this.ball.pos, 15, 0xffea00, 3.0);
-      }
-    }
-
-    const vx = (targetX - this.ball.pos.x) / flightTime;
-    const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + extraArc;
-
-    this.ball.vel.set(vx, vy, vz);
-
-    // Ball 3D Angular Velocity (Tennis Topspin / Backspin)
-    const spinRate = isSmash ? 20.0 : (isLob ? -12.0 : (isSlice ? -18.0 : 14.0));
-    this.ball.spin.set(spinRate, (Math.random() - 0.5) * 6.0, 0);
-
-    this.audio.playHit(power, isSmash, isSweetSpot);
-    if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.camShake = isSmash ? 0.35 : (isSweetSpot ? 0.16 : 0.08);
-
-    // Racket Impact Recoil Visual (kick on ball contact)
-    const hitterChar = hitter === 'player' ? this.player : this.ai;
-    if (hitterChar) {
-      hitterChar.racketImpactRecoil = isSmash ? 0.38 : (isSweetSpot ? 0.22 : 0.14);
-    }
-
-    this.shotType = 'DRIVE';
-    document.getElementById('current-shot').innerText = 'DRIVE';
-    this.updateHUD();
-  }
-
-  showTimingFeedback(text, className) {
-    const el = document.getElementById('timing-feedback');
-    const txt = document.getElementById('timing-text');
-    txt.innerText = text;
-    el.className = `timing-badge ${className}`;
-    clearTimeout(this.timingTimeout);
-    this.timingTimeout = setTimeout(() => el.classList.add('hidden'), 1500);
-  }
-
-  // --- Official Tennis Point Evaluation & Scoring System ---
-  awardPoint(winner, reason = '') {
-    if (!this.pointActive) return;
-    this.pointActive = false;
-    this.serveFaultCount = 0; // Reset serve faults on point end
-
-    this.audio.playWhistle();
-    if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
-
-    const isMulti = (this.gameMode === 'local' || this.gameMode === 'online_host' || this.gameMode === 'online_guest');
-    const p1Label = isMulti ? 'JUGADOR 1 (AZUL)' : 'TI';
-    const p2Label = isMulti ? 'JUGADOR 2 (ROJO)' : 'EL RIVAL';
-
-    if (winner === 'player') {
-      this.scorePlayer++;
-      this.audio.playCrowd();
-      this.showAnnouncement(`¡PUNTO PARA ${p1Label}!`, reason);
-    } else {
-      this.scoreAI++;
-      this.showAnnouncement(`¡PUNTO PARA ${p2Label}!`, reason);
-    }
-
-    // Tennis Game Calculation (0, 15, 30, 40, Deuce, Advantage)
-    let gameWon = false;
-    let gameWinner = null;
-
-    if (this.scorePlayer >= 4 && this.scorePlayer - this.scoreAI >= 2) {
-      gameWon = true;
-      gameWinner = 'player';
-      this.gamesPlayer++;
-      this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement(`¡JUEGO PARA ${p1Label}!`, 'Gana el juego');
-    } else if (this.scoreAI >= 4 && this.scoreAI - this.scorePlayer >= 2) {
-      gameWon = true;
-      gameWinner = 'ai';
-      this.gamesAI++;
-      this.scorePlayer = 0; this.scoreAI = 0;
-      this.showAnnouncement(`¡JUEGO PARA ${p2Label}!`, 'Gana el juego');
-    } else if (this.scorePlayer >= 3 && this.scoreAI >= 3) {
-      if (this.scorePlayer === this.scoreAI) {
-        this.showAnnouncement('¡IGUALES (DEUCE)!', '40 - 40');
-      } else if (this.scorePlayer === this.scoreAI + 1) {
-        this.showAnnouncement(`¡VENTAJA ${p1Label}!`, 'Punto de juego');
-      } else if (this.scoreAI === this.scorePlayer + 1) {
-        this.showAnnouncement(`¡VENTAJA ${p2Label}!`, 'Punto de juego');
-      }
-    }
-
-    // Set check (First to 6 with 2 games lead)
-    if (gameWon) {
-      if (this.gamesPlayer >= 6 && this.gamesPlayer - this.gamesAI >= 2) {
-        this.setsPlayer++;
-        this.gamesPlayer = 0; this.gamesAI = 0;
-        this.showAnnouncement(`¡SET PARA ${p1Label}!`, 'Consigue la primera manga');
-      } else if (this.gamesAI >= 6 && this.gamesAI - this.gamesPlayer >= 2) {
-        this.setsAI++;
-        this.gamesPlayer = 0; this.gamesAI = 0;
-        this.showAnnouncement(`¡SET PARA ${p2Label}!`, 'Consigue la primera manga');
-      }
-      // Alternate server after every game
-      this.server = (this.server === 'player') ? 'ai' : 'player';
-      this.servingSide = 1;
-    } else {
-      // Alternate serving side (Deuce / Ad) after every point within game
-      this.servingSide = -this.servingSide;
-    }
-
-    this.ball.vel.set(0, 0, 0);
-    this.updateHUD();
-
-    setTimeout(() => {
-      this.prepareServe(this.server);
-    }, 2200);
-  }
-
-  // Handle Service Fault (1st Serve fault -> 2nd serve, 2nd Serve fault -> Double Fault)
-  handleServiceFault(faultReason) {
-    this.pointActive = false;
-    this.audio.playOut();
-    if (this.gameMode === 'online_host') this._pendingSound = 'out';
-
-    if (this.serveFaultCount === 0) {
-      this.serveFaultCount = 1;
-      this.showAnnouncement('¡FALTA EN EL SAQUE!', `${faultReason} • Segundo servicio`);
-      setTimeout(() => {
-        this.prepareServe(this.server);
-      }, 1800);
-    } else {
-      this.serveFaultCount = 0;
-      const winner = (this.server === 'player') ? 'ai' : 'player';
-      this.awardPoint(winner, '¡DOBLE FALTA!');
-    }
-  }
-
-  formatScore(p1, p2) {
-    if (p1 >= 3 && p2 >= 3) {
-      if (p1 === p2) return '40';
-      if (p1 === p2 + 1) return 'AD';
-      return '40';
-    }
-    const map = ['0', '15', '30', '40'];
-    return map[Math.min(p1, 3)];
-  }
-
-  updateHUD() {
-    document.getElementById('pts-player').innerText = this.formatScore(this.scorePlayer, this.scoreAI);
-    document.getElementById('pts-ai').innerText = this.formatScore(this.scoreAI, this.scorePlayer);
-    document.getElementById('games-player').innerText = this.gamesPlayer;
-    document.getElementById('games-ai').innerText = this.gamesAI;
-    document.getElementById('sets-player').innerText = this.setsPlayer;
-    document.getElementById('sets-ai').innerText = this.setsAI;
-    document.getElementById('rally-count').innerText = this.rally;
-  }
-
-  showAnnouncement(title, sub) {
-    const el = document.getElementById('center-announcement');
-    if (el) {
-      const t = document.getElementById('announcement-title');
-      const s = document.getElementById('announcement-sub');
-      if (t) t.innerText = title;
-      if (s) s.innerText = sub;
-      el.classList.remove('hidden');
-      clearTimeout(this.annTimeout);
-      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2000);
-    }
-    if (this.gameMode === 'online_host') {
-      this._pendingAnn = { title, sub };
-    }
-  }
-
-  // --- Official Tennis Physics Loop (No Walls, Strictly Singles Court Out Rules) ---
-  updatePhysics(dt) {
-    if (!this.pointActive) return;
-
-    this.ball.prevPos.copy(this.ball.pos);
-
-    // Gravity & Air Drag
-    const GRAVITY = -9.8;
-    this.ball.vel.y += GRAVITY * dt;
-    this.ball.vel.x *= (1 - 0.02 * dt);
-    this.ball.vel.z *= (1 - 0.02 * dt);
-
-    this.ball.pos.addScaledVector(this.ball.vel, dt);
-
-    // Ball 3D Spin
-    this.ball.mesh.rotation.x += this.ball.spin.x * dt;
-    this.ball.mesh.rotation.y += this.ball.spin.y * dt;
-    this.ball.mesh.rotation.z += this.ball.spin.z * dt;
-
-    const speedKmH = Math.round(this.ball.vel.length() * 3.6);
-    document.getElementById('ball-speed').innerHTML = `${speedKmH} <small>km/h</small>`;
-
-    // Fast Shot Motion Trail
-    if (this.ball.vel.lengthSq() > 280) {
-      const trailColor = (this.ball.lastHitter === 'player') ? 0x00f0ff : 0xff2a55;
-      this.particles.spawnBallTrail(this.ball.pos, trailColor);
-    }
-
-    // 1. Continuous Collision Detection (CCD) Net Check
-    const crossedNet = (this.ball.prevPos.z * this.ball.pos.z <= 0);
-    if ((crossedNet || Math.abs(this.ball.pos.z) < 0.20) && this.ball.pos.y < this.NET_H) {
-      if (this.rally === 0) {
-        // Check if ball grazed the top cord tape (within 0.08m of net height)
-        if (this.ball.pos.y >= this.NET_H - 0.08) {
-          this.ball.isServeLetCandidate = true;
-          this.ball.vel.z *= 0.62; // Slows down and continues over net
-          this.ball.vel.y = Math.max(this.ball.vel.y, 1.1);
-          this.audio.playBounce(0.35);
-          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-          return;
-        } else {
-          this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
-          this.ball.vel.z = -this.ball.vel.z * 0.22;
-          this.ball.vel.y *= 0.4;
-          this.audio.playBounce(0.4);
-          if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-          this.handleServiceFault('Pelota en la red');
-          return;
-        }
-      } else {
-        this.ball.pos.z = (this.ball.prevPos.z > 0) ? 0.16 : -0.16;
-        this.ball.vel.z = -this.ball.vel.z * 0.22;
-        this.ball.vel.y *= 0.4;
-        this.audio.playBounce(0.4);
-        if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, 'Pelota atrapada en la red');
-        return;
-      }
-    }
-
-    // 2. Court Ground Bounce (Y <= ballRadius)
-    if (this.ball.pos.y <= this.ballRadius) {
-      this.ball.pos.y = this.ballRadius;
-      this.ball.vel.y = -this.ball.vel.y * 0.74; // Hard court restitution
-      this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
-      if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
-
-      // Map-themed impact particle burst
-      if (this.currentMap === 'beach') {
-        this.particles.burst(this.ball.pos, 14, 0xd9a766, 2.6);
-      } else if (this.currentMap === 'zen') {
-        this.particles.burst(this.ball.pos, 12, 0xffb6c1, 2.3);
-      } else {
-        this.particles.burst(this.ball.pos, 9, 0x88ccff, 2.0);
-      }
-
-      const currentSide = (this.ball.pos.z > 0) ? 'player' : 'ai';
-
-      // Rule A: SERVICE BOUNCE CHECK
-      if (this.rally === 0 && !this.ball.hitGroundInCourt) {
-        // Must land inside the diagonal service box
-        // Player serve: lands on AI side (Z: -6.40m to 0), X on opposite side
-        let validServiceBox = false;
-        // Official Tennis Rule: A ball touching any part of the boundary line is IN
-        const lineTol = 0.22;
-        if (this.server === 'player') {
-          const inZ = (this.ball.pos.z >= -this.SERVICE_Z - lineTol && this.ball.pos.z <= lineTol);
-          const inX = (this.servingSide === 1) ?
-                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol) :
-                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol);
-          validServiceBox = inZ && inX;
-        } else {
-          const inZ = (this.ball.pos.z >= -lineTol && this.ball.pos.z <= this.SERVICE_Z + lineTol);
-          const inX = (this.servingSide === 1) ?
-                      (this.ball.pos.x >= -lineTol && this.ball.pos.x <= this.HALF_W + lineTol) :
-                      (this.ball.pos.x >= -this.HALF_W - lineTol && this.ball.pos.x <= lineTol);
-          validServiceBox = inZ && inX;
-        }
-
-        // Official Tennis Let Rule: Ball clipped net cord on serve
-        if (this.ball.isServeLetCandidate) {
-          this.ball.isServeLetCandidate = false;
-          if (validServiceBox) {
-            this.showAnnouncement('¡SAQUE DE RED (LET)!', 'Pelota tocó la red y entró en el cuadro • Se repite el saque');
-            this.audio.playWhistle();
-            if (this.gameMode === 'online_host') this._pendingSound = 'whistle';
-            this.ball.vel.set(0, 0, 0);
-            setTimeout(() => {
-              this.prepareServe(this.server);
-            }, 1800);
-            return;
-          } else {
-            this.handleServiceFault('Fuera del cuadro tras rozar la red');
-            return;
-          }
-        }
-
-        if (!validServiceBox) {
-          this.handleServiceFault('Fuera del cuadro de saque');
-          return;
-        }
-
-        // Valid serve first bounce inside diagonal service box
-        this.ball.hitGroundInCourt = true;
-        this.ball.bounceCount = 1;
-        return;
-      }
-
-      // Rule B: Double Bounce Rule
-      // If ball already bounced inside the court once, any subsequent ground bounce is a double bounce point for the hitter
-      if (this.ball.hitGroundInCourt) {
-        const winner = this.ball.lastHitter || (currentSide === 'player' ? 'ai' : 'player');
-        this.awardPoint(winner, 'Doble bote en pista');
-        return;
-      }
-
-      // Rule C: First bounce in rally (this.rally > 0 && !this.ball.hitGroundInCourt)
-      // Own court bounce fault:
-      if (this.ball.lastHitter && this.ball.lastHitter === currentSide) {
-        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, 'Bote en campo propio (Falta)');
-        return;
-      }
-
-      // Rally in-play singles boundaries (touching line is IN)
-      const lineTol = 0.22;
-      const inSinglesX = Math.abs(this.ball.pos.x) <= this.HALF_W + lineTol;
-      const inSinglesZ = Math.abs(this.ball.pos.z) <= this.HALF_L + lineTol;
-
-      if (!inSinglesX || !inSinglesZ) {
-        const winner = (this.ball.lastHitter === 'player') ? 'ai' : 'player';
-        this.awardPoint(winner, '¡Pelota Fuera (OUT)!');
-        return;
-      }
-
-      this.ball.hitGroundInCourt = true;
-      this.ball.bounceCount = 1;
-    }
-
-    // Synchronize Ball & Shadow
-    this.ball.mesh.position.copy(this.ball.pos);
-    this.ball.shadow.position.set(this.ball.pos.x, 0.015, this.ball.pos.z);
-    const sScale = Math.max(0.4, 1.0 - (this.ball.pos.y / 6.0));
-    this.ball.shadow.scale.set(sScale, sScale, sScale);
-
-    // Landing Ring Projection
-    if (this.ball.vel.y < 0) {
-      const tToF = (this.ball.pos.y - this.ballRadius) / Math.max(Math.abs(this.ball.vel.y), 0.1);
-      const px = this.ball.pos.x + this.ball.vel.x * tToF;
-      const pz = this.ball.pos.z + this.ball.vel.z * tToF;
-      this.ball.targetMarker.position.set(px, 0.02, pz);
-      this.ball.targetMarker.visible = true;
-    } else {
-      this.ball.targetMarker.visible = false;
-    }
-  }
-
-  // --- AI Opponent Tactical Positioning & Intercept ---
-  updateAI(dt) {
-    if (!this.isPlaying) return;
-
-    if (this.pointActive) {
-      if (this.ball.vel.z < 0) {
-        // Ball approaching AI side: intercept landing position
-        const targetZ = -10.5;
-        const timeToZ = Math.max(0.05, (this.ball.pos.z - targetZ) / Math.max(Math.abs(this.ball.vel.z), 1));
-        const futureX = THREE.MathUtils.clamp(
-          this.ball.pos.x + this.ball.vel.x * timeToZ,
-          -this.HALF_W + 0.4,
-          this.HALF_W - 0.4
-        );
-        this.ai.targetPos.set(futureX, 0, targetZ);
-      } else {
-        // AI recovers to center baseline
-        this.ai.targetPos.set(0, 0, -11.5);
-      }
-
-      const delta = this._v1.subVectors(this.ai.targetPos, this.ai.pos);
-      const dist = delta.length();
-      if (dist > 0.1) {
-        delta.normalize();
-        this.ai.pos.addScaledVector(delta, Math.min(this.ai.speed * dt, dist));
-        this.ai.runCycle += dt * 14;
-      } else {
-        this.ai.runCycle *= 0.8;
-      }
-
-      // AI Return Strike
-      if (this.ai.limbs && this.ai.limbs.racket) {
-        this.ai.limbs.racket.getWorldPosition(this._rHead);
-        const distToAIRacket = this._rHead.distanceTo(this.ball.pos);
-        const distToAIBody = this.ai.pos.distanceTo(this.ball.pos);
-
-        // Tennis Rule 24: Receiver must allow the serve to bounce in the service box
-        const canAIReturn = (this.rally > 0 || this.server === 'ai' || this.ball.hitGroundInCourt);
-
-        if (canAIReturn && (distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
-          const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
-          this.startSwingAnimation(this.ai, swingType);
-          const aiPower = 0.72 + Math.random() * 0.28;
-          this.executeHitWithHitbox('ai', aiPower, 0, true);
-        }
-      }
-    }
-
-    this.ai.model.position.copy(this.ai.pos);
-    this.animateCharacter(this.ai, dt, true);
-  }
-
-  // --- Smooth Camera System ---
 
   // --- Online Tournament Engine (4+ Players with World Rotation) ---
   initTournamentUI() {
@@ -6742,63 +6126,214 @@ class TennisGameEngine {
     }
   }
 
-  // --- 2D Realtime Tennis Minimap ---
+  // --- 2D Realtime Tactical Tennis Minimap (High-DPI & Arena Adaptive) ---
   drawMinimap() {
     const c = document.getElementById('minimap');
     if (!c) return;
     const ctx = c.getContext('2d');
-    const w = c.width, h = c.height;
+    
+    // High-DPI Canvas Scaling
+    const dpr = window.devicePixelRatio || 1;
+    const logicalW = 100;
+    const logicalH = 200;
+    if (c.width !== Math.round(logicalW * dpr) || c.height !== Math.round(logicalH * dpr)) {
+      c.width = Math.round(logicalW * dpr);
+      c.height = Math.round(logicalH * dpr);
+    }
+    
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    const w = logicalW, h = logicalH;
 
-    // Deep Marine Background
-    ctx.fillStyle = '#061325';
+    // Arena-themed palette
+    let bgOuter, courtInner, courtOuter, lineCol, netCol;
+    if (this.currentMap === 'beach') {
+      bgOuter = '#291305';
+      courtOuter = '#92400e';
+      courtInner = '#d97706';
+      lineCol = 'rgba(254, 243, 199, 0.9)';
+      netCol = '#fef3c7';
+    } else if (this.currentMap === 'zen') {
+      bgOuter = '#0a0f18';
+      courtOuter = '#0f172a';
+      courtInner = '#1e293b';
+      lineCol = 'rgba(241, 245, 249, 0.9)';
+      netCol = '#ef4444';
+    } else if (this.currentMap === 'whitehouse') {
+      bgOuter = '#052e16';
+      courtOuter = '#14532d';
+      courtInner = '#166534';
+      lineCol = 'rgba(254, 240, 138, 0.95)'; // 24K Presidential Gold Lines
+      netCol = '#fef08a';
+    } else {
+      // Stadium Pro
+      bgOuter = '#030a16';
+      courtOuter = '#0c2244';
+      courtInner = '#1d4ed8';
+      lineCol = 'rgba(255, 255, 255, 0.92)';
+      netCol = '#ffffff';
+    }
+
+    // 1. Clear background
+    ctx.fillStyle = bgOuter;
     ctx.fillRect(0, 0, w, h);
 
-    // Court DecoTurf Blue Area
-    ctx.fillStyle = '#1e40af';
-    ctx.fillRect(8, 8, w - 16, h - 16);
+    // Court bounds with margin
+    const mX = 8;
+    const mY = 10;
+    const cW = w - mX * 2;
+    const cH = h - mY * 2;
 
-    // Boundary Lines
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(8, 8, w - 16, h - 16);
+    // Surrounding runoff area
+    ctx.fillStyle = courtOuter;
+    ctx.fillRect(mX - 3, mY - 4, cW + 6, cH + 8);
 
-    // Net line
+    // Main Doubles Court Bed
+    ctx.fillStyle = courtInner;
+    ctx.fillRect(mX, mY, cW, cH);
+
+    // Coordinate converters (mapping real world meters to minimap pixels)
+    const toX = (x) => mX + ((x + this.DOUBLES_HALF_W) / this.COURT_W) * cW;
+    const toY = (z) => mY + ((z + this.HALF_L) / this.COURT_L) * cH;
+
+    // 2. Regulation Tennis Court Lines
+    ctx.strokeStyle = lineCol;
+    ctx.lineWidth = 1.0;
+
+    // Doubles outer perimeter
+    ctx.strokeRect(mX, mY, cW, cH);
+
+    // Singles sidelines (tramlines: x = +/-4.115m)
+    const singlesLeft = toX(-this.HALF_W);
+    const singlesRight = toX(this.HALF_W);
     ctx.beginPath();
-    ctx.moveTo(4, h / 2); ctx.lineTo(w - 4, h / 2);
+    ctx.moveTo(singlesLeft, mY); ctx.lineTo(singlesLeft, mY + cH);
+    ctx.moveTo(singlesRight, mY); ctx.lineTo(singlesRight, mY + cH);
     ctx.stroke();
 
-    // Service lines (6.4m / 11.88m proportion)
-    const sRatio = 6.40 / 11.885;
-    const sY1 = (h / 2) - ((h / 2) - 8) * sRatio;
-    const sY2 = (h / 2) + ((h / 2) - 8) * sRatio;
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    // Service lines (+/-6.40m from net)
+    const servTop = toY(-this.SERVICE_Z);
+    const servBottom = toY(this.SERVICE_Z);
     ctx.beginPath();
-    ctx.moveTo(8, sY1); ctx.lineTo(w - 8, sY1);
-    ctx.moveTo(8, sY2); ctx.lineTo(w - 8, sY2);
-    ctx.moveTo(w / 2, sY1); ctx.lineTo(w / 2, sY2);
+    ctx.moveTo(singlesLeft, servTop); ctx.lineTo(singlesRight, servTop);
+    ctx.moveTo(singlesLeft, servBottom); ctx.lineTo(singlesRight, servBottom);
+    // Center Service Line
+    ctx.moveTo(toX(0), servTop); ctx.lineTo(toX(0), servBottom);
     ctx.stroke();
 
-    const toX = (x) => 8 + ((x + this.DOUBLES_HALF_W) / this.COURT_W) * (w - 16);
-    const toY = (z) => 8 + ((z + this.HALF_L) / this.COURT_L) * (h - 16);
-
-    // Player 1 (Cyan)
-    ctx.fillStyle = '#00f0ff';
+    // Baseline Center Marks (hash ticks at x = 0)
     ctx.beginPath();
-    ctx.arc(toX(this.player.pos.x), toY(this.player.pos.z), 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(toX(0), mY); ctx.lineTo(toX(0), mY + 4);
+    ctx.moveTo(toX(0), mY + cH); ctx.lineTo(toX(0), mY + cH - 4);
+    ctx.stroke();
 
-    // Player 2 / AI (Red)
-    ctx.fillStyle = '#ff2a55';
+    // Net line at Z = 0
+    const netY = toY(0);
+    ctx.strokeStyle = netCol;
+    ctx.lineWidth = 2.0;
     ctx.beginPath();
-    ctx.arc(toX(this.ai.pos.x), toY(this.ai.pos.z), 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(mX - 4, netY); ctx.lineTo(mX + cW + 4, netY);
+    ctx.stroke();
 
-    // Ball (Optic Yellow)
+    // Net posts
+    ctx.fillStyle = netCol;
+    ctx.fillRect(mX - 5, netY - 2, 3, 4);
+    ctx.fillRect(mX + cW + 2, netY - 2, 3, 4);
+
+    // 3. Ball Trajectory Trail
+    if (!this._ballTrail) this._ballTrail = [];
+    if (this.pointActive) {
+      this._ballTrail.push({ x: this.ball.pos.x, z: this.ball.pos.z, y: this.ball.pos.y });
+      if (this._ballTrail.length > 7) this._ballTrail.shift();
+    } else {
+      this._ballTrail.length = 0;
+    }
+
+    if (this._ballTrail.length > 1) {
+      for (let i = 0; i < this._ballTrail.length - 1; i++) {
+        const p1 = this._ballTrail[i];
+        const p2 = this._ballTrail[i + 1];
+        const alpha = (i + 1) / this._ballTrail.length * 0.45;
+        ctx.strokeStyle = `rgba(204, 255, 0, ${alpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(toX(p1.x), toY(p1.z));
+        ctx.lineTo(toX(p2.x), toY(p2.z));
+        ctx.stroke();
+      }
+    }
+
+    // 4. Ball Shadow & Marker
+    const bx = toX(this.ball.pos.x);
+    const bz = toY(this.ball.pos.z);
+    const bHeight = Math.max(0, this.ball.pos.y);
+
+    // Shadow on court plane (grows fainter as ball climbs higher)
+    if (bHeight > 0.15) {
+      ctx.fillStyle = `rgba(0, 0, 0, ${Math.max(0.15, 0.55 - bHeight * 0.08)})`;
+      ctx.beginPath();
+      ctx.ellipse(bx, bz, 3.5, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Ball (Optic Tennis Yellow with Glow)
+    const ballRadius = Math.min(5.5, 3.2 + bHeight * 0.4);
+    ctx.shadowColor = '#ccff00';
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#ccff00';
     ctx.beginPath();
-    ctx.arc(toX(this.ball.pos.x), toY(this.ball.pos.z), 3, 0, Math.PI * 2);
+    ctx.arc(bx, bz - bHeight * 0.6, ballRadius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 5. Player 2 (AI / Rival) Marker (Crimson with outline)
+    const aiX = toX(this.ai.pos.x);
+    const aiZ = toY(this.ai.pos.z);
+    ctx.shadowColor = '#ff2a55';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#ff2a55';
+    ctx.beginPath();
+    ctx.arc(aiX, aiZ, 5.0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 6. Player 1 (You) Marker (Cyan with Directional Cone & Ring)
+    const pX = toX(this.player.pos.x);
+    const pZ = toY(this.player.pos.z);
+
+    // Subtle Sweet Spot coverage arc in front of player
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
+    ctx.beginPath();
+    ctx.arc(pX, pZ, 12, -Math.PI * 0.9, -Math.PI * 0.1);
+    ctx.lineTo(pX, pZ);
+    ctx.closePath();
+    ctx.fill();
+
+    // Player body dot
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(pX, pZ, 5.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // Facing direction chevron pointing toward net (-Z)
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(pX, pZ - 7.5);
+    ctx.lineTo(pX - 3, pZ - 4.5);
+    ctx.lineTo(pX + 3, pZ - 4.5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
   }
 
   // --- Main Animation Loop ---

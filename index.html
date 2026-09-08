@@ -94,8 +94,12 @@
 
     <!-- Bottom Right: Court 2D Minimap & Camera Controls -->
     <div class="bottom-right-panel">
-      <div class="minimap-card">
-        <canvas id="minimap" width="80" height="160"></canvas>
+      <div class="minimap-card" id="minimap-card">
+        <div class="minimap-header">
+          <span class="minimap-live-dot"></span>
+          <span class="minimap-title">RADAR PISTA</span>
+        </div>
+        <canvas id="minimap" width="110" height="220"></canvas>
       </div>
 
       <div class="hud-control-row">
@@ -376,7 +380,7 @@
 
   <!-- In-Game Mobile Virtual Touch Controls Overlay -->
   <div id="mobile-controls" class="mobile-controls-overlay hidden">
-    <!-- Virtual 360 Thumbstick (Bottom-Left) -->
+    <!-- Fluid Floating Thumbstick Capture Zone (Left Screen) -->
     <div id="touch-joystick-zone" class="touch-joystick-zone">
       <div id="joystick-base" class="joystick-base">
         <div id="joystick-knob" class="joystick-knob"></div>
@@ -389,19 +393,33 @@
       </div>
     </div>
 
-    <!-- Action Hit Button & Shot Selector (Bottom-Right) -->
-    <div id="touch-action-zone" class="touch-action-zone">
-      <div class="touch-shot-selector">
-        <button type="button" class="touch-shot-btn active" data-shot="DRIVE">DRIVE</button>
-        <button type="button" class="touch-shot-btn" data-shot="GLOBO">GLOBO</button>
-        <button type="button" class="touch-shot-btn" data-shot="SMASH">SMASH</button>
-        <button type="button" class="touch-shot-btn" data-shot="SLICE">SLICE</button>
-      </div>
-      <div id="touch-hit-btn" class="touch-hit-btn" role="button" aria-label="Golpear pelota">
+    <!-- Ergonomic Action Button Cluster (Right Screen) -->
+    <div id="touch-action-zone" class="touch-action-cluster">
+      <button type="button" id="touch-btn-sprint" class="touch-sub-btn touch-sprint-btn" aria-label="Esprintar">
+        <span class="t-icon">⚡</span>
+        <span class="t-label">SPRINT</span>
+      </button>
+
+      <button type="button" id="touch-btn-globo" class="touch-sub-btn touch-globo-btn" data-shot="GLOBO" aria-label="Globo">
+        <span class="t-icon">🎈</span>
+        <span class="t-label">GLOBO</span>
+      </button>
+
+      <button type="button" id="touch-btn-smash" class="touch-sub-btn touch-smash-btn" data-shot="SMASH" aria-label="Smash">
+        <span class="t-icon">💥</span>
+        <span class="t-label">SMASH</span>
+      </button>
+
+      <button type="button" id="touch-btn-slice" class="touch-sub-btn touch-slice-btn" data-shot="SLICE" aria-label="Cortado">
+        <span class="t-icon">🌀</span>
+        <span class="t-label">SLICE</span>
+      </button>
+
+      <button type="button" id="touch-hit-btn" class="touch-hit-btn primary-hit" data-shot="DRIVE" aria-label="Golpear o Servir">
         <div class="touch-hit-pulse"></div>
         <span class="touch-hit-icon">🎾</span>
         <span class="touch-hit-text">GOLPE</span>
-      </div>
+      </button>
     </div>
   </div>
 
