@@ -6279,7 +6279,9 @@ class TennisGameEngine {
     txt.innerText = text;
     el.className = `timing-badge ${className}`;
     clearTimeout(this.timingTimeout);
-    this.timingTimeout = setTimeout(() => el.classList.add('hidden'), 1500);
+    const isMobile = (window.innerWidth <= 820) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const duration = isMobile ? 950 : 1500;
+    this.timingTimeout = setTimeout(() => el.classList.add('hidden'), duration);
   }
 
   // --- Official Tennis Point Evaluation & Scoring System ---
@@ -6408,7 +6410,9 @@ class TennisGameEngine {
       if (s) s.innerText = sub;
       el.classList.remove('hidden');
       clearTimeout(this.annTimeout);
-      this.annTimeout = setTimeout(() => el.classList.add('hidden'), 2200);
+      const isMobile = (window.innerWidth <= 820) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const duration = (isMobile && this.pointActive) ? 1200 : (isMobile ? 1600 : 2200);
+      this.annTimeout = setTimeout(() => el.classList.add('hidden'), duration);
     }
     if (this.currentMap === 'stadium') {
       this.updateJumbotronScreen(title, sub);
