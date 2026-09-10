@@ -5242,7 +5242,7 @@ class TennisGameEngine {
           this.conn.send({ type: 'guest_serve' });
         }
       } else {
-        this.triggerGuestShot();
+        this.isChargingPower = true;
       }
       return;
     }
@@ -5255,13 +5255,23 @@ class TennisGameEngine {
   }
 
   handleActionRelease() {
-    if (this.gameMode === 'online_guest') return;
+    if (this.gameMode === 'online_guest') {
+      if (this.isChargingPower) {
+        const p = Math.max(0.45, this.power);
+        this.triggerGuestShot(p);
+        this.power = 0.55;
+        this.isChargingPower = false;
+        const powerBar = document.getElementById('power-bar');
+        if (powerBar) powerBar.style.width = '0%';
+      }
+      return;
+    }
     if (this.isChargingPower) {
       this.triggerPlayerShot();
     }
   }
 
-  triggerGuestShot() {
+  triggerGuestShot(power = 0.88) {
     if (this.conn && this.conn.open) {
       // Tennis Rule 24: Receiver cannot volley the serve before it bounces!
       if (this.rally === 0 && this.server !== 'ai' && !this.ball.hitGroundInCourt) {
@@ -5279,7 +5289,7 @@ class TennisGameEngine {
         rc: this.ai.runCycle,
         sw: true,
         st: swingType,
-        shot: { power: 0.88, shotType: this.shotType }
+        shot: { power: power, shotType: this.shotType }
       });
       this.startSwingAnimation(this.ai, swingType);
     }
@@ -5597,11 +5607,15 @@ class TennisGameEngine {
 
         setTimeout(() => {
           this.audio.init();
-          document.getElementById('start-screen').classList.add('fade-out');
+          const startScreen = document.getElementById('start-screen');
+          if (startScreen) {
+            startScreen.classList.add('fade-out', 'hidden');
+          }
           this.isPlaying = true;
           this.showAnnouncement('¡RIVAL ONLINE CONECTADO!', 'Host (Azul) vs Invitado (Rojo)');
           if (document.activeElement) document.activeElement.blur();
           this.keys = {};
+          this._guestInitialPosSet = false;
           window.focus();
         }, 1000);
       });
@@ -5667,11 +5681,15 @@ class TennisGameEngine {
 
           setTimeout(() => {
             this.audio.init();
-            document.getElementById('start-screen').classList.add('fade-out');
+            const startScreen = document.getElementById('start-screen');
+            if (startScreen) {
+              startScreen.classList.add('fade-out', 'hidden');
+            }
             this.isPlaying = true;
             this.showAnnouncement('¡CONECTADO A LA PISTA!', 'Invitado (Rojo) vs Host (Azul)');
             if (document.activeElement) document.activeElement.blur();
             this.keys = {};
+            this._guestInitialPosSet = false;
             window.focus();
           }, 800);
         });
@@ -5741,8 +5759,11 @@ class TennisGameEngine {
           this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
         }
 
-        if (!this.pointActive && data.p2) {
+        // Set initial spawn position once upon connecting or when point ends to reset to serve line, never continuously overwrite guest movement!
+        const pointJustEnded = this.pointActive && !data.pa;
+        if ((!this._guestInitialPosSet || pointJustEnded) && data.p2) {
           this.ai.pos.set(data.p2.x, 0, data.p2.z);
+          this._guestInitialPosSet = true;
         }
 
         this.scorePlayer = data.sc.sp;
@@ -5807,10 +5828,11 @@ class TennisGameEngine {
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
 
-          if ((distToRacket <= 2.5 || distToBody <= 3.2) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
+          if ((distToRacket <= 2.8 || distToBody <= 3.5) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
-            this.executeHitWithHitbox('ai', data.shot.power || 0.85, 0, true);
+            this.shotType = data.shot.shotType || 'DRIVE';
+            this.executeHitWithHitbox('ai', data.shot.power || 0.88, 0, true);
           }
         }
       } else if (data.type === 'guest_serve' && this.gameMode === 'online_host') {
@@ -5883,19 +5905,35 @@ class TennisGameEngine {
     this.animateCharacter(this.ai, dt, true);
   }
 
-  // --- Guest Controls (Left/Right FIXED: A adds +X (screen left), D subtracts -X (screen right)) ---
+  // --- Guest Controls (Keyboard WASD / Arrows, Touch Virtual Joystick, and Sprint) ---
   updatePlayer2Guest(dt) {
     const dir = this._v1.set(0, 0, 0);
-    if (this.keys['w'] || this.keys['arrowup']) dir.z += 1; // forward toward net
-    if (this.keys['s'] || this.keys['arrowdown']) dir.z -= 1; // backward away from net
-    if (this.keys['a'] || this.keys['arrowleft']) dir.x += 1; // SCREEN LEFT (projects to negative screen X)
-    if (this.keys['d'] || this.keys['arrowright']) dir.x -= 1; // SCREEN RIGHT (projects to positive screen X)
 
-    const curSpeed = this.ai.speed;
+    // Keyboard controls (from Guest camera perspective looking towards +Z)
+    if (this.keys['w'] || this.keys['arrowup']) dir.z += 1; // forward toward net (+Z)
+    if (this.keys['s'] || this.keys['arrowdown']) dir.z -= 1; // backward away from net (-Z)
+    if (this.keys['a'] || this.keys['arrowleft']) dir.x += 1; // SCREEN LEFT (+X world)
+    if (this.keys['d'] || this.keys['arrowright']) dir.x -= 1; // SCREEN RIGHT (-X world)
+
+    // Touch Virtual Joystick on Mobile (iPhone / Android)
+    if (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.02) {
+      dir.x -= this.touchJoystickVec.x; // thumb right -> screen right (-X), thumb left -> screen left (+X)
+      dir.z -= this.touchJoystickVec.y; // thumb forward (-Y) -> toward net (+Z), thumb backward (+Y) -> away from net (-Z)
+    }
+
+    // Sprint support (Shift on PC, touch sprint button or thumbstick outer rim on mobile)
+    const isSprinting = this.keys['shift'] || this.touchSprinting || (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.72);
+    const curSpeed = this.ai.speed * (isSprinting ? 1.50 : 1.0);
+
     if (dir.lengthSq() > 0) {
       dir.normalize();
       this.ai.pos.addScaledVector(dir, curSpeed * dt);
-      this.ai.runCycle += dt * 14;
+      this.ai.runCycle += dt * (isSprinting ? 20 : 14);
+
+      // Sprint trail particles for Guest
+      if (isSprinting && Math.random() < 0.35) {
+        this.particles.burst(this.ai.pos, 2, 0xff0055, 1.2);
+      }
 
       // Allow running into doubles tramlines and wide run-off to return angled tennis balls
       this.ai.pos.x = THREE.MathUtils.clamp(this.ai.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
@@ -5904,16 +5942,10 @@ class TennisGameEngine {
       this.ai.runCycle *= 0.8;
     }
 
-    if (this.keys[' '] || this.keys['enter']) {
-      this.keys[' '] = false;
-      this.keys['enter'] = false;
-      if (!this.pointActive && this.server === 'ai') {
-        if (this.conn && this.conn.open) {
-          this.conn.send({ type: 'guest_serve' });
-        }
-      } else {
-        this.triggerGuestShot();
-      }
+    if (this.isChargingPower) {
+      this.power = Math.min(this.power + dt * 1.6, 1.0);
+      const powerBar = document.getElementById('power-bar');
+      if (powerBar) powerBar.style.width = `${this.power * 100}%`;
     }
 
     this.netTimer += dt;
@@ -6006,6 +6038,7 @@ class TennisGameEngine {
       this.player.pos.set(serveX, 0, 12.2);
       this.ball.pos.set(serveX + 0.35, 1.1, 11.8);
       this.ai.pos.set(-this.servingSide * 2.5, 0, -12.2);
+      this.ai.netTargetPos.set(-this.servingSide * 2.5, 0, -12.2);
 
       if (promptEl) {
         promptEl.classList.remove('hidden');
@@ -6019,6 +6052,7 @@ class TennisGameEngine {
       // Rival / AI / Guest Server behind baseline at Z = -12.2m
       const serveX = -this.servingSide * 1.8;
       this.ai.pos.set(serveX, 0, -12.2);
+      this.ai.netTargetPos.set(serveX, 0, -12.2);
       this.ball.pos.set(serveX - 0.35, 1.1, -11.8);
       this.player.pos.set(this.servingSide * 2.5, 0, 12.2);
       document.getElementById('serve-player').innerText = '';
