@@ -1758,7 +1758,34 @@ kbd {
 .touch-sprint-btn.active {
   background: radial-gradient(circle, #34d399 0%, #10b981 70%, #059669 100%);
   box-shadow: 0 0 25px rgba(52, 211, 153, 1.0);
-  border-color: #ffffff;
+}
+
+/* Selected Active Ability State (Glow & Scale) */
+.touch-sub-btn.selected,
+.touch-hit-btn.selected {
+  transform: scale(1.10) !important;
+  border-color: #ffffff !important;
+  filter: brightness(1.22);
+}
+
+.touch-smash-btn.selected {
+  border-color: #fef08a !important;
+  box-shadow: 0 0 24px rgba(254, 240, 138, 0.95), 0 0 40px rgba(249, 115, 22, 0.8) !important;
+}
+
+.touch-globo-btn.selected {
+  border-color: #bae6fd !important;
+  box-shadow: 0 0 24px rgba(186, 230, 253, 0.95), 0 0 40px rgba(56, 189, 248, 0.8) !important;
+}
+
+.touch-slice-btn.selected {
+  border-color: #e9d5ff !important;
+  box-shadow: 0 0 24px rgba(233, 213, 255, 0.95), 0 0 40px rgba(192, 132, 252, 0.8) !important;
+}
+
+.touch-hit-btn.selected {
+  border-color: #d8ff00 !important;
+  box-shadow: 0 0 24px rgba(216, 255, 0, 0.95), 0 0 40px rgba(0, 240, 255, 0.7) !important;
 }
 
 /* ─────────────────────────────────────────────────────────────

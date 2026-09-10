@@ -4963,14 +4963,11 @@ class TennisGameEngine {
       }
 
       if (e.key.toLowerCase() === 'l') {
-        this.shotType = 'GLOBO';
-        document.getElementById('current-shot').innerText = 'GLOBO (LOB)';
+        this.setShotType('GLOBO');
       } else if (e.key.toLowerCase() === 'e') {
-        this.shotType = 'SMASH';
-        document.getElementById('current-shot').innerText = 'SMASH (REMATE)';
+        this.setShotType('SMASH');
       } else if (e.key.toLowerCase() === 'c') {
-        this.shotType = 'SLICE';
-        document.getElementById('current-shot').innerText = 'SLICE (CORTADO)';
+        this.setShotType('SLICE');
       }
 
       if (e.key === '1') this.setCameraMode('third');
@@ -5152,9 +5149,7 @@ class TennisGameEngine {
         e.preventDefault();
         e.stopPropagation();
         if (shotType) {
-          this.shotType = shotType;
-          const label = document.getElementById('current-shot');
-          if (label) label.innerText = shotType;
+          this.setShotType(shotType);
         }
         if (navigator.vibrate) navigator.vibrate(22);
         this.handleActionPress();
@@ -5198,6 +5193,23 @@ class TennisGameEngine {
       sprintBtn.addEventListener('mousedown', startSprint);
       sprintBtn.addEventListener('mouseup', endSprint);
     }
+  }
+
+  setShotType(type) {
+    this.shotType = type;
+    const labels = {
+      'DRIVE': 'DRIVE',
+      'GLOBO': 'GLOBO (LOB)',
+      'SMASH': 'SMASH (REMATE)',
+      'SLICE': 'SLICE (CORTADO)'
+    };
+    const label = document.getElementById('current-shot');
+    if (label) label.innerText = labels[type] || type;
+
+    // Highlight active touch button
+    document.querySelectorAll('.touch-sub-btn, .touch-hit-btn').forEach(b => {
+      b.classList.toggle('selected', b.dataset.shot === type);
+    });
   }
 
   setControlMode(mode) {
@@ -6158,22 +6170,22 @@ class TennisGameEngine {
     const distToHead = this._rHead.distanceTo(this.ball.pos);
     const timeOffset = (this.ball.pos.z - this.player.pos.z);
 
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
-    const canHit = (distToHead <= 1.45 || distToBody <= 1.95) &&
-                   this.ball.pos.z > 0.25 &&
+    const isSmash = (this.shotType === 'SMASH');
+    const canHit = (distToHead <= 1.55 || distToBody <= 2.10) &&
+                   this.ball.pos.z > 0.20 &&
                    this.ball.lastHitter !== 'player' &&
-                   this.ball.pos.y >= 0.10;
+                   this.ball.pos.y >= 0.08;
 
     if (canHit) {
-      const isSweetSpot = (distToHead <= 0.85 || isSmash) && Math.abs(timeOffset) < 0.35;
+      const isSweetSpot = (distToHead <= 0.90 || isSmash) && Math.abs(timeOffset) < 0.40;
       const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
       this.startSwingAnimation(this.player, swingType);
       // Snap swing directly into impact zone so racket string bed visibly connects with ball!
       this.player.swingProgress = 0.32 * Math.PI;
 
-      let timingLabel = 'PERFECT • SWEET SPOT';
+      let timingLabel = isSmash ? '¡SMASH LETAL! • PERFECT' : 'PERFECT • SWEET SPOT';
       let timingClass = 'perfect';
-      if (!isSweetSpot) {
+      if (!isSweetSpot && !isSmash) {
         timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
         timingClass = 'early';
       }
@@ -6201,66 +6213,111 @@ class TennisGameEngine {
     this.ball.hitGroundInCourt = false;
     this.rally++;
 
-    const isSmash = (this.shotType === 'SMASH' && this.ball.pos.y > 1.6);
+    const isSmash = (this.shotType === 'SMASH');
     const isLob = (this.shotType === 'GLOBO');
     const isSlice = (this.shotType === 'SLICE');
+    const isSuperShot = (!isSmash && !isLob && !isSlice && power >= 0.92);
 
     // Directional aim within tennis singles boundaries (+/-4.115m)
-    let targetX = (Math.random() - 0.5) * 4.5;
+    let targetX = (Math.random() - 0.5) * 4.2;
     if (hitter === 'player') {
       if (this.keys['a'] || this.keys['arrowleft'] || (this.touchJoystickVec && this.touchJoystickVec.x < -0.22)) {
-        targetX = -3.1;
+        targetX = -3.2;
       } else if (this.keys['d'] || this.keys['arrowright'] || (this.touchJoystickVec && this.touchJoystickVec.x > 0.22)) {
-        targetX = 3.1;
+        targetX = 3.2;
       } else if (timingOffset < -0.3) {
         targetX *= -1.2;
       }
     }
-    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.5, this.HALF_W - 0.5);
+    targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.55, this.HALF_W - 0.55);
 
-    let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.8) : (8.2 + Math.random() * 2.8);
+    let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.2) : (8.2 + Math.random() * 2.2);
     let flightTime = 1.02;
     let extraArc = 1.2;
+    let spinRate = 14.0;
+    let shotTypeName = 'DRIVE';
 
     if (isSmash) {
-      flightTime = 0.68;
-      extraArc = -0.5;
-      this.showAnnouncement('¡SMASH DIRECTO!', 'Remate ganador por encima de la red');
-      this.particles.burst(this.ball.pos, 35, 0xff0055, 6.0);
+      shotTypeName = 'SMASH';
+      // Blazing overhead spike aimed at mid/deep service area
+      targetZ = (hitter === 'player') ? (-5.2 - Math.random() * 1.8) : (5.2 + Math.random() * 1.8);
+      flightTime = 0.50; // Super fast lethal smash (~140 km/h)
+      extraArc = 0.15;
+      spinRate = 26.0;
+
+      this.showAnnouncement('¡SMASH LETAL!', 'Remate fulminante imparable');
+      this.particles.burst(this.ball.pos, 38, 0xff0055, 6.5);
       this.particles.spawnImpactRing(this.ball.pos, 0xff0055);
+      this.camShake = 0.52;
     } else if (isLob) {
-      flightTime = 1.65;
-      extraArc = 6.4;
-      this.showAnnouncement('¡GLOBO AL FONDO!', 'Buscando la línea de fondo');
-      this.particles.burst(this.ball.pos, 20, 0x00f0ff, 3.5);
+      shotTypeName = 'GLOBO';
+      // Tactical rainbow arc landing safely deep inside baseline
+      targetZ = (hitter === 'player') ? (-9.8 - Math.random() * 0.9) : (9.8 + Math.random() * 0.9);
+      flightTime = 1.62;
+      extraArc = 5.6;
+      spinRate = -18.0;
+
+      this.showAnnouncement('¡GLOBO TÁCTICO!', 'Superando al rival hacia el fondo');
+      this.particles.burst(this.ball.pos, 22, 0x00f0ff, 4.0);
+      this.camShake = 0.15;
     } else if (isSlice) {
-      flightTime = 1.15;
-      extraArc = 0.4;
-      this.showAnnouncement('¡GOLPE CORTADO (SLICE)!', 'Bajo bote con efecto invertido');
-      this.particles.burst(this.ball.pos, 22, 0xa855f7, 3.5);
+      shotTypeName = 'SLICE';
+      // Low skidding backspin drive that hugs the court
+      targetZ = (hitter === 'player') ? (-7.6 - Math.random() * 2.2) : (7.6 + Math.random() * 2.2);
+      flightTime = 1.05;
+      extraArc = 0.22;
+      spinRate = -26.0;
+
+      this.showAnnouncement('¡GOLPE CORTADO (SLICE)!', 'Bote venenoso a ras de suelo');
+      this.particles.burst(this.ball.pos, 26, 0xa855f7, 4.0);
+      this.camShake = 0.20;
+    } else if (isSuperShot) {
+      shotTypeName = 'SUPER_DRIVE';
+      flightTime = 0.74;
+      extraArc = 0.7;
+      spinRate = 22.0;
+
+      this.showAnnouncement('¡SUPER IMPACTO 100%!', 'Potencia destructiva de fondo');
+      this.particles.burst(this.ball.pos, 32, 0xffd700, 5.5);
+      this.particles.spawnImpactRing(this.ball.pos, 0xffd700);
+      this.camShake = 0.40;
     } else {
       if (isSweetSpot) {
-        flightTime = 0.90;
-        this.particles.burst(this.ball.pos, 28, 0x00ffaa, 4.8);
+        flightTime = 0.88;
+        this.particles.burst(this.ball.pos, 26, 0x00ffaa, 4.5);
         this.particles.spawnImpactRing(this.ball.pos, 0x00ffaa);
       } else {
-        this.particles.burst(this.ball.pos, 15, 0xffea00, 3.0);
+        this.particles.burst(this.ball.pos, 14, 0xffea00, 3.0);
       }
     }
 
+    this.ball.currentShotType = shotTypeName;
+
     const vx = (targetX - this.ball.pos.x) / flightTime;
     const vz = (targetZ - this.ball.pos.z) / flightTime;
-    const vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + extraArc;
+    let vy = (0.5 * 9.8 * flightTime * flightTime - this.ball.pos.y) / flightTime + extraArc;
+
+    // Guaranteed Net Clearance (Net is at Z=0, height 0.914m)
+    // Ball must cross at y >= minClearance to never self-destruct into net on smash/drive
+    if (vz !== 0) {
+      const timeToNet = (0 - this.ball.pos.z) / vz;
+      if (timeToNet > 0.04 && timeToNet < flightTime) {
+        const yAtNet = this.ball.pos.y + vy * timeToNet - 0.5 * 9.8 * timeToNet * timeToNet;
+        const minClearance = isSlice ? 0.98 : (isSmash ? 1.12 : 1.05);
+        if (yAtNet < minClearance) {
+          vy = (minClearance - this.ball.pos.y + 0.5 * 9.8 * timeToNet * timeToNet) / timeToNet;
+        }
+      }
+    }
 
     this.ball.vel.set(vx, vy, vz);
-
-    // Ball 3D Angular Velocity (Tennis Topspin / Backspin)
-    const spinRate = isSmash ? 20.0 : (isLob ? -12.0 : (isSlice ? -18.0 : 14.0));
     this.ball.spin.set(spinRate, (Math.random() - 0.5) * 6.0, 0);
 
-    this.audio.playHit(power, isSmash, isSweetSpot);
+    this.audio.playHit(power, isSmash || isSuperShot, isSweetSpot || isSmash);
     if (this.gameMode === 'online_host') this._pendingSound = 'hit';
-    this.camShake = isSmash ? 0.45 : (isSweetSpot ? 0.24 : 0.10 * power);
+    if (!isSmash && !isSuperShot) {
+      this.camShake = isSweetSpot ? 0.24 : 0.10 * power;
+    }
 
     // Racket Impact Recoil Visual (kick on ball contact)
     const hitterChar = hitter === 'player' ? this.player : this.ai;
@@ -6270,6 +6327,9 @@ class TennisGameEngine {
 
     this.shotType = 'DRIVE';
     document.getElementById('current-shot').innerText = 'DRIVE';
+    document.querySelectorAll('.touch-sub-btn, .touch-hit-btn').forEach(b => b.classList.remove('selected'));
+    const hitBtn = document.getElementById('touch-hit-btn');
+    if (hitBtn) hitBtn.classList.add('selected');
     this.updateHUD();
   }
 
@@ -6488,8 +6548,31 @@ class TennisGameEngine {
     // 2. Court Ground Bounce (Y <= ballRadius)
     if (this.ball.pos.y <= this.ballRadius) {
       this.ball.pos.y = this.ballRadius;
-      this.ball.vel.y = -this.ball.vel.y * 0.74; // Hard court restitution
-      this.audio.playBounce(Math.abs(this.ball.vel.y) / 8);
+
+      // Realistic Dynamic Restitution & Spin Bite
+      let restitution = 0.74; // Standard hard court
+      if (this.ball.currentShotType === 'SLICE' || (this.ball.spin && this.ball.spin.x < -12)) {
+        // Slice backspin bites: suppressed vertical bounce (barely ankle high), rapid skidding glide!
+        restitution = 0.36;
+        this.ball.vel.z *= 0.96;
+        this.particles.burst(this.ball.pos, 16, 0xa855f7, 2.4);
+      } else if (this.ball.currentShotType === 'SMASH') {
+        // Explosive overhead smash: launches high into the air after bounce!
+        restitution = 1.04;
+        this.ball.vel.z *= 1.02;
+        this.particles.burst(this.ball.pos, 28, 0xff0055, 4.2);
+      } else if (this.ball.currentShotType === 'GLOBO') {
+        // Lob: high vertical pop, check-up forward momentum so it never runs long
+        restitution = 0.72;
+        this.ball.vel.z *= 0.76;
+        this.particles.burst(this.ball.pos, 18, 0x00f0ff, 2.6);
+      } else if (this.ball.currentShotType === 'SUPER_DRIVE') {
+        restitution = 0.84;
+        this.particles.burst(this.ball.pos, 24, 0xffd700, 3.4);
+      }
+
+      this.ball.vel.y = -this.ball.vel.y * restitution;
+      this.audio.playBounce(Math.min(1.2, Math.abs(this.ball.vel.y) / 7));
       if (this.gameMode === 'online_host') this._pendingSound = 'bounce';
 
       // Map-themed impact particle burst
@@ -6620,8 +6703,24 @@ class TennisGameEngine {
 
     if (this.pointActive) {
       if (this.ball.vel.z < 0) {
-        // Ball approaching AI side: intercept landing position
-        const targetZ = -10.5;
+        // Ball approaching AI side: calculate tactical intercept position
+        let targetZ = -10.5;
+        let aiSpeedMult = 1.0;
+
+        if (this.ball.currentShotType === 'GLOBO') {
+          // Tactical lob: AI forced to scramble back to baseline
+          targetZ = -11.2;
+          aiSpeedMult = 0.90; // Caught off guard by high trajectory
+        } else if (this.ball.currentShotType === 'SMASH') {
+          // Smash: lands fast in mid-court
+          targetZ = -6.2;
+          aiSpeedMult = 1.15; // Rushing to retrieve explosive spike
+        } else if (this.ball.currentShotType === 'SLICE') {
+          // Slice: skids low in mid/deep court
+          targetZ = -8.2;
+          aiSpeedMult = 0.95;
+        }
+
         const timeToZ = Math.max(0.05, (this.ball.pos.z - targetZ) / Math.max(Math.abs(this.ball.vel.z), 1));
         const futureX = THREE.MathUtils.clamp(
           this.ball.pos.x + this.ball.vel.x * timeToZ,
@@ -6629,16 +6728,18 @@ class TennisGameEngine {
           this.HALF_W - 0.4
         );
         this.ai.targetPos.set(futureX, 0, targetZ);
+        this.ai.effectiveSpeed = this.ai.speed * aiSpeedMult;
       } else {
         // AI recovers to center baseline
         this.ai.targetPos.set(0, 0, -11.5);
+        this.ai.effectiveSpeed = this.ai.speed;
       }
 
       const delta = this._v1.subVectors(this.ai.targetPos, this.ai.pos);
       const dist = delta.length();
       if (dist > 0.1) {
         delta.normalize();
-        this.ai.pos.addScaledVector(delta, Math.min(this.ai.speed * dt, dist));
+        this.ai.pos.addScaledVector(delta, Math.min((this.ai.effectiveSpeed || this.ai.speed) * dt, dist));
         this.ai.runCycle += dt * 14;
       } else {
         this.ai.runCycle *= 0.8;
@@ -6653,10 +6754,20 @@ class TennisGameEngine {
         // Tennis Rule 24: Receiver must allow the serve to bounce in the service box
         const canAIReturn = (this.rally > 0 || this.server === 'ai' || this.ball.hitGroundInCourt);
 
-        if (canAIReturn && (distToAIRacket <= 1.45 || distToAIBody <= 1.95) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.12) {
+        // If Smash was hit with immense speed, AI must be well positioned to return cleanly
+        const maxReach = (this.ball.currentShotType === 'SMASH') ? 1.30 : 1.55;
+
+        if (canAIReturn && (distToAIRacket <= maxReach || distToAIBody <= 1.85) && this.ball.pos.z < -0.35 && this.ball.lastHitter !== 'ai' && this.ball.pos.y >= 0.10) {
           const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
           this.startSwingAnimation(this.ai, swingType);
-          const aiPower = 0.72 + Math.random() * 0.28;
+
+          // Tactical return power:
+          let aiPower = 0.72 + Math.random() * 0.28;
+          if (this.ball.currentShotType === 'SLICE' && this.ball.pos.y < 0.38) {
+            aiPower = 0.58; // Defensive lift against low skidding slice
+          } else if (this.ball.currentShotType === 'GLOBO') {
+            aiPower = 0.65;
+          }
           this.executeHitWithHitbox('ai', aiPower, 0, true);
         }
       }
@@ -6683,12 +6794,17 @@ class TennisGameEngine {
     }
 
     const isSprinting = this.keys['shift'] || this.touchSprinting || (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.72);
-    const curSpeed = this.player.speed * (isSprinting ? 1.45 : 1.0);
+    const curSpeed = this.player.speed * (isSprinting ? 1.50 : 1.0);
 
     if (dir.lengthSq() > 0) {
       dir.normalize();
       this.player.pos.addScaledVector(dir, curSpeed * dt);
-      this.player.runCycle += dt * 14;
+      this.player.runCycle += dt * (isSprinting ? 20 : 14);
+
+      // Dynamic sprint particles behind running athlete
+      if (isSprinting && Math.random() < 0.35) {
+        this.particles.burst(this.player.pos, 2, 0x00f0ff, 1.2);
+      }
 
       this.player.pos.x = THREE.MathUtils.clamp(this.player.pos.x, -this.DOUBLES_HALF_W - 1.5, this.DOUBLES_HALF_W + 1.5);
       this.player.pos.z = THREE.MathUtils.clamp(this.player.pos.z, 0.9, this.HALF_L + 3.5);
