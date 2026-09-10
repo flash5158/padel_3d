@@ -29,9 +29,13 @@ body, html {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  position: fixed;
   background: #040711;
   font-family: var(--font-main);
   color: #f8fafc;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
 }
 
 #canvas-container {
@@ -41,6 +45,7 @@ body, html {
   width: 100%;
   height: 100%;
   z-index: 1;
+  touch-action: none;
 }
 
 /* In-Game HUD Overlay */
@@ -1532,30 +1537,32 @@ kbd {
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 850;
+  z-index: 950;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   padding: 24px;
   box-sizing: border-box;
+  touch-action: none;
 }
 
 .mobile-controls-overlay.hidden {
   display: none !important;
 }
 
-/* Fluid Floating Thumbstick Capture Zone (Left Screen) */
+/* Fluid Floating Thumbstick Capture Zone (Full Left Half of Screen) */
 .touch-joystick-zone {
   position: absolute;
+  top: 0;
   bottom: 0;
   left: 0;
-  width: 48vw;
-  height: 54vh;
+  width: 50vw;
+  height: 100%;
   pointer-events: auto;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  z-index: 10;
+  z-index: 20;
 }
 
 .joystick-base {
@@ -2495,8 +2502,11 @@ kbd {
   }
 
   .touch-joystick-zone {
-    width: 45vw !important;
-    height: 45vh !important;
+    width: 52vw !important;
+    height: 100% !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
   }
 
   .joystick-base {

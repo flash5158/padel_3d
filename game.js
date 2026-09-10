@@ -5060,8 +5060,9 @@ class TennisGameEngine {
         const zoneRect = jZone.getBoundingClientRect();
         const relX = clientX - zoneRect.left;
         const relY = clientY - zoneRect.top;
-        jBase.style.left = `${relX - 70}px`;
-        jBase.style.top = `${relY - 70}px`;
+        const baseRadius = (jBase.offsetWidth || 96) / 2;
+        jBase.style.left = `${relX - baseRadius}px`;
+        jBase.style.top = `${relY - baseRadius}px`;
         jBase.style.bottom = 'auto';
         jBase.classList.add('active');
         baseCenter = { x: clientX, y: clientY };
@@ -5071,6 +5072,7 @@ class TennisGameEngine {
         const dx = clientX - baseCenter.x;
         const dy = clientY - baseCenter.y;
         const dist = Math.hypot(dx, dy);
+        const maxRadius = Math.max(34, (jBase.offsetWidth || 96) * 0.40);
         const clampedDist = Math.min(dist, maxRadius);
         const angle = Math.atan2(dy, dx);
 
@@ -5091,7 +5093,7 @@ class TennisGameEngine {
         }, 500);
       };
 
-      // Touch events for mobile/tablet
+      // Touch events for mobile/tablet (Android Chrome & iOS Safari)
       jZone.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const touch = e.changedTouches[0];
@@ -5104,6 +5106,7 @@ class TennisGameEngine {
         if (activeTouchId === null) return;
         for (let i = 0; i < e.changedTouches.length; i++) {
           if (e.changedTouches[i].identifier === activeTouchId) {
+            e.preventDefault(); // Prevents Android Chrome gesture navigation from cancelling touches
             handleMove(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
             break;
           }
@@ -5120,7 +5123,25 @@ class TennisGameEngine {
         }
       });
 
-      window.addEventListener('touchcancel', handleEnd);
+      // Filter touchcancel: only cancel joystick if it was the joystick touch that got cancelled
+      window.addEventListener('touchcancel', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === activeTouchId) {
+            handleEnd();
+            break;
+          }
+        }
+      });
+
+      // Global Android touch detector
+      window.addEventListener('touchstart', () => {
+        this.isTouchDevice = true;
+        const mobileOverlay = document.getElementById('mobile-controls');
+        if (mobileOverlay && mobileOverlay.classList.contains('hidden') && this.controlMode !== 'pc') {
+          this.setControlMode('mobile');
+        }
+      }, { passive: true });
 
       // Mouse drag fallback for testing on PC
       let isMouseDown = false;
@@ -5281,6 +5302,25 @@ class TennisGameEngine {
         return;
       }
 
+      // Calculate directional aim from touch joystick or keyboard
+      let aimX = 0;
+      if (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.04) {
+        aimX = -this.touchJoystickVec.x; // thumb right -> screen right (-X), thumb left -> screen left (+X)
+      } else if (this.keys['a'] || this.keys['arrowleft']) {
+        aimX = 1.0;
+      } else if (this.keys['d'] || this.keys['arrowright']) {
+        aimX = -1.0;
+      }
+
+      let aimZ = 0;
+      if (this.touchJoystickVec && this.touchJoystickVec.lengthSq() > 0.04) {
+        aimZ = -this.touchJoystickVec.y;
+      } else if (this.keys['w'] || this.keys['arrowup']) {
+        aimZ = 1.0;
+      } else if (this.keys['s'] || this.keys['arrowdown']) {
+        aimZ = -1.0;
+      }
+
       const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
       this.conn.send({
         type: 'p2_input',
@@ -5289,9 +5329,10 @@ class TennisGameEngine {
         rc: this.ai.runCycle,
         sw: true,
         st: swingType,
-        shot: { power: power, shotType: this.shotType }
+        shot: { power: power, shotType: this.shotType, aimX: aimX, aimZ: aimZ }
       });
       this.startSwingAnimation(this.ai, swingType);
+      if (navigator.vibrate) navigator.vibrate(22);
     }
   }
 
@@ -5507,6 +5548,9 @@ class TennisGameEngine {
         const code = joinInput.value.trim().toUpperCase();
         if (code) {
           joinInput.blur();
+          if (document.activeElement) document.activeElement.blur();
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
           this.keys = {};
           this.connectToPeer(code);
         }
@@ -5607,6 +5651,7 @@ class TennisGameEngine {
 
         setTimeout(() => {
           this.audio.init();
+          this.audio.startMusic();
           const startScreen = document.getElementById('start-screen');
           if (startScreen) {
             startScreen.classList.add('fade-out', 'hidden');
@@ -5614,8 +5659,21 @@ class TennisGameEngine {
           this.isPlaying = true;
           this.showAnnouncement('¡RIVAL ONLINE CONECTADO!', 'Host (Azul) vs Invitado (Rojo)');
           if (document.activeElement) document.activeElement.blur();
+          window.scrollTo(0, 0);
+          document.body.scrollTop = 0;
           this.keys = {};
           this._guestInitialPosSet = false;
+
+          const isTouch = this.isTouchDevice || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+          if (isTouch) {
+            this.isTouchDevice = true;
+            this.setControlMode('mobile');
+          }
+
+          if ('wakeLock' in navigator && !this._wakeLock) {
+            navigator.wakeLock.request('screen').then(wl => { this._wakeLock = wl; }).catch(() => {});
+          }
+
           window.focus();
         }, 1000);
       });
@@ -5681,6 +5739,7 @@ class TennisGameEngine {
 
           setTimeout(() => {
             this.audio.init();
+            this.audio.startMusic();
             const startScreen = document.getElementById('start-screen');
             if (startScreen) {
               startScreen.classList.add('fade-out', 'hidden');
@@ -5688,8 +5747,21 @@ class TennisGameEngine {
             this.isPlaying = true;
             this.showAnnouncement('¡CONECTADO A LA PISTA!', 'Invitado (Rojo) vs Host (Azul)');
             if (document.activeElement) document.activeElement.blur();
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
             this.keys = {};
             this._guestInitialPosSet = false;
+
+            const isTouch = this.isTouchDevice || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            if (isTouch) {
+              this.isTouchDevice = true;
+              this.setControlMode('mobile');
+            }
+
+            if ('wakeLock' in navigator && !this._wakeLock) {
+              navigator.wakeLock.request('screen').then(wl => { this._wakeLock = wl; }).catch(() => {});
+            }
+
             window.focus();
           }, 800);
         });
@@ -5827,12 +5899,22 @@ class TennisGameEngine {
           this.ai.limbs.racket.getWorldPosition(this._rHead);
           const distToRacket = this._rHead.distanceTo(this.ball.pos);
           const distToBody = this.ai.pos.distanceTo(this.ball.pos);
+          const canHit = (distToRacket <= 2.8 || distToBody <= 3.5);
+          const canLunge = !canHit && (distToRacket <= 3.8 || distToBody <= 4.4);
 
-          if ((distToRacket <= 2.8 || distToBody <= 3.5) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
+          if ((canHit || canLunge) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
             this.shotType = data.shot.shotType || 'DRIVE';
-            this.executeHitWithHitbox('ai', data.shot.power || 0.88, 0, true);
+            this._guestAimX = data.shot.aimX || 0;
+            this._guestAimZ = data.shot.aimZ || 0;
+            if (canLunge) {
+              this.particles.burst(this.ai.pos, 16, 0xff0055, 2.4);
+              this.ai.pos.x = THREE.MathUtils.lerp(this.ai.pos.x, this.ball.pos.x, 0.40);
+              this.executeHitWithHitbox('ai', Math.min(data.shot.power || 0.88, 0.72), 0, false);
+            } else {
+              this.executeHitWithHitbox('ai', data.shot.power || 0.88, 0, true);
+            }
           }
         }
       } else if (data.type === 'guest_serve' && this.gameMode === 'online_host') {
@@ -6210,25 +6292,37 @@ class TennisGameEngine {
                    this.ball.lastHitter !== 'player' &&
                    this.ball.pos.y >= 0.08;
 
-    if (canHit) {
-      const isSweetSpot = (distToHead <= 0.90 || isSmash) && Math.abs(timeOffset) < 0.40;
+    const canLungeSave = !canHit && (distToHead <= 2.50 || distToBody <= 3.05) &&
+                         this.ball.pos.z > -0.20 &&
+                         this.ball.lastHitter !== 'player' &&
+                         this.ball.pos.y >= 0.05;
+
+    if (canHit || canLungeSave) {
+      const isSweetSpot = !canLungeSave && (distToHead <= 0.90 || isSmash) && Math.abs(timeOffset) < 0.40;
       const swingType = (this.ball.pos.x > this.player.pos.x) ? 'forehand' : 'backhand';
       this.startSwingAnimation(this.player, swingType);
       // Snap swing directly into impact zone so racket string bed visibly connects with ball!
       this.player.swingProgress = 0.32 * Math.PI;
 
-      let timingLabel = isSmash ? '¡SMASH LETAL! • PERFECT' : 'PERFECT • SWEET SPOT';
-      let timingClass = 'perfect';
-      if (!isSweetSpot && !isSmash) {
-        timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
-        timingClass = 'early';
-      }
+      if (canLungeSave) {
+        this.showTimingFeedback('¡SALVADA EXTREMA! • SLIDE REACH', 'early');
+        this.particles.burst(this.player.pos, 18, 0x00f0ff, 2.5);
+        this.player.pos.x = THREE.MathUtils.lerp(this.player.pos.x, this.ball.pos.x, 0.45);
+        this.executeHitWithHitbox('player', Math.min(power, 0.72), timeOffset, false);
+      } else {
+        let timingLabel = isSmash ? '¡SMASH LETAL! • PERFECT' : 'PERFECT • SWEET SPOT';
+        let timingClass = 'perfect';
+        if (!isSweetSpot && !isSmash) {
+          timingLabel = (timeOffset > 0) ? 'LATE • RETRASADO' : 'EARLY • ADELANTADO';
+          timingClass = 'early';
+        }
 
-      this.showTimingFeedback(timingLabel, timingClass);
-      this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
+        this.showTimingFeedback(timingLabel, timingClass);
+        this.executeHitWithHitbox('player', power, timeOffset, isSweetSpot);
+      }
     } else {
       this.startSwingAnimation(this.player, 'forehand');
-      if (distToBody < 3.2 && this.ball.lastHitter !== 'player') {
+      if (distToBody < 3.4 && this.ball.lastHitter !== 'player') {
         this.showTimingFeedback('¡AIRE! FUERA DE ALCANCE', 'late');
         this.audio.playAirSwing();
       }
@@ -6256,22 +6350,50 @@ class TennisGameEngine {
     let targetX = (Math.random() - 0.5) * 4.2;
     if (hitter === 'player') {
       if (this.keys['a'] || this.keys['arrowleft'] || (this.touchJoystickVec && this.touchJoystickVec.x < -0.22)) {
-        targetX = -3.2;
+        targetX = -3.25;
       } else if (this.keys['d'] || this.keys['arrowright'] || (this.touchJoystickVec && this.touchJoystickVec.x > 0.22)) {
-        targetX = 3.2;
+        targetX = 3.25;
       } else if (timingOffset < -0.3) {
         targetX *= -1.2;
+      }
+    } else if (hitter === 'ai' && this.gameMode === 'online_host') {
+      if (this._guestAimX !== undefined && Math.abs(this._guestAimX) > 0.15) {
+        targetX = this._guestAimX * 3.35;
       }
     }
     targetX = THREE.MathUtils.clamp(targetX, -this.HALF_W + 0.55, this.HALF_W - 0.55);
 
     let targetZ = (hitter === 'player') ? (-8.2 - Math.random() * 2.2) : (8.2 + Math.random() * 2.2);
+    if (hitter === 'ai' && this.gameMode === 'online_host' && this._guestAimZ !== undefined) {
+      if (this._guestAimZ > 0.25) targetZ = 10.2 + Math.random() * 0.8; // Deep baseline drive
+      else if (this._guestAimZ < -0.25) targetZ = 5.2 + Math.random() * 1.5; // Short tactical angle
+    } else if (hitter === 'player') {
+      const isPushingForward = (this.keys['w'] || this.keys['arrowup'] || (this.touchJoystickVec && this.touchJoystickVec.y < -0.25));
+      const isPullingBack = (this.keys['s'] || this.keys['arrowdown'] || (this.touchJoystickVec && this.touchJoystickVec.y > 0.25));
+      if (isPushingForward) targetZ = -10.2 - Math.random() * 0.8;
+      else if (isPullingBack) targetZ = -5.2 - Math.random() * 1.5;
+    }
+
+    const isPlayerPullingBack = (hitter === 'player' && (this.keys['s'] || this.keys['arrowdown'] || (this.touchJoystickVec && this.touchJoystickVec.y > 0.35)));
+    const isGuestPullingBack = (hitter === 'ai' && this._guestAimZ !== undefined && this._guestAimZ < -0.35);
+    const isDropShot = isSlice && (isPlayerPullingBack || isGuestPullingBack);
+
     let flightTime = 1.02;
     let extraArc = 1.2;
     let spinRate = 14.0;
     let shotTypeName = 'DRIVE';
 
-    if (isSmash) {
+    if (isDropShot) {
+      shotTypeName = 'DEJADA';
+      targetZ = (hitter === 'player') ? -2.4 : 2.4;
+      flightTime = 1.15;
+      extraArc = 0.95;
+      spinRate = -34.0;
+
+      this.showAnnouncement('¡DEJADA TÁCTICA! • DROP SHOT', 'Caricia sutil a milímetros de la red');
+      this.particles.burst(this.ball.pos, 20, 0x10b981, 3.2);
+      this.camShake = 0.12;
+    } else if (isSmash) {
       shotTypeName = 'SMASH';
       // Blazing overhead spike aimed at mid/deep service area
       targetZ = (hitter === 'player') ? (-5.2 - Math.random() * 1.8) : (5.2 + Math.random() * 1.8);
@@ -6323,6 +6445,12 @@ class TennisGameEngine {
       } else {
         this.particles.burst(this.ball.pos, 14, 0xffea00, 3.0);
       }
+    }
+
+    if (navigator.vibrate) {
+      if (isSmash || isSuperShot) navigator.vibrate([25, 35, 25]);
+      else if (isSweetSpot) navigator.vibrate(22);
+      else navigator.vibrate(14);
     }
 
     this.ball.currentShotType = shotTypeName;
@@ -6524,6 +6652,12 @@ class TennisGameEngine {
 
     // Gravity
     this.ball.vel.y -= 9.8 * dt;
+
+    // Aerodynamic Magnus Effect (Topspin dips ball into court, Backspin gives floating glide)
+    if (this.ball.spin && this.ball.spin.x !== 0) {
+      const magnusY = this.ball.spin.x * 0.055;
+      this.ball.vel.y -= magnusY * dt;
+    }
 
     // Atmospheric Drag
     this.ball.vel.x *= (1 - 0.02 * dt);
