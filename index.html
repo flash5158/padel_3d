@@ -139,40 +139,10 @@
       animation: court-shake 0.35s ease-out;
     }
 
-    /* Mobile Ergonomic Layout Adjustments */
+    /* Mobile Ergonomic Layout Adjustments — SUPERSEDED by the JS-driven body.mobi-* rebuild below.
+       (The old fixed/grid rules here did not take effect on the owner's iPhone; the new system
+       hooks layout off body classes set in setupMobileUX and uses explicit sizes.) */
     @media (max-width: 768px) {
-      #action-buttons-wrapper {
-        position: fixed;
-        bottom: calc(18px + env(safe-area-inset-bottom));
-        right: calc(16px + env(safe-area-inset-right));
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px !important;
-        z-index: 45;
-      }
-      .shot-btn-mobile {
-        min-width: 78px !important;
-        min-height: 52px !important;
-        padding: 10px 8px !important;
-        border-radius: 16px !important;
-      }
-      #power-charger-box {
-        position: fixed;
-        bottom: calc(162px + env(safe-area-inset-bottom));
-        right: calc(16px + env(safe-area-inset-right));
-        width: 166px !important;
-        margin-bottom: 0 !important;
-      }
-      #joystick-container {
-        width: 120px;
-        height: 120px;
-        bottom: calc(18px + env(safe-area-inset-bottom));
-        left: calc(16px + env(safe-area-inset-left));
-      }
-      #joystick-knob {
-        width: 46px;
-        height: 46px;
-      }
       /* 44px minimum touch targets on top HUD icon buttons */
       #hud-top .pointer-events-auto button {
         min-width: 44px;
@@ -235,6 +205,125 @@
         display: flex;
       }
     }
+
+    /* ============ MOBILE HUD REBUILD — JS-driven body classes (no media queries) ============
+       body.mobi (<=940px), body.mobi-portrait, body.mobi-landscape are set in setupMobileUX().
+       Strict, non-overlapping zones with explicit sizes. */
+    /* ---- common mobile: declutter top bar ---- */
+    body.mobi #radar-tactico-wrap { display: none !important; }
+    body.mobi #hud-tourney-info { display: none !important; }
+    body.mobi #touch-mode-label,
+    body.mobi #cam-mode-label { display: none !important; }
+    body.mobi #hud-top .pointer-events-auto button {
+      min-width: 44px !important;
+      min-height: 44px !important;
+      padding: 8px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    /* strict top-bar zones: scoreboard shrinks, controls stay right */
+    body.mobi #hud-top > div:first-child { flex: 1 1 auto !important; min-width: 0 !important; }
+    body.mobi #hud-top > div:last-child { flex: 0 0 auto !important; }
+    /* shot buttons: compact, hide desktop keyboard hints */
+    body.mobi .shot-btn-mobile span:last-child { display: none !important; }
+    /* power widget: ONE slim pill (shot label + power bar), legend row hidden */
+    body.mobi #power-charger-box .power-legend { display: none !important; }
+    body.mobi #power-charger-box {
+      position: fixed !important;
+      z-index: 45 !important;
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      gap: 8px !important;
+      width: auto !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 7px 12px !important;
+      background: rgba(10, 15, 28, 0.82) !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      border-radius: 999px !important;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+    body.mobi #shot-intent-badge {
+      margin: 0 !important;
+      white-space: nowrap !important;
+      font-size: 10px !important;
+      padding: 2px 8px !important;
+    }
+    body.mobi #power-charger-box .power-track {
+      width: 110px !important;
+      height: 10px !important;
+      flex: 0 0 auto !important;
+    }
+    /* ---- portrait: compact 2x2 bottom-right, joystick bottom-left ---- */
+    body.mobi-portrait #action-buttons-wrapper {
+      position: fixed !important;
+      right: calc(10px + env(safe-area-inset-right)) !important;
+      bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, 96px) !important;
+      gap: 8px !important;
+      z-index: 45 !important;
+      width: 200px !important;
+    }
+    body.mobi-portrait .shot-btn-mobile {
+      min-width: 0 !important;
+      width: 96px !important;
+      min-height: 50px !important;
+      padding: 6px 4px !important;
+      border-radius: 14px !important;
+    }
+    body.mobi-portrait .shot-btn-mobile span:first-child { font-size: 12px !important; }
+    body.mobi-portrait #joystick-container {
+      width: 120px !important;
+      height: 120px !important;
+      left: calc(10px + env(safe-area-inset-left)) !important;
+      bottom: calc(12px + env(safe-area-inset-bottom)) !important;
+    }
+    body.mobi-portrait #joystick-knob { width: 48px !important; height: 48px !important; }
+    body.mobi-portrait #power-charger-box {
+      bottom: calc(152px + env(safe-area-inset-bottom)) !important;
+    }
+    /* rotate hint BELOW the top HUD — never covering the scoreboard */
+    body.mobi-portrait #rotate-hint.show {
+      top: calc(88px + env(safe-area-inset-top)) !important;
+      max-width: 94vw !important;
+      white-space: normal !important;
+      border-radius: 18px !important;
+      text-align: center !important;
+    }
+    /* ---- landscape: single row bottom-right, joystick bottom-left, pill bottom-center ---- */
+    body.mobi-landscape #action-buttons-wrapper {
+      position: fixed !important;
+      right: calc(10px + env(safe-area-inset-right)) !important;
+      bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 8px !important;
+      z-index: 45 !important;
+    }
+    body.mobi-landscape .shot-btn-mobile {
+      min-width: 0 !important;
+      width: 88px !important;
+      min-height: 48px !important;
+      padding: 6px 4px !important;
+      border-radius: 12px !important;
+    }
+    body.mobi-landscape .shot-btn-mobile span:first-child { font-size: 11px !important; }
+    body.mobi-landscape #joystick-container {
+      width: 104px !important;
+      height: 104px !important;
+      left: calc(10px + env(safe-area-inset-left)) !important;
+      bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    }
+    body.mobi-landscape #joystick-knob { width: 42px !important; height: 42px !important; }
+    body.mobi-landscape #power-charger-box {
+      bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+    }
   </style>
 </head>
 <body class="w-screen h-screen overflow-hidden select-none">
@@ -251,7 +340,7 @@
       <!-- Match & Scoreboard Display -->
       <div class="pointer-events-auto flex items-center space-x-2 max-w-full overflow-hidden">
         <div class="glass-panel rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center space-x-2 sm:space-x-4 border-l-4 border-amber-500 shadow-2xl">
-          <div class="flex flex-col hidden sm:flex">
+          <div id="hud-tourney-info" class="flex flex-col hidden sm:flex">
             <span id="hud-tournament-name" class="text-[11px] uppercase tracking-widest text-amber-400 font-bold flex items-center gap-1">
               <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               ROLAND GARROS GRAND FINAL
@@ -348,12 +437,12 @@
         </div>
         
         <!-- Power Gauge -->
-        <div class="w-full h-2.5 sm:h-3 bg-black/70 rounded-full overflow-hidden border border-white/25 p-0.5 relative shadow-inner">
+        <div class="power-track w-full h-2.5 sm:h-3 bg-black/70 rounded-full overflow-hidden border border-white/25 p-0.5 relative shadow-inner">
           <div id="power-bar" class="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 w-0 transition-all duration-75"></div>
           <!-- Sweet spot indicator -->
           <div class="absolute top-0 bottom-0 left-[78%] w-1.5 bg-white shadow-lg shadow-white/90"></div>
         </div>
-        <div class="w-full flex justify-between text-[9px] text-gray-300 font-bold px-1 mt-0.5">
+        <div class="power-legend w-full flex justify-between text-[9px] text-gray-300 font-bold px-1 mt-0.5">
           <span>CONTROL</span>
           <span class="text-amber-300">★ ZONA SWEET SPOT ★</span>
           <span>POTENCIA MAX</span>
@@ -388,7 +477,7 @@
       </div>
 
       <!-- Tactical Minimap Radar (Right side on Desktop) -->
-      <div class="absolute bottom-4 right-4 pointer-events-auto hidden md:block">
+      <div id="radar-tactico-wrap" class="absolute bottom-4 right-4 pointer-events-auto hidden md:block">
         <div class="glass-panel rounded-xl p-2 border border-white/15 flex flex-col items-center">
           <div class="text-[9px] uppercase tracking-wider text-cyan-300 font-bold mb-1">RADAR TÁCTICO 3D</div>
           <canvas id="radar-canvas" width="76" height="128" class="rounded bg-black/60 border border-white/10"></canvas>
@@ -3097,6 +3186,15 @@
         document.addEventListener('gesturestart', (e) => e.preventDefault());
         document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
+        // JS-driven mobile layout classes (robust: does not depend on CSS media queries)
+        const refreshMobileClass = () => {
+          const w = window.innerWidth, h = window.innerHeight;
+          const isMobi = w <= 940;
+          document.body.classList.toggle('mobi', isMobi);
+          document.body.classList.toggle('mobi-portrait', isMobi && h > w);
+          document.body.classList.toggle('mobi-landscape', isMobi && h <= w);
+        };
+
         const hint = document.getElementById('rotate-hint');
         const dismissBtn = document.getElementById('btn-dismiss-rotate');
         let dismissed = false;
@@ -3108,15 +3206,15 @@
           });
         }
 
-        // Show only: small screen + portrait + actually inside a match (no modal open)
+        // Show only: small portrait screen + actually inside a match (no modal open)
         const refreshRotateHint = () => {
+          refreshMobileClass();
           if (!hint || dismissed) return;
-          const isSmall = window.innerWidth <= 768;
-          const isPortrait = window.innerHeight > window.innerWidth;
+          const isPortraitMobi = document.body.classList.contains('mobi-portrait');
           const mainHidden = document.getElementById('modal-main-menu').classList.contains('hidden');
           const pauseHidden = document.getElementById('modal-pause').classList.contains('hidden');
           const victoryHidden = document.getElementById('modal-victory').classList.contains('hidden');
-          hint.classList.toggle('show', isSmall && isPortrait && mainHidden && pauseHidden && victoryHidden);
+          hint.classList.toggle('show', isPortraitMobi && mainHidden && pauseHidden && victoryHidden);
         };
 
         window.addEventListener('resize', refreshRotateHint);
@@ -3127,6 +3225,19 @@
             if (m) new MutationObserver(refreshRotateHint).observe(m, { attributes: true, attributeFilter: ['class'] });
           });
         }
+        refreshMobileClass();
+
+        // Default camera: TV broadcast on narrow portrait phones (best court view)
+        try {
+          if (document.body.classList.contains('mobi-portrait') && this.camModes) {
+            this.currentCamIndex = 1; // broadcast
+            const lbl = document.getElementById('cam-mode-label');
+            if (lbl) lbl.textContent = 'CAM: TV BROADCAST';
+            const sel = document.getElementById('sel-camera');
+            if (sel) sel.value = '1';
+          }
+        } catch (e) { /* non-fatal */ }
+
         refreshRotateHint();
       }
 
