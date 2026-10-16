@@ -54,6 +54,20 @@
       box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.65);
     }
 
+    /* FIX: HUD action buttons must always sit above the canvas & overlays (modals stay on top at z-50) */
+    #hud-top {
+      position: relative;
+      z-index: 30;
+    }
+    #ui-container .pointer-events-auto {
+      position: relative;
+      z-index: 30;
+    }
+    #ui-container button {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     /* Virtual Joystick */
     #joystick-container {
       position: absolute;
@@ -508,8 +522,30 @@
 
       <!-- Graphic Quality & Toggles -->
       <div class="space-y-2.5 text-xs sm:text-sm">
+        <div class="flex justify-between items-center gap-3">
+          <span class="text-gray-300">Volumen</span>
+          <input type="range" id="rng-volume" min="0" max="100" value="50" class="w-32 accent-amber-500 cursor-pointer">
+        </div>
+        <div class="flex justify-between items-center gap-3">
+          <span class="text-gray-300">Calidad gráfica</span>
+          <select id="sel-quality" class="bg-black/50 text-white text-xs rounded-lg px-2 py-1.5 border border-white/15 cursor-pointer">
+            <option value="auto" selected>Auto (recomendado)</option>
+            <option value="high">Alta</option>
+            <option value="medium">Media</option>
+            <option value="low">Baja</option>
+          </select>
+        </div>
+        <div class="flex justify-between items-center gap-3">
+          <span class="text-gray-300">Cámara</span>
+          <select id="sel-camera" class="bg-black/50 text-white text-xs rounded-lg px-2 py-1.5 border border-white/15 cursor-pointer">
+            <option value="0">Trasera</option>
+            <option value="1">Broadcast</option>
+            <option value="2">Acción</option>
+            <option value="3">Cenital</option>
+          </select>
+        </div>
         <div class="flex justify-between items-center">
-          <span class="text-gray-300">Sombras Dinámicas de Estadio (2048px)</span>
+          <span class="text-gray-300">Sombras Dinámicas de Estadio</span>
           <input type="checkbox" id="chk-shadows" checked class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
         </div>
         <div class="flex justify-between items-center">
@@ -594,6 +630,7 @@
       constructor() {
         this.ctx = null;
         this.enabled = true;
+        this.volume = 0.5;
         this.masterGain = null;
         this.speechAvailable = ('speechSynthesis' in window);
       }
@@ -610,7 +647,7 @@
           if (!AudioContext) return;
           this.ctx = new AudioContext();
           this.masterGain = this.ctx.createGain();
-          this.masterGain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+          this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
           this.masterGain.connect(this.ctx.destination);
         } catch (e) {}
       }
@@ -618,9 +655,18 @@
       toggle(state) {
         this.enabled = (state !== undefined) ? state : !this.enabled;
         if (this.masterGain && this.ctx) {
-          this.masterGain.gain.setValueAtTime(this.enabled ? 0.5 : 0, this.ctx.currentTime);
+          this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
         }
         return this.enabled;
+      }
+
+      // FIX: real volume control for the settings panel
+      setVolume(v) {
+        this.volume = Math.max(0, Math.min(1, v));
+        this.init();
+        if (this.masterGain && this.ctx) {
+          this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
+        }
       }
 
       playHit(powerRatio = 0.5, isSmash = false) {
@@ -1055,6 +1101,57 @@
           ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        // UPGRADE: landmark silhouettes per arena on the horizon (y ~ 280-330)
+        ctx.fillStyle = 'rgba(20, 28, 45, 0.85)';
+        if (themeKey === 'clay') {
+          // Paris rooftops + Eiffel Tower silhouette
+          for (let x = 0; x < 1024; x += 46) {
+            const bh = 26 + Math.floor(Math.random() * 30);
+            ctx.fillRect(x, 300 - bh, 42, bh + 30);
+            ctx.beginPath(); // mansard roof
+            ctx.moveTo(x, 300 - bh); ctx.lineTo(x + 21, 300 - bh - 12); ctx.lineTo(x + 42, 300 - bh); ctx.fill();
+          }
+          // Eiffel Tower
+          const ex = 512;
+          ctx.fillStyle = 'rgba(15, 20, 35, 0.95)';
+          ctx.beginPath();
+          ctx.moveTo(ex - 46, 330); ctx.quadraticCurveTo(ex - 20, 220, ex - 8, 150);
+          ctx.lineTo(ex + 8, 150); ctx.quadraticCurveTo(ex + 20, 220, ex + 46, 330); ctx.fill();
+          ctx.fillRect(ex - 3, 118, 6, 34); // spire
+          ctx.fillRect(ex - 24, 236, 48, 7); ctx.fillRect(ex - 14, 188, 28, 6); // platforms
+        } else if (themeKey === 'grass') {
+          // London skyline + clock tower
+          for (let x = 0; x < 1024; x += 52) {
+            const bh = 30 + Math.floor(Math.random() * 42);
+            ctx.fillRect(x, 300 - bh, 48, bh + 30);
+          }
+          const bx = 180; // Big-Ben-style tower
+          ctx.fillRect(bx, 168, 26, 162);
+          ctx.beginPath(); ctx.moveTo(bx - 4, 168); ctx.lineTo(bx + 13, 128); ctx.lineTo(bx + 30, 168); ctx.fill();
+          ctx.fillStyle = 'rgba(253, 224, 71, 0.9)';
+          ctx.beginPath(); ctx.arc(bx + 13, 196, 8, 0, Math.PI * 2); ctx.fill(); // clock face
+        } else if (themeKey === 'padel') {
+          // Mediterranean sea band + Monte Carlo waterfront + yachts
+          const seaGrad = ctx.createLinearGradient(0, 280, 0, 340);
+          seaGrad.addColorStop(0, '#7dd3fc'); seaGrad.addColorStop(1, '#0c4a6e');
+          ctx.fillStyle = seaGrad;
+          ctx.fillRect(0, 282, 1024, 60);
+          ctx.fillStyle = 'rgba(255,255,255,0.35)';
+          for (let i = 0; i < 40; i++) ctx.fillRect(Math.random() * 1024, 288 + Math.random() * 44, 14 + Math.random() * 22, 2);
+          ctx.fillStyle = 'rgba(20, 28, 45, 0.85)';
+          for (let x = 560; x < 1024; x += 44) { // casino district right side
+            const bh = 34 + Math.floor(Math.random() * 52);
+            ctx.fillRect(x, 282 - bh, 40, bh);
+          }
+          // Yachts
+          ctx.fillStyle = 'rgba(255,255,255,0.9)';
+          [200, 420].forEach(yx => {
+            ctx.fillRect(yx, 300, 46, 10); // hull
+            ctx.fillRect(yx + 14, 286, 18, 14); // cabin
+            ctx.fillRect(yx + 21, 272, 3, 14); // mast
+          });
+        }
       }
 
       const tex = new THREE.CanvasTexture(canvas);
@@ -1264,6 +1361,34 @@
         ctx.stroke();
       }
 
+      // UPGRADE: match-wear detail — slide streaks & shoe scuffs near baselines
+      if (themeKey === 'clay' || themeKey === 'hard' || themeKey === 'padel') {
+        const scuffColor = themeKey === 'clay' ? 'rgba(70, 25, 8, 0.20)' : 'rgba(8, 8, 10, 0.22)';
+        ctx.strokeStyle = scuffColor;
+        ctx.lineCap = 'round';
+        [mY + 60, mY + cH - 60].forEach(baseY => {
+          for (let i = 0; i < 26; i++) {
+            const sx = mX + 60 + Math.random() * (cW - 120);
+            const sy = baseY + (Math.random() - 0.5) * 130;
+            ctx.lineWidth = 3 + Math.random() * 5;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.quadraticCurveTo(sx + (Math.random() - 0.5) * 60, sy + (Math.random() - 0.5) * 40, sx + (Math.random() - 0.5) * 90, sy + (Math.random() - 0.5) * 50);
+            ctx.stroke();
+          }
+        });
+        // Subtle line wear: erase tiny chips along the baselines
+        ctx.globalCompositeOperation = 'destination-out';
+        for (let i = 0; i < 60; i++) {
+          const wx = mX + Math.random() * cW;
+          const wy = (Math.random() > 0.5 ? mY : mY + cH) + (Math.random() - 0.5) * 14;
+          ctx.globalAlpha = 0.25 + Math.random() * 0.3;
+          ctx.fillRect(wx, wy, 2 + Math.random() * 5, 2 + Math.random() * 4);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
       const diffuseTex = new THREE.CanvasTexture(canvas);
       diffuseTex.anisotropy = 8;
       const normalTex = new THREE.CanvasTexture(normCanvas);
@@ -1461,6 +1586,7 @@
         this.padelWalls = [];
         this.courtMarks = [];
         this.spectatorData = [];
+        this.ledBoards = [];
 
         const theme = CourtThemes[this.courtTheme];
         const isPadel = theme.isPadel;
@@ -1747,28 +1873,28 @@
         const wallZ = halfLen + 4.2;
         const wallX = halfWid + 3.4;
 
-        // Create Sponsor Banner Texture
-        const bCanvas = document.createElement('canvas');
-        bCanvas.width = 512;
-        bCanvas.height = 64;
-        const bCtx = bCanvas.getContext('2d');
-        bCtx.fillStyle = (this.courtTheme === 'grass') ? '#14532d' : (this.courtTheme === 'clay' ? '#1e3a2f' : '#0f172a');
-        bCtx.fillRect(0, 0, 512, 64);
-        bCtx.strokeStyle = '#' + theme.netTapeColor.toString(16).padStart(6, '0');
-        bCtx.lineWidth = 4;
-        bCtx.strokeRect(2, 2, 508, 60);
-        bCtx.fillStyle = '#ffffff';
-        bCtx.font = '900 24px "Inter", sans-serif';
-        bCtx.textAlign = 'center';
-        bCtx.fillText(`★ ${theme.tournament} • PRO TOUR 3D ★`, 256, 40);
-        const bannerTex = new THREE.CanvasTexture(bCanvas);
-        bannerTex.wrapS = THREE.RepeatWrapping;
-        bannerTex.repeat.set(3, 1);
+        // UPGRADE: Animated LED perimeter boards (scrolling canvas texture)
+        if (!this.ledBoards) this.ledBoards = [];
+        const ledCanvas = document.createElement('canvas');
+        ledCanvas.width = 1024;
+        ledCanvas.height = 96;
+        const ledCtx = ledCanvas.getContext('2d');
+        const ledBase = (this.courtTheme === 'grass') ? '#0b3d24' : (this.courtTheme === 'clay' ? '#14291f' : (this.courtTheme === 'cyber' ? '#0d0221' : '#0a0f1e'));
+        const ledAccent = '#' + theme.lineColor.toString(16).padStart(6, '0');
+        const ledTex = new THREE.CanvasTexture(ledCanvas);
+        ledTex.wrapS = THREE.RepeatWrapping;
+        ledTex.repeat.set(2, 1);
+        ledTex.anisotropy = 4;
+        this.ledBoards.push({ canvas: ledCanvas, ctx: ledCtx, tex: ledTex, base: ledBase, accent: ledAccent, label: theme.tournament, offset: 0, speed: 0.35 + Math.random() * 0.2 });
+        this.drawLedBoard(this.ledBoards[this.ledBoards.length - 1], 0);
 
         const bannerMat = new THREE.MeshStandardMaterial({
-          map: bannerTex,
-          roughness: 0.4,
-          metalness: 0.2
+          map: ledTex,
+          roughness: 0.35,
+          metalness: 0.25,
+          emissive: new THREE.Color(ledAccent),
+          emissiveMap: ledTex,
+          emissiveIntensity: 0.55
         });
 
         // Backstop barriers
@@ -1785,6 +1911,51 @@
           sideBarrier.receiveShadow = true;
           this.courtGroup.add(sideBarrier);
         });
+      }
+
+      // Draws one frame of the scrolling LED board texture
+      drawLedBoard(board, t) {
+        const { ctx, canvas, base, accent, label } = board;
+        const W = canvas.width, H = canvas.height;
+        ctx.fillStyle = base;
+        ctx.fillRect(0, 0, W, H);
+        // Animated light sweep
+        const sweepX = ((t * 120) % (W + 300)) - 150;
+        const grad = ctx.createLinearGradient(sweepX - 120, 0, sweepX + 120, 0);
+        grad.addColorStop(0, 'rgba(255,255,255,0)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.14)');
+        grad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+        // Scrolling text (two copies for seamless wrap)
+        ctx.font = '900 44px "Inter", sans-serif';
+        ctx.textBaseline = 'middle';
+        const msg = `★ ${label} • PRO TOUR 3D ★  `;
+        const tw = ctx.measureText(msg).width;
+        let x = -(board.offset % tw);
+        ctx.fillStyle = accent;
+        for (; x < W; x += tw) ctx.fillText(msg, x, H / 2 + 2);
+        // Top/bottom edge glow lines
+        ctx.fillStyle = accent;
+        ctx.globalAlpha = 0.85;
+        ctx.fillRect(0, 0, W, 5);
+        ctx.fillRect(0, H - 5, W, 5);
+        ctx.globalAlpha = 1;
+        board.tex.needsUpdate = true;
+      }
+
+      updateLedBoards(dt) {
+        if (!this.ledBoards || !this.ledBoards.length) return;
+        const t = performance.now() / 1000;
+        // Redraw at most ~30fps: a 1024x96 texture re-upload every frame is wasteful
+        this._ledAcc = (this._ledAcc || 0) + dt;
+        if (this._ledAcc < 0.033) return;
+        const step = this._ledAcc;
+        this._ledAcc = 0;
+        for (const b of this.ledBoards) {
+          b.offset += step * 90 * b.speed;
+          this.drawLedBoard(b, t);
+        }
       }
 
       buildCourtSideFurniture(courtWid, courtLen, isPadel) {
@@ -1942,7 +2113,7 @@
           this.spectatorInstanced.setMatrixAt(i, dummy.matrix);
           col.setHex(spectatorColors[i]);
           this.spectatorInstanced.setColorAt(i, col);
-          this.spectatorData.push({ ...d, phase: Math.random() * Math.PI * 2, speed: 3 + Math.random() * 3 });
+          this.spectatorData.push({ ...d, phase: Math.random() * Math.PI * 2, speed: 3 + Math.random() * 3, angle: Math.atan2(d.z, d.x) });
         }
         this.spectatorInstanced.instanceMatrix.needsUpdate = true;
         if (this.spectatorInstanced.instanceColor) this.spectatorInstanced.instanceColor.needsUpdate = true;
@@ -1972,6 +2143,20 @@
         // 4 Towering Corner Floodlight Pylons
         const towerMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.85, roughness: 0.25 });
         const lampGlowMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        // UPGRADE: volumetric light cones for night sessions (cheap additive geometry)
+        const isNightArena = (this.courtTheme === 'hard' || this.courtTheme === 'cyber' || this.courtTheme === 'padel');
+        let coneGeo = null, coneMat = null;
+        if (isNightArena) {
+          coneGeo = new THREE.ConeGeometry(7.5, 26, 18, 1, true);
+          coneGeo.translate(0, -13, 0);   // apex at origin
+          coneGeo.rotateX(-Math.PI / 2);  // axis along +z
+          coneMat = new THREE.MeshBasicMaterial({
+            color: (this.courtTheme === 'cyber' ? 0x67e8f9 : 0xfff3d6),
+            transparent: true, opacity: 0.06,
+            blending: THREE.AdditiveBlending, depthWrite: false,
+            side: THREE.DoubleSide, fog: false
+          });
+        }
         [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
           const tx = sx * (halfW + tiers * 1.3);
           const tz = sz * (halfL + tiers * 1.3);
@@ -1983,6 +2168,13 @@
           lightBank.position.set(tx * 0.96, 21.5, tz * 0.96);
           lightBank.lookAt(0, 0, 0);
           stadiumGroup.add(lightBank);
+
+          if (isNightArena) {
+            const cone = new THREE.Mesh(coneGeo, coneMat);
+            cone.position.set(tx * 0.96, 21.2, tz * 0.96);
+            cone.lookAt(0, 1.5, 0);
+            stadiumGroup.add(cone);
+          }
         });
 
         // Surrounding Trees / Palms / Cyberpunk Towers outside the bowl
@@ -2601,6 +2793,19 @@
 
           sound.init();
 
+          // FIX: Escape toggles real pause overlay (was missing entirely)
+          if (e.code === 'Escape') {
+            const mainMenuOpen = !document.getElementById('modal-main-menu').classList.contains('hidden');
+            const victoryOpen = !document.getElementById('modal-victory').classList.contains('hidden');
+            if (!mainMenuOpen && !victoryOpen) {
+              const isPaused = (this.matchState === 'paused');
+              this.togglePause(!isPaused);
+            }
+            return;
+          }
+          // Ignore gameplay keys while paused
+          if (this.matchState === 'paused') return;
+
           if (this.matchState === 'serving' && (e.code === 'Space' || k === 'j' || k === 'k')) {
             this.startServe();
             return;
@@ -2664,6 +2869,25 @@
         document.getElementById('btn-resume-game').addEventListener('click', () => this.togglePause(false));
         document.getElementById('btn-restart-match').addEventListener('click', () => this.restartMatch());
         document.getElementById('btn-return-menu').addEventListener('click', () => this.returnToMainMenu());
+
+        // FIX: wire the settings panel controls (were decorative / unbound)
+        const rngVol = document.getElementById('rng-volume');
+        if (rngVol) rngVol.addEventListener('input', () => sound.setVolume(rngVol.value / 100));
+        const selQuality = document.getElementById('sel-quality');
+        if (selQuality) selQuality.addEventListener('change', () => this.applyQuality(selQuality.value));
+        const selCamera = document.getElementById('sel-camera');
+        if (selCamera) selCamera.addEventListener('change', () => {
+          this.currentCamIndex = parseInt(selCamera.value, 10) % this.camModes.length;
+          const labels = { chase: 'CAM: TRASERA', broadcast: 'CAM: TV BROADCAST', action: 'CAM: ACCIÓN PRO', topdown: 'CAM: TÁCTICA AÉREA' };
+          document.getElementById('cam-mode-label').textContent = labels[this.camModes[this.currentCamIndex]];
+        });
+        const chkShadows = document.getElementById('chk-shadows');
+        if (chkShadows) chkShadows.addEventListener('change', () => {
+          const on = chkShadows.checked;
+          this.renderer.shadowMap.enabled = on;
+          if (this.dirLight) this.dirLight.castShadow = on;
+          this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
+        });
 
         // Touch & Click Shot Buttons (Multi-touch independent)
         const bindShotBtn = (id, type) => {
@@ -2807,6 +3031,42 @@
           topdown: 'CAM: TÁCTICA AÉREA'
         };
         document.getElementById('cam-mode-label').textContent = labels[mode];
+        const sel = document.getElementById('sel-camera');
+        if (sel) sel.value = String(this.currentCamIndex);
+      }
+
+      // FIX: real graphics quality control (preserves the adaptive mobile defaults)
+      applyQuality(mode) {
+        let level = mode;
+        if (level === 'auto') level = this.isMobileQuality ? 'medium' : 'high';
+        const dpr = window.devicePixelRatio || 1;
+        if (level === 'high') {
+          this.renderer.setPixelRatio(Math.min(dpr, 2));
+          this.setShadowQuality(true, 2048);
+        } else if (level === 'medium') {
+          this.renderer.setPixelRatio(Math.min(dpr, 1.5));
+          this.setShadowQuality(true, 1024);
+        } else { // low
+          this.renderer.setPixelRatio(1);
+          this.setShadowQuality(false, 512);
+        }
+        const chk = document.getElementById('chk-shadows');
+        if (chk) chk.checked = (level !== 'low');
+      }
+
+      setShadowQuality(on, res) {
+        this.renderer.shadowMap.enabled = on;
+        if (this.dirLight) {
+          this.dirLight.castShadow = on;
+          if (this.dirLight.shadow.mapSize.width !== res) {
+            this.dirLight.shadow.mapSize.set(res, res);
+            if (this.dirLight.shadow.map) {
+              this.dirLight.shadow.map.dispose();
+              this.dirLight.shadow.map = null;
+            }
+          }
+        }
+        this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; });
       }
 
       selectGameMode(mode) {
@@ -2875,19 +3135,28 @@
 
       togglePause(pauseState) {
         const modal = document.getElementById('modal-pause');
-        if (pauseState) {
-          this.prevMatchState = this.matchState;
-          this.matchState = 'paused';
-          modal.classList.remove('hidden');
-          document.getElementById('stat-aces').textContent = this.stats.aces;
-          document.getElementById('stat-speed-max').textContent = `${Math.round(this.stats.maxSpeed)} km/h`;
-          document.getElementById('stat-rally-max').textContent = `${this.stats.maxRally} golpes`;
-        } else {
-          modal.classList.add('hidden');
-          if (this.matchState === 'paused') {
-            this.matchState = this.ballPhysics.inPlay ? 'in_rally' : 'serving';
+        if (!modal) return;
+        // Never allow pausing over the main menu or victory screens
+        const mainMenuOpen = !document.getElementById('modal-main-menu').classList.contains('hidden');
+        const victoryOpen = !document.getElementById('modal-victory').classList.contains('hidden');
+        if (pauseState && (mainMenuOpen || victoryOpen)) return;
+        try {
+          if (pauseState) {
+            this.prevMatchState = this.matchState;
+            this.matchState = 'paused';
+            modal.classList.remove('hidden');
+            // Force a reflow so the overlay paints even under heavy load
+            void modal.offsetWidth;
+            document.getElementById('stat-aces').textContent = this.stats.aces;
+            document.getElementById('stat-speed-max').textContent = `${Math.round(this.stats.maxSpeed)} km/h`;
+            document.getElementById('stat-rally-max').textContent = `${this.stats.maxRally} golpes`;
+          } else {
+            modal.classList.add('hidden');
+            if (this.matchState === 'paused') {
+              this.matchState = this.ballPhysics.inPlay ? 'in_rally' : 'serving';
+            }
           }
-        }
+        } catch (err) { /* pause must never crash the game loop */ }
       }
 
       restartMatch() {
@@ -2916,6 +3185,10 @@
 
         main.textContent = mainText;
         sub.textContent = subText;
+        // FIX: fully remove from layout when hidden so no banner fragments linger
+        badge.classList.remove('hidden');
+        // Force reflow so the show animation restarts cleanly
+        void badge.offsetWidth;
         badge.classList.remove('scale-0', 'opacity-0');
         badge.classList.add('scale-100', 'opacity-100');
 
@@ -2923,6 +3196,10 @@
         this.calloutTimeout = setTimeout(() => {
           badge.classList.remove('scale-100', 'opacity-100');
           badge.classList.add('scale-0', 'opacity-0');
+          // After the fade, take it out of the layout entirely
+          setTimeout(() => {
+            if (!badge.classList.contains('scale-100')) badge.classList.add('hidden');
+          }, 350);
         }, 1600);
       }
 
@@ -3070,6 +3347,7 @@
         this.matchState = 'match_over';
         this.lastMatchWinner = winner;
         sound.playCrowdCheer();
+        this.spawnConfetti();
         const isPlayer = (winner === 'p1');
 
         const isTourneyAdvance = (this.gameMode === 'tournament' && isPlayer && this.tournamentRound < 2);
@@ -3828,15 +4106,35 @@
           const p = this.particles[i];
           p.life -= dt;
           p.mesh.position.addScaledVector(p.vel, dt);
-          p.vel.y -= 9.8 * dt;
+          p.vel.y -= (p.gravity !== undefined ? p.gravity : 9.8) * dt;
+          if (p.spin) { p.mesh.rotation.x += p.spin.x * dt; p.mesh.rotation.y += p.spin.y * dt; }
           p.mesh.material.opacity = (p.life / p.maxLife) * 0.8;
 
           if (p.life <= 0) {
             this.scene.remove(p.mesh);
-            p.mesh.geometry.dispose();
+            if (!p.sharedGeo) p.mesh.geometry.dispose();
             p.mesh.material.dispose();
             this.particles.splice(i, 1);
           }
+        }
+      }
+
+      // UPGRADE: confetti burst on match end (reuses the pooled particle system)
+      spawnConfetti() {
+        const colors = [0xf43f5e, 0xf59e0b, 0x22d3ee, 0xa3e635, 0xffffff, 0xec4899];
+        const geo = new THREE.PlaneGeometry(0.16, 0.24);
+        for (let i = 0; i < 130; i++) {
+          const mat = new THREE.MeshBasicMaterial({
+            color: colors[i % colors.length], transparent: true, opacity: 0.95, side: THREE.DoubleSide
+          });
+          const m = new THREE.Mesh(geo, mat);
+          m.position.set((Math.random() - 0.5) * 16, 8 + Math.random() * 6, (Math.random() - 0.5) * 20);
+          const v = new THREE.Vector3((Math.random() - 0.5) * 3, -0.5 - Math.random() * 1.5, (Math.random() - 0.5) * 3);
+          this.scene.add(m);
+          this.particles.push({
+            mesh: m, vel: v, life: 3.2 + Math.random() * 1.5, maxLife: 4.2, gravity: 1.4, sharedGeo: true,
+            spin: { x: 4 + Math.random() * 8, y: 3 + Math.random() * 7 }
+          });
         }
       }
 
@@ -3854,10 +4152,15 @@
 
         const dummy = new THREE.Object3D();
         const len = this.spectatorData.length;
+        // UPGRADE: traveling stadium "wave" — excitement sweeps around the bowl
+        const waveT = performance.now() / 1000;
         for (let i = 0; i < len; i++) {
           const s = this.spectatorData[i];
           s.phase += dt * s.speed * (isExcited ? 2.2 : 0.7);
-          const hop = isExcited ? Math.abs(Math.sin(s.phase)) * 0.22 : Math.sin(s.phase) * 0.03;
+          const wave = Math.max(0, Math.sin(waveT * 1.6 - s.angle * 3)) ** 3;
+          const hop = isExcited
+            ? Math.abs(Math.sin(s.phase)) * (0.22 + wave * 0.35)
+            : Math.sin(s.phase) * 0.03 + wave * 0.12;
           dummy.position.set(s.x, s.y + hop, s.z);
           dummy.rotation.set(0, s.rotY, 0);
           dummy.updateMatrix();
@@ -3876,6 +4179,7 @@
           this.updateAI(dt);
           this.updateParticles(dt);
           this.updateSpectatorsAndOfficials(dt);
+          this.updateLedBoards(dt);
         }
 
         this.updateCamera(dt);
