@@ -143,8 +143,8 @@
     @media (max-width: 768px) {
       #action-buttons-wrapper {
         position: fixed;
-        bottom: 18px;
-        right: 16px;
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        right: calc(16px + env(safe-area-inset-right));
         display: grid !important;
         grid-template-columns: repeat(2, 1fr);
         gap: 8px !important;
@@ -152,25 +152,87 @@
       }
       .shot-btn-mobile {
         min-width: 78px !important;
+        min-height: 52px !important;
         padding: 10px 8px !important;
         border-radius: 16px !important;
       }
       #power-charger-box {
         position: fixed;
-        bottom: 162px;
-        right: 16px;
+        bottom: calc(162px + env(safe-area-inset-bottom));
+        right: calc(16px + env(safe-area-inset-right));
         width: 166px !important;
         margin-bottom: 0 !important;
       }
       #joystick-container {
         width: 120px;
         height: 120px;
-        bottom: 18px;
-        left: 16px;
+        bottom: calc(18px + env(safe-area-inset-bottom));
+        left: calc(16px + env(safe-area-inset-left));
       }
       #joystick-knob {
         width: 46px;
         height: 46px;
+      }
+      /* 44px minimum touch targets on top HUD icon buttons */
+      #hud-top .pointer-events-auto button {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* Bigger tappable controls inside pause/settings modal */
+      #modal-pause input[type="checkbox"] {
+        width: 28px;
+        height: 28px;
+      }
+      #modal-pause select {
+        min-height: 44px;
+      }
+      #modal-pause input[type="range"] {
+        height: 32px;
+      }
+      #btn-close-pause {
+        min-width: 44px;
+        min-height: 44px;
+      }
+    }
+
+    /* Stack pause action buttons on very narrow phones */
+    @media (max-width: 420px) {
+      #pause-actions {
+        flex-direction: column;
+      }
+    }
+
+    /* Safe areas: notch / dynamic island / home indicator (all screens, env=0 on desktop) */
+    #hud-top {
+      padding-top: calc(0.5rem + env(safe-area-inset-top));
+      padding-left: calc(0.5rem + env(safe-area-inset-left));
+      padding-right: calc(0.5rem + env(safe-area-inset-right));
+    }
+    #hud-bottom {
+      padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+      padding-left: calc(0.75rem + env(safe-area-inset-left));
+      padding-right: calc(0.75rem + env(safe-area-inset-right));
+    }
+    #modal-main-menu, #modal-pause, #modal-victory {
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    }
+
+    /* Portrait rotate suggestion: elegant, dismissible, non-blocking */
+    #rotate-hint {
+      display: none;
+      position: fixed;
+      top: calc(0.5rem + env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 40;
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) and (orientation: portrait) {
+      #rotate-hint.show {
+        display: flex;
       }
     }
   </style>
@@ -339,6 +401,13 @@
       <div id="joystick-Container-ring"></div>
       <div id="joystick-knob"></div>
     </div>
+  </div>
+
+  <!-- PORTRAIT ROTATE SUGGESTION (mobile only, dismissible, non-blocking) -->
+  <div id="rotate-hint" class="glass-panel rounded-full pl-4 pr-1.5 py-1.5 items-center gap-2 text-xs text-white shadow-2xl border border-cyan-400/40">
+    <span class="text-base leading-none">🔄</span>
+    <span class="font-semibold">Gira tu móvil para ver mejor la pista</span>
+    <button id="btn-dismiss-rotate" class="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold flex items-center justify-center" aria-label="Cerrar aviso">✕</button>
   </div>
 
   <!-- MAIN MENU MODAL (SPLASH / START SCREEN) -->
@@ -578,7 +647,7 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex gap-2.5 pt-2">
+      <div id="pause-actions" class="flex gap-2.5 pt-2">
         <button id="btn-restart-match" class="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white font-bold text-xs uppercase tracking-wider transition">
           REINICIAR PARTIDO
         </button>
@@ -595,7 +664,7 @@
 
   <!-- VICTORY / TOURNAMENT PROGRESSION MODAL -->
   <div id="modal-victory" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden">
-    <div class="glass-panel max-w-md w-full rounded-3xl p-6 border-2 border-amber-400/50 shadow-2xl text-center space-y-4 relative overflow-hidden">
+    <div class="glass-panel modal-scroll max-w-md w-full rounded-3xl p-6 border-2 border-amber-400/50 shadow-2xl text-center space-y-4 relative overflow-hidden">
       <div class="inline-block p-4 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 mb-1">
         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
       </div>
@@ -1474,6 +1543,7 @@
         this.buildBall();
         this.setupEventListeners();
         this.setupVirtualJoystick();
+        this.setupMobileUX();
         this.initRadar();
         this.applyTouchVisibility();
 
@@ -3019,6 +3089,45 @@
 
         container.addEventListener('pointerup', resetKnob);
         container.addEventListener('pointercancel', resetKnob);
+      }
+
+      // --- MOBILE UX: gesture guards, double-tap zoom guard, portrait rotate hint ---
+      setupMobileUX() {
+        // iOS Safari: block pinch-zoom gesture; extra guard against double-tap zoom
+        document.addEventListener('gesturestart', (e) => e.preventDefault());
+        document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+
+        const hint = document.getElementById('rotate-hint');
+        const dismissBtn = document.getElementById('btn-dismiss-rotate');
+        let dismissed = false;
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dismissed = true;
+            if (hint) hint.classList.remove('show');
+          });
+        }
+
+        // Show only: small screen + portrait + actually inside a match (no modal open)
+        const refreshRotateHint = () => {
+          if (!hint || dismissed) return;
+          const isSmall = window.innerWidth <= 768;
+          const isPortrait = window.innerHeight > window.innerWidth;
+          const mainHidden = document.getElementById('modal-main-menu').classList.contains('hidden');
+          const pauseHidden = document.getElementById('modal-pause').classList.contains('hidden');
+          const victoryHidden = document.getElementById('modal-victory').classList.contains('hidden');
+          hint.classList.toggle('show', isSmall && isPortrait && mainHidden && pauseHidden && victoryHidden);
+        };
+
+        window.addEventListener('resize', refreshRotateHint);
+        window.addEventListener('orientationchange', () => setTimeout(refreshRotateHint, 250));
+        if (window.MutationObserver) {
+          ['modal-main-menu', 'modal-pause', 'modal-victory'].forEach((id) => {
+            const m = document.getElementById(id);
+            if (m) new MutationObserver(refreshRotateHint).observe(m, { attributes: true, attributeFilter: ['class'] });
+          });
+        }
+        refreshRotateHint();
       }
 
       cycleCamera() {
