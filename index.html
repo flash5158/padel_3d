@@ -1917,7 +1917,7 @@
       high: {
         bloom: true, bloomHDR: true, bloomMips: 5, bloomRes: 0.5, bloomStrength: 0.62, bloomThreshold: 0.92,
         bloomThresholdLDR: 0.78, bloomKnee: 0.55, bloomScatter: 0.74, msaa: 4, dither: true,
-        crowdFill: 1.0, crowdHeads: true, crowdArms: true, crowdShadows: true, crowdEvery: 1,
+        crowdFill: 1.0, crowdHeads: true, crowdArms: true, crowdShadows: true, crowdEvery: 1, crowdWave: true,
         flashSlots: 40, flashAmbient: 1.0,
         jumboScale: 2, jumboFps: 12, jumboAnim: true, jumboScanlines: true,
         bodyDetail: 2, racketDetail: 2, racketCarbonTex: 256, racketClearcoat: true
@@ -1925,20 +1925,65 @@
       medium: {
         bloom: true, bloomHDR: true, bloomMips: 4, bloomRes: 0.25, bloomStrength: 0.5, bloomThreshold: 0.95,
         bloomThresholdLDR: 0.8, bloomKnee: 0.5, bloomScatter: 0.7, msaa: 2, dither: false,
-        crowdFill: 0.75, crowdHeads: true, crowdArms: true, crowdShadows: false, crowdEvery: 2,
-        flashSlots: 16, flashAmbient: 0.6,
+        crowdFill: 0.75, crowdHeads: true, crowdArms: true, crowdShadows: false, crowdEvery: 2, crowdWave: true,
+        flashSlots: 0, flashAmbient: 0.6,
         jumboScale: 1, jumboFps: 5, jumboAnim: true, jumboScanlines: false,
         bodyDetail: 1, racketDetail: 1, racketCarbonTex: 128, racketClearcoat: false
       },
       low: {
         bloom: false, bloomHDR: false, bloomMips: 0, bloomRes: 0.25, bloomStrength: 0, bloomThreshold: 1,
         bloomThresholdLDR: 1, bloomKnee: 0.5, bloomScatter: 0.7, msaa: 0, dither: false,
-        crowdFill: 0.5, crowdHeads: false, crowdArms: false, crowdShadows: false, crowdEvery: 3,
-        flashSlots: 6, flashAmbient: 0.35,
+        crowdFill: 0.3, crowdHeads: false, crowdArms: false, crowdShadows: false, crowdEvery: 3, crowdWave: false,
+        flashSlots: 0, flashAmbient: 0.35,
         jumboScale: 0.75, jumboFps: 2, jumboAnim: false, jumboScanlines: false,
         bodyDetail: 0, racketDetail: 0, racketCarbonTex: 64, racketClearcoat: false
       }
     };
+
+    // =====================================================================
+    // ATHLETE / RACKET DETAIL HELPERS (scale through QualityProfiles.bodyDetail / racketDetail)
+    // =====================================================================
+    // Tags an object as optional detail: it is only visible when the active profile's
+    // bodyDetail (kind 'body') or racketDetail (kind 'racket') is >= level.
+    function markLod(obj, level, kind = 'body') {
+      obj.userData.lod = level;
+      obj.userData.lodKind = kind;
+      return obj;
+    }
+
+    // Multiplies a geometry's UVs so the carbon weave tiles evenly on thin frame parts
+    function scaleGeoUV(geo, su, sv) {
+      const uv = geo.attributes.uv;
+      if (!uv) return geo;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+      uv.needsUpdate = true;
+      return geo;
+    }
+
+    // Shared (cached per resolution) racket string bed (mains + crosses) on transparent background
+    const _stringTexCache = {};
+    function getStringBedTexture(size) {
+      if (_stringTexCache[size]) return _stringTexCache[size];
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.strokeStyle = 'rgba(232, 238, 245, 0.82)';
+      ctx.lineWidth = Math.max(1, size / 80);
+      const mains = 14, crosses = 18;
+      for (let i = 0; i <= mains; i++) {
+        const x = (i / mains) * size;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
+      }
+      for (let j = 0; j <= crosses; j++) {
+        const y = (j / crosses) * size;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.anisotropy = 4;
+      _stringTexCache[size] = tex;
+      return tex;
+    }
 
     // =====================================================================
     // CUSTOM BLOOM PIPELINE (no EffectComposer dependency, single file)
@@ -2319,6 +2364,12 @@
         this.jumbotronCanvas = null;
         this.jumbotronCtx = null;
         this.jumbotronTex = null;
+        this.jumbotronMat = null;
+        this._jumboFlashAt = { p1: -99999, p2: -99999 };
+        this._jumboLastTxt = null;
+        this._jumboFlashing = false;
+        this._jumboPhase = 0;
+        this._jumboLastDraw = 0;
 
         // Input, Forgiving Swing Buffer & Serve Toss System
         this.keys = {};
@@ -2474,53 +2525,190 @@
       }
 
       // --- UPDATE 3D STADIUM JUMBOTRON TEXTURE ---
-      updateJumbotronTexture() {
-        if (!this.jumbotronCtx || !this.jumbotronTex) return;
-        const ctx = this.jumbotronCtx;
-        const w = 512, h = 192;
-        const theme = CourtThemes[this.courtTheme];
+      // Live scoreboard (sets / juegos / puntos / saque). Logical layout is 512x192;
+      // the backing canvas resolution scales with the quality profile (jumboScale).
+      jumboProfile() {
+        return QualityProfiles[this.qualityLevel] || QualityProfiles.medium;
+      }
 
-        ctx.fillStyle = '#040814';
+      // (Re)creates the canvas surface + texture at the resolution of the active quality level.
+      rebuildJumbotronSurface() {
+        if (!this.jumbotronCanvas || !this.jumbotronMat) return;
+        const scale = this.jumboProfile().jumboScale || 1;
+        const cw = Math.round(512 * scale), ch = Math.round(192 * scale);
+        if (this.jumbotronTex && this.jumbotronCanvas.width === cw && this.jumbotronCanvas.height === ch) return;
+        this.jumbotronCanvas.width = cw;
+        this.jumbotronCanvas.height = ch;
+        this.jumbotronCtx = this.jumbotronCanvas.getContext('2d');
+        const oldTex = this.jumbotronTex;
+        this.jumbotronTex = new THREE.CanvasTexture(this.jumbotronCanvas);
+        this.jumbotronTex.anisotropy = (this.qualityLevel === 'high') ? 4 : 1;
+        this.jumbotronMat.map = this.jumbotronTex;
+        this.jumbotronMat.needsUpdate = true;
+        if (oldTex) oldTex.dispose();
+        this._jumboLastTxt = null;
+        this.updateJumbotronTexture();
+      }
+
+      applyJumbotronQuality() {
+        this.rebuildJumbotronSurface();
+      }
+
+      // Animation tick (blinking server ball / LIVE dot / point flash), throttled by jumboFps.
+      tickJumbotron() {
+        if (!this.jumbotronCtx || !this.jumbotronTex) return;
+        const prof = this.jumboProfile();
+        if (!prof.jumboAnim) return;
+        const now = performance.now();
+        if (now - this._jumboLastDraw < 1000 / Math.max(1, prof.jumboFps)) return;
+        const phase = Math.floor(now / 500) & 1;
+        if (this._jumboFlashing || phase !== this._jumboPhase) this.updateJumbotronTexture();
+      }
+
+      updateJumbotronTexture() {
+        if (!this.jumbotronCtx || !this.jumbotronTex || !this.scores) return;
+        const ctx = this.jumbotronCtx;
+        const prof = this.jumboProfile();
+        const anim = !!prof.jumboAnim;
+        const now = performance.now();
+        const w = 512, h = 192;
+        const sc = this.jumbotronCanvas.width / w;
+        const theme = CourtThemes[this.courtTheme] || {};
+        const FONT = '"Inter", "Segoe UI", Arial, sans-serif';
+        ctx.setTransform(sc, 0, 0, sc, 0, 0);
+        ctx.globalAlpha = 1;
+
+        // Background
+        const bg = ctx.createLinearGradient(0, 0, 0, h);
+        bg.addColorStop(0, '#0a1630');
+        bg.addColorStop(1, '#040814');
+        ctx.fillStyle = bg;
         ctx.fillRect(0, 0, w, h);
+
+        // Score state
+        const sc1 = this.scores.p1, sc2 = this.scores.p2;
+        const isTiebreak = (this.matchLength === 'tiebreak');
+        const over = (this.matchState === 'match_over');
+        const [p1Idx, p2Idx] = this.formatPointIndices();
+        const p1Pts = String(isTiebreak ? sc1.points : this.tennisPoints[p1Idx]);
+        const p2Pts = String(isTiebreak ? sc2.points : this.tennisPoints[p2Idx]);
+
+        // Point-change flash detection (per player)
+        const txt = { p1: p1Pts + '|' + sc1.games + '|' + sc1.sets, p2: p2Pts + '|' + sc2.games + '|' + sc2.sets };
+        if (this._jumboLastTxt) {
+          if (txt.p1 !== this._jumboLastTxt.p1) this._jumboFlashAt.p1 = now;
+          if (txt.p2 !== this._jumboLastTxt.p2) this._jumboFlashAt.p2 = now;
+        }
+        this._jumboLastTxt = txt;
+        const flashOf = (k) => anim ? Math.max(0, 1 - (now - this._jumboFlashAt[k]) / 900) : 0;
+        const fl1 = flashOf('p1'), fl2 = flashOf('p2');
+        this._jumboFlashing = (fl1 > 0 || fl2 > 0);
+        this._jumboPhase = Math.floor(now / 500) & 1;
+        this._jumboLastDraw = now;
+        const blink = (!anim || this._jumboPhase === 0) ? 1 : 0.35;
+
+        // Header: tournament + LIVE tag
+        ctx.textBaseline = 'alphabetic';
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 15px ' + FONT;
+        ctx.fillText(String(theme.tournament || 'TORNEO'), 20, 29, 330);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 13px ' + FONT;
+        ctx.fillText('EN VIVO', w - 20, 28);
+        ctx.globalAlpha = blink;
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(w - 82, 23.5, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.fillRect(16, 36, w - 32, 1);
+
+        // Column labels
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px ' + FONT;
+        const colSets = 330, colGames = 398, colPts = 468;
+        ctx.fillText('SETS', colSets, 52);
+        ctx.fillText('JUEGOS', colGames, 52);
+        ctx.fillText('PUNTOS', colPts, 52);
+        ctx.textAlign = 'left';
+        ctx.fillText('JUGADOR', 44, 52);
+
+        // Player rows
+        const rows = [
+          { key: 'p1', sc: sc1, pts: p1Pts, fl: fl1, col: '#38bdf8', y: 62 },
+          { key: 'p2', sc: sc2, pts: p2Pts, fl: fl2, col: '#fb7185', y: 98 }
+        ];
+        rows.forEach(r => {
+          const cy = r.y + 16;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+          ctx.fillRect(16, r.y, w - 32, 32);
+          // Serving ball
+          if (this.scores.server === r.key && !over) {
+            ctx.globalAlpha = blink;
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.arc(28, cy, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+          // Name
+          ctx.textAlign = 'left';
+          ctx.fillStyle = r.col;
+          ctx.font = 'bold 21px ' + FONT;
+          ctx.fillText(String(r.sc.name || ''), 44, cy + 7.5, 250);
+          // Sets & games
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 24px ' + FONT;
+          ctx.fillText(String(r.sc.sets), colSets, cy + 8.5);
+          ctx.fillText(String(r.sc.games), colGames, cy + 8.5);
+          // Points cell (highlighted, flashes on change)
+          ctx.fillStyle = 'rgba(245, 158, 11, ' + (0.22 + 0.6 * r.fl).toFixed(3) + ')';
+          ctx.fillRect(colPts - 28, r.y + 3, 56, 26);
+          ctx.fillStyle = r.fl > 0 ? '#fef08a' : '#ffffff';
+          ctx.font = 'bold 26px ' + FONT;
+          ctx.fillText(r.pts, colPts, cy + 9);
+        });
+
+        // Status line (Spanish)
+        const srvName = String(this.scores.server === 'p1' ? sc1.name : sc2.name);
+        let status, statusCol = '#facc15';
+        if (over) {
+          const wn = String(this.lastMatchWinner === 'p2' ? sc2.name : sc1.name);
+          status = 'PARTIDO FINALIZADO · GANADOR: ' + wn;
+          statusCol = '#34d399';
+        } else if (isTiebreak) {
+          status = 'TIE-BREAK · SAQUE: ' + srvName;
+        } else if (sc1.points >= 3 && sc2.points >= 3) {
+          const adv = (sc1.points === sc2.points) ? 'IGUALES' : ('VENTAJA ' + String(sc1.points > sc2.points ? sc1.name : sc2.name));
+          status = adv + ' · SAQUE: ' + srvName;
+        } else {
+          status = 'SAQUE: ' + srvName;
+        }
+        ctx.textAlign = 'center';
+        ctx.fillStyle = statusCol;
+        ctx.font = 'bold 14px ' + FONT;
+        ctx.fillText(status.toUpperCase(), w / 2, 156, w - 40);
+
+        // Footer
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 13px ' + FONT;
+        ctx.fillText('INTERCAMBIO: ' + (this.rallyCount || 0) + ' GOLPES   •   VEL. MÁX: ' + Math.round((this.stats && this.stats.maxSpeed) || 0) + ' KM/H', w / 2, 178, w - 40);
+
+        // CRT scanlines (high quality only)
+        if (prof.jumboScanlines) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+          for (let y = 0; y < h; y += 3) ctx.fillRect(0, y, w, 1);
+        }
 
         // Neon border
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 6;
         ctx.strokeRect(4, 4, w - 8, h - 8);
-
-        // Header
-        ctx.fillStyle = '#f59e0b';
-        ctx.font = 'bold 20px "Inter", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(theme.tournament, w / 2, 32);
-
-        const isTiebreak = (this.matchLength === 'tiebreak');
-        const [p1Idx, p2Idx] = this.formatPointIndices();
-        const p1Pts = isTiebreak ? this.scores.p1.points : this.tennisPoints[p1Idx];
-        const p2Pts = isTiebreak ? this.scores.p2.points : this.tennisPoints[p2Idx];
-
-        // Player 1 Row
-        ctx.textAlign = 'left';
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 26px "Inter", sans-serif';
-        ctx.fillText((this.scores.server === 'p1' ? '● ' : '  ') + this.scores.p1.name, 26, 86);
-
-        // Player 2 Row
-        ctx.fillStyle = '#fb7185';
-        ctx.fillText((this.scores.server === 'p2' ? '● ' : '  ') + this.scores.p2.name, 26, 138);
-
-        // Games & Points
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 30px "Inter", sans-serif';
-        ctx.fillText(`${this.scores.p1.games}   |   ${p1Pts}`, w - 32, 86);
-        ctx.fillText(`${this.scores.p2.games}   |   ${p2Pts}`, w - 32, 138);
-
-        // Footer Speed
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#34d399';
-        ctx.font = 'bold 16px "Inter", sans-serif';
-        ctx.fillText(`RALLY: ${this.rallyCount} GOLPES   •   MÁX VEL: ${Math.round(this.stats.maxSpeed)} KM/H`, w / 2, 174);
 
         this.jumbotronTex.needsUpdate = true;
       }
@@ -3024,9 +3212,13 @@
             stepMesh.receiveShadow = true;
             stadiumGroup.add(stepMesh);
 
+            // Two rows per tier (row 1 = original; row 2 = expanded crowd, kept only on higher quality via 'u')
             for (let z = -len / 2 + 1.2; z <= len / 2 - 1.2; z += 1.45) {
               if (Math.abs(z) < 1.2) continue; // Aisle gap
-              spectatorMatrices.push({ x: posX - side * 0.2, y: tH + 0.38, z: z + (Math.random() - 0.5) * 0.25, rotY: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
+              spectatorMatrices.push({ x: posX - side * 0.2, y: tH + 0.38, z: z + (Math.random() - 0.5) * 0.25, rotY: side > 0 ? -Math.PI / 2 : Math.PI / 2, u: Math.random() * 0.6 });
+              spectatorColors.push(theme.seatColors[Math.floor(Math.random() * theme.seatColors.length)]);
+              if (Math.abs(z + 0.72) < 1.0 || z + 0.72 > len / 2 - 0.8) continue;
+              spectatorMatrices.push({ x: posX + side * 0.38, y: tH + 0.38, z: z + 0.72 + (Math.random() - 0.5) * 0.2, rotY: side > 0 ? -Math.PI / 2 : Math.PI / 2, u: 0.6 + Math.random() * 0.4 });
               spectatorColors.push(theme.seatColors[Math.floor(Math.random() * theme.seatColors.length)]);
             }
           }
@@ -3046,34 +3238,85 @@
 
             for (let x = -wid / 2 + 1.4; x <= wid / 2 - 1.4; x += 1.5) {
               if (Math.abs(x) < 1.2) continue;
-              spectatorMatrices.push({ x: x + (Math.random() - 0.5) * 0.25, y: tH + 0.38, z: posZ - side * 0.2, rotY: side > 0 ? Math.PI : 0 });
+              spectatorMatrices.push({ x: x + (Math.random() - 0.5) * 0.25, y: tH + 0.38, z: posZ - side * 0.2, rotY: side > 0 ? Math.PI : 0, u: Math.random() * 0.6 });
+              spectatorColors.push(theme.seatColors[Math.floor(Math.random() * theme.seatColors.length)]);
+              if (Math.abs(x + 0.75) < 1.0 || x + 0.75 > wid / 2 - 0.8) continue;
+              spectatorMatrices.push({ x: x + 0.75 + (Math.random() - 0.5) * 0.2, y: tH + 0.38, z: posZ + side * 0.38, rotY: side > 0 ? Math.PI : 0, u: 0.6 + Math.random() * 0.4 });
               spectatorColors.push(theme.seatColors[Math.floor(Math.random() * theme.seatColors.length)]);
             }
           }
         });
 
-        // Instanced 3D Spectators (Torso + Head combined geometry)
-        const specCount = spectatorMatrices.length;
+        // Instanced 3D Spectators (torso + head + raised arm, all InstancedMesh).
+        // Candidates are sorted by density rank 'u' so the quality level just changes the instance count.
+        const order = spectatorMatrices.map((d, i) => i).sort((a, b) => spectatorMatrices[a].u - spectatorMatrices[b].u);
+        const specCount = order.length;
         const specGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.72, 8);
         const specMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
         this.spectatorInstanced = new THREE.InstancedMesh(specGeo, specMat, specCount);
         this.spectatorInstanced.castShadow = true;
+        this.spectatorHeads = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 8, 6), new THREE.MeshStandardMaterial({ roughness: 0.7 }), specCount);
+        this.spectatorArms = new THREE.InstancedMesh(new THREE.BoxGeometry(0.09, 0.46, 0.09), new THREE.MeshStandardMaterial({ roughness: 0.7 }), specCount);
+        this.spectatorHeads.frustumCulled = false;
+        this.spectatorArms.frustumCulled = false;
+        this.spectatorInstanced.frustumCulled = false;
+        const skinTones = [0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0xffdbac];
 
         const dummy = new THREE.Object3D();
         const col = new THREE.Color();
         for (let i = 0; i < specCount; i++) {
-          const d = spectatorMatrices[i];
+          const d = spectatorMatrices[order[i]];
           dummy.position.set(d.x, d.y, d.z);
           dummy.rotation.set(0, d.rotY, 0);
           dummy.updateMatrix();
           this.spectatorInstanced.setMatrixAt(i, dummy.matrix);
-          col.setHex(spectatorColors[i]);
+          col.setHex(spectatorColors[order[i]]);
           this.spectatorInstanced.setColorAt(i, col);
-          this.spectatorData.push({ ...d, phase: Math.random() * Math.PI * 2, speed: 3 + Math.random() * 3, angle: Math.atan2(d.z, d.x) });
+          col.setHex(skinTones[Math.floor(Math.random() * skinTones.length)]);
+          this.spectatorHeads.setColorAt(i, col);
+          this.spectatorArms.setColorAt(i, col);
+          this.spectatorData.push({ ...d, phase: Math.random() * Math.PI * 2, speed: 3 + Math.random() * 3, angle: Math.atan2(d.z, d.x), armSide: Math.random() < 0.5 ? -1 : 1 });
         }
         this.spectatorInstanced.instanceMatrix.needsUpdate = true;
         if (this.spectatorInstanced.instanceColor) this.spectatorInstanced.instanceColor.needsUpdate = true;
-        stadiumGroup.add(this.spectatorInstanced);
+        if (this.spectatorHeads.instanceColor) this.spectatorHeads.instanceColor.needsUpdate = true;
+        if (this.spectatorArms.instanceColor) this.spectatorArms.instanceColor.needsUpdate = true;
+        stadiumGroup.add(this.spectatorInstanced, this.spectatorHeads, this.spectatorArms);
+
+        // Camera-flash pool (additive points among the crowd; slots scale with quality, 0 = disabled)
+        this.crowdFlashPoints = null;
+        this._crowdFlashBurst = 0;
+        this._crowdWaveStart = -1;
+        this._crowdWaveNext = 14 + Math.random() * 8;
+        this._crowdT = 0;
+        {
+          const maxSlots = QualityProfiles.high.flashSlots;
+          const fGeo = new THREE.BufferGeometry();
+          fGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxSlots * 3), 3));
+          fGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(maxSlots * 3), 3));
+          if (!this._flashTex) {
+            const c = document.createElement('canvas');
+            c.width = c.height = 64;
+            const g = c.getContext('2d');
+            const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grd.addColorStop(0, 'rgba(255,255,255,1)');
+            grd.addColorStop(0.25, 'rgba(255,255,255,0.7)');
+            grd.addColorStop(1, 'rgba(255,255,255,0)');
+            g.fillStyle = grd;
+            g.fillRect(0, 0, 64, 64);
+            this._flashTex = new THREE.CanvasTexture(c);
+          }
+          const fMat = new THREE.PointsMaterial({
+            size: 1.1, map: this._flashTex, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending,
+            depthWrite: false, fog: false, toneMapped: false, sizeAttenuation: true
+          });
+          this.crowdFlashPoints = new THREE.Points(fGeo, fMat);
+          this.crowdFlashPoints.frustumCulled = false;
+          this.crowdFlashPoints.visible = false;
+          this.crowdFlashLife = new Float32Array(maxSlots);
+          stadiumGroup.add(this.crowdFlashPoints);
+        }
+        this.applyStadiumQuality();
 
         // 2 Giant Live Jumbotron Scoreboards (North & South Upper Deck)
         this.jumbotronCanvas = document.createElement('canvas');
@@ -3083,6 +3326,9 @@
         this.jumbotronTex = new THREE.CanvasTexture(this.jumbotronCanvas);
 
         const jumboMat = new THREE.MeshBasicMaterial({ map: this.jumbotronTex });
+        this.jumbotronMat = jumboMat;
+        this._jumboLastTxt = null;
+        this.rebuildJumbotronSurface();
         const jumboFrameMat = new THREE.MeshStandardMaterial({ color: 0x09090b, metalness: 0.8, roughness: 0.2 });
 
         [-1, 1].forEach(side => {
@@ -3679,6 +3925,10 @@
         const shoeAccentMat = new THREE.MeshStandardMaterial({ color: prof.shoeColor || prof.jerseyPrimary, roughness: 0.35 });
         const hairMat = new THREE.MeshStandardMaterial({ color: prof.hairColor, roughness: 0.75 });
         const darkMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3 });
+        // Optional athletic detail (muscles, joints, shoe parts): shown by QualityProfiles.bodyDetail >= lvl
+        const detail = (mesh, lvl, shadow = false) => { markLod(mesh, lvl); mesh.userData.lodShadow = shadow; return mesh; };
+        const jerseyPlainMat = new THREE.MeshStandardMaterial({ color: prof.jerseyPrimary, roughness: 0.55 });
+        const accentMat = new THREE.MeshStandardMaterial({ color: prof.jerseySecondary, roughness: 0.5 });
 
         // 1. HIPS / PELVIS
         const hips = new THREE.Group();
@@ -3688,6 +3938,12 @@
         const pelvisMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.26, 16), shortsMat);
         pelvisMesh.castShadow = true;
         hips.add(pelvisMesh);
+
+        // Athletic shorts waistband
+        const waistband = detail(new THREE.Mesh(new THREE.TorusGeometry(0.224, 0.014, 8, 20), accentMat), 1);
+        waistband.rotation.x = Math.PI / 2;
+        waistband.position.y = 0.118;
+        hips.add(waistband);
 
         // 2. SPINE & SCULPTED ATHLETIC TORSO
         const spine = new THREE.Group();
@@ -3712,6 +3968,14 @@
         torsoMesh.castShadow = true;
         torsoMesh.receiveShadow = true;
         chest.add(torsoMesh);
+
+        // Pectoral volumes under the jersey (muscular chest)
+        [-1, 1].forEach(side => {
+          const pec = detail(new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), jerseyPlainMat), 2);
+          pec.scale.set(1.05, 0.78, 0.55);
+          pec.position.set(side * 0.105, 0.45, 0.15);
+          chest.add(pec);
+        });
 
         // Polo Collar
         const collar = new THREE.Mesh(
@@ -3883,12 +4147,28 @@
           const thigh = this.createSculptedLimb(0.098, 0.092, 0.072, 0.44, skinMat);
           hip.add(thigh);
 
+          // Quadriceps volume
+          const quad = detail(new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), skinMat), 2, true);
+          quad.scale.set(1, 1.9, 1);
+          quad.position.set(0, -0.27, 0.02);
+          hip.add(quad);
+
           const knee = new THREE.Group();
           knee.position.y = -0.44;
           hip.add(knee);
 
           const calf = this.createSculptedLimb(0.072, 0.078, 0.052, 0.42, skinMat);
           knee.add(calf);
+
+          // Kneecap (visible knee joint) & gastrocnemius volume
+          const kneeCap = detail(new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), skinMat), 1);
+          kneeCap.scale.set(1, 1.05, 0.8);
+          kneeCap.position.set(0, 0, 0.045);
+          knee.add(kneeCap);
+          const gastroc = detail(new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 10), skinMat), 2, true);
+          gastroc.scale.set(1, 2.0, 1);
+          gastroc.position.set(0, -0.13, -0.035);
+          knee.add(gastroc);
 
           // Ribbed Tennis Sock
           const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.054, 0.18, 14), whiteMat);
@@ -3910,6 +4190,32 @@
           toeCap.scale.set(1.0, 0.65, 1.2);
           toeCap.position.set(0, 0.015, 0.15);
           shoeGroup.add(sole, upper, toeCap);
+
+          // Tennis shoe detail: side stripes, laces, heel counter, tongue, collar & dark outsole
+          [-1, 1].forEach(s => {
+            const stripe = detail(new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.035, 0.12), whiteMat), 1);
+            stripe.position.set(s * 0.0655, 0.03, 0.02);
+            shoeGroup.add(stripe);
+          });
+          for (let li = 0; li < 4; li++) {
+            const lace = detail(new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.006, 0.012), whiteMat), 1);
+            lace.position.set(0, 0.0745, 0.01 + li * 0.03);
+            shoeGroup.add(lace);
+          }
+          const heelCounter = detail(new THREE.Mesh(new THREE.BoxGeometry(0.134, 0.06, 0.03), whiteMat), 1);
+          heelCounter.position.set(0, 0.03, -0.085);
+          shoeGroup.add(heelCounter);
+          const tongue = detail(new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.02, 0.07), whiteMat), 2);
+          tongue.position.set(0, 0.085, -0.015);
+          tongue.rotation.x = -0.5;
+          shoeGroup.add(tongue);
+          const collar = detail(new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.016, 8, 16), shoeAccentMat), 2);
+          collar.rotation.x = Math.PI / 2;
+          collar.position.set(0, 0.065, -0.01);
+          shoeGroup.add(collar);
+          const outsole = detail(new THREE.Mesh(new THREE.BoxGeometry(0.142, 0.012, 0.292), darkMat), 2);
+          outsole.position.set(0, -0.034, 0.045);
+          shoeGroup.add(outsole);
           ankle.add(shoeGroup);
 
           return { hip, knee, ankle };
@@ -4728,6 +5034,7 @@
         if (this.lightTowerPoles) this.lightTowerPoles.forEach(t => { t.castShadow = isHigh; });
         this.configureBloom();
         if (this.applyStadiumQuality) this.applyStadiumQuality();
+        this.applyJumbotronQuality();
         if (this.applyPlayerQuality) this.applyPlayerQuality();
         const lblQ = document.getElementById('lbl-active-quality');
         if (lblQ) lblQ.textContent = (mode === 'auto') ? 'AUTO' : level.toUpperCase();
@@ -4948,6 +5255,7 @@
         this.matchState = 'point_ended';
         sound.playCrowdCheer();
         sound.playScoreChime();
+        this.triggerCrowdFlashes(1);
 
         const isAce = (this.rallyCount === 1 && winner === this.scores.server);
         if (isAce && winner === 'p1') this.stats.aces++;
@@ -5040,6 +5348,7 @@
         this.matchState = 'match_over';
         this.lastMatchWinner = winner;
         sound.playCrowdCheer();
+        this.triggerCrowdFlashes(2.2);
         this.spawnConfetti();
         const isPlayer = (winner === 'p1');
 
@@ -6313,28 +6622,153 @@
           this.umpireHead.rotation.y = -targetAngle * 0.5;
         }
 
+        // Camera flashes among the crowd (key moments: points won)
+        this.updateCrowdFlashes(dt);
+
         // Instanced Spectators wave/jump on high rally or point end
         if (!this.spectatorInstanced || !this.spectatorData.length) return;
+        if (!this.jumboProfile().crowdWave) return; // low quality: static crowd, no animation
         const isExcited = (this.rallyCount > 3 || this.matchState === 'point_ended');
-        if (!isExcited && Math.random() > 0.3) return; // Optimize idle updates
 
-        const dummy = new THREE.Object3D();
-        const len = this.spectatorData.length;
-        // UPGRADE: traveling stadium "wave" — excitement sweeps around the bowl
-        const waveT = performance.now() / 1000;
+        // Periodic stadium "wave": a single sweep around the whole bowl every ~30-50 s
+        this._crowdT += dt;
+        const WAVE_W = 0.8;
+        let front = -99;
+        if (this._crowdWaveStart < 0 && this._crowdT >= this._crowdWaveNext) this._crowdWaveStart = this._crowdT;
+        if (this._crowdWaveStart >= 0) {
+          front = -Math.PI - WAVE_W + (this._crowdT - this._crowdWaveStart) * 1.3;
+          if (front > Math.PI + WAVE_W) {
+            this._crowdWaveStart = -1;
+            this._crowdWaveNext = this._crowdT + 30 + Math.random() * 20;
+            front = -99;
+          }
+        }
+        const waving = front > -90;
+        if (!isExcited && !waving && Math.random() > 0.3) return; // Optimize idle updates
+
+        const dummy = this._crowdDummy || (this._crowdDummy = new THREE.Object3D());
+        const len = this.crowdCount;
+        const TWO_PI = Math.PI * 2;
         for (let i = 0; i < len; i++) {
           const s = this.spectatorData[i];
           s.phase += dt * s.speed * (isExcited ? 2.2 : 0.7);
-          const wave = Math.max(0, Math.sin(waveT * 1.6 - s.angle * 3)) ** 3;
+          let wave = 0;
+          if (waving) {
+            let d = (s.angle - front) % TWO_PI;
+            if (d > Math.PI) d -= TWO_PI; else if (d < -Math.PI) d += TWO_PI;
+            if (d > -WAVE_W && d < WAVE_W) wave = 0.5 * (1 + Math.cos(Math.PI * d / WAVE_W));
+          }
           const hop = isExcited
             ? Math.abs(Math.sin(s.phase)) * (0.22 + wave * 0.35)
-            : Math.sin(s.phase) * 0.03 + wave * 0.12;
-          dummy.position.set(s.x, s.y + hop, s.z);
-          dummy.rotation.set(0, s.rotY, 0);
-          dummy.updateMatrix();
-          this.spectatorInstanced.setMatrixAt(i, dummy.matrix);
+            : Math.sin(s.phase) * 0.03 + wave * 0.3;
+          const arm = Math.max(wave, isExcited ? 0.55 + 0.45 * Math.sin(s.phase * 1.3) : 0);
+          this._poseSpectator(i, s, hop, arm, dummy);
         }
+        this._commitCrowd();
+      }
+
+      // Writes torso / head / raised-arm matrices of one spectator (arm scale 0 = lowered)
+      _poseSpectator(i, s, hop, arm, dummy) {
+        dummy.scale.set(1, 1, 1);
+        dummy.rotation.set(0, s.rotY, 0);
+        dummy.position.set(s.x, s.y + hop, s.z);
+        dummy.updateMatrix();
+        this.spectatorInstanced.setMatrixAt(i, dummy.matrix);
+        if (this.spectatorHeads.visible) {
+          dummy.position.y = s.y + hop + 0.5;
+          dummy.updateMatrix();
+          this.spectatorHeads.setMatrixAt(i, dummy.matrix);
+        }
+        if (this.spectatorArms.visible) {
+          dummy.position.set(s.x + Math.cos(s.rotY) * 0.22 * s.armSide, s.y + hop + 0.28 + 0.23 * arm, s.z - Math.sin(s.rotY) * 0.22 * s.armSide);
+          dummy.scale.set(1, Math.max(0.001, arm), 1);
+          dummy.updateMatrix();
+          this.spectatorArms.setMatrixAt(i, dummy.matrix);
+        }
+      }
+
+      _commitCrowd() {
         this.spectatorInstanced.instanceMatrix.needsUpdate = true;
+        if (this.spectatorHeads.visible) this.spectatorHeads.instanceMatrix.needsUpdate = true;
+        if (this.spectatorArms.visible) this.spectatorArms.instanceMatrix.needsUpdate = true;
+      }
+
+      // Scales crowd density / parts / shadows / flashes with the active quality level
+      applyStadiumQuality() {
+        if (!this.spectatorInstanced || !this.spectatorHeads || !this.spectatorData.length) return;
+        const p = this.jumboProfile();
+        const total = this.spectatorData.length;
+        let n = 0;
+        while (n < total && this.spectatorData[n].u < p.crowdFill) n++; // data is sorted by density rank
+        this.crowdCount = n;
+        this.spectatorInstanced.count = n;
+        this.spectatorHeads.count = n;
+        this.spectatorArms.count = n;
+        this.spectatorHeads.visible = !!p.crowdHeads;
+        this.spectatorArms.visible = !!p.crowdArms;
+        this.spectatorInstanced.castShadow = !!p.crowdShadows;
+        // Reset to the resting pose (also covers switching from an animated level to a static one)
+        const dummy = this._crowdDummy || (this._crowdDummy = new THREE.Object3D());
+        for (let i = 0; i < n; i++) this._poseSpectator(i, this.spectatorData[i], 0, 0, dummy);
+        this.spectatorInstanced.instanceMatrix.needsUpdate = true;
+        this.spectatorHeads.instanceMatrix.needsUpdate = true;
+        this.spectatorArms.instanceMatrix.needsUpdate = true;
+        // Flashes off until next trigger
+        if (this.crowdFlashPoints) {
+          this.crowdFlashLife.fill(0);
+          this.crowdFlashPoints.geometry.attributes.color.array.fill(0);
+          this.crowdFlashPoints.geometry.attributes.color.needsUpdate = true;
+          this.crowdFlashPoints.visible = false;
+        }
+        this._crowdFlashBurst = 0;
+      }
+
+      // Starts a burst of random camera flashes in the stands (power ~1 per point, higher for match end)
+      triggerCrowdFlashes(power = 1) {
+        if (!this.crowdFlashPoints || !(this.jumboProfile().flashSlots > 0)) return;
+        this._crowdFlashBurst = Math.max(this._crowdFlashBurst, 1.4 * power);
+        this._crowdFlashPower = power;
+      }
+
+      updateCrowdFlashes(dt) {
+        const fp = this.crowdFlashPoints;
+        if (!fp) return;
+        const slots = this.jumboProfile().flashSlots | 0;
+        if (slots <= 0 || !this.crowdCount) { if (fp.visible) fp.visible = false; return; }
+        const life = this.crowdFlashLife;
+        const posA = fp.geometry.attributes.position;
+        const colA = fp.geometry.attributes.color;
+        const amp = 2.4 * this.jumboProfile().flashAmbient;
+        const FL = 0.2;
+        let active = false;
+
+        if (this._crowdFlashBurst > 0) {
+          this._crowdFlashBurst -= dt;
+          let spawn = 22 * (this._crowdFlashPower || 1) * dt;
+          while (spawn > 0) {
+            if (Math.random() < spawn) {
+              for (let k = 0; k < slots; k++) {
+                if (life[k] > 0) continue;
+                const s = this.spectatorData[Math.floor(Math.random() * this.crowdCount)];
+                posA.setXYZ(k, s.x, s.y + 0.8, s.z);
+                life[k] = FL * (0.6 + Math.random() * 0.8);
+                posA.needsUpdate = true;
+                break;
+              }
+            }
+            spawn -= 1;
+          }
+        }
+
+        for (let k = 0; k < slots; k++) {
+          if (life[k] <= 0) continue;
+          life[k] -= dt;
+          const b = life[k] > 0 ? Math.min(1, life[k] / FL) * amp : 0;
+          colA.setXYZ(k, b, b * 0.97, b * 0.9);
+          active = true;
+        }
+        if (active) colA.needsUpdate = true;
+        fp.visible = active;
       }
 
       animate() {
@@ -6349,6 +6783,7 @@
           this.updateSpectatorsAndOfficials(dt);
           this.updateLedBoards(dt);
           this.updateWavingFlags(dt);
+          this.tickJumbotron();
         }
 
         this.updateCamera(dt);
