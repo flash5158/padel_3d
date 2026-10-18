@@ -4258,20 +4258,30 @@
         racketGroup.position.set(0, -0.02, 0.04);
         racketGroup.rotation.x = -Math.PI / 3;
 
+        // Quality-scaled carbon build (first call happens before qualityLevel exists -> medium fallback)
+        const qp = QualityProfiles[this.qualityLevel] || QualityProfiles.medium;
+        const rDetail = qp.racketDetail || 0;
         const isPadel = CourtThemes[this.courtTheme].isPadel;
-        const frameColor = isOpponent ? 0xf43f5e : 0x06b6d4;
-        const frameMat = new THREE.MeshStandardMaterial({ color: frameColor, metalness: 0.85, roughness: 0.18 });
-        const carbonMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.6, roughness: 0.35 });
-        const gripMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.7 });
+        const carbonTex = getCarbonTexture(qp.racketCarbonTex || 128);
+        const frameMat = new THREE.MeshStandardMaterial({ color: isOpponent ? 0xf43f5e : 0x06b6d4, metalness: 0.85, roughness: 0.18 });
+        // Real carbon-fibre frame: woven twill texture, high metalness, optional clearcoat on high
+        const carbonFrameMat = qp.racketClearcoat
+          ? new THREE.MeshPhysicalMaterial({ map: carbonTex, metalness: 0.75, roughness: 0.28, clearcoat: 1.0, clearcoatRoughness: 0.12 })
+          : new THREE.MeshStandardMaterial({ map: carbonTex, metalness: 0.75, roughness: 0.32 });
+        const carbonFlatMat = new THREE.MeshStandardMaterial({ color: 0x18181b, metalness: 0.6, roughness: 0.35 });
+        const gripMat = new THREE.MeshStandardMaterial({ map: getGripTexture(), roughness: 0.7 });
 
         // Handle & Butt Cap
         const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.22, 8), gripMat);
         handle.position.y = 0.08;
         racketGroup.add(handle);
+        const buttCap = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.025, 10), frameMat);
+        buttCap.position.y = -0.035;
+        racketGroup.add(buttCap);
 
         if (isPadel) {
           // Authentic 3D Padel Pala (Teardrop Carbon Head + Perforated Holes)
-          const palaHead = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.036, 24), carbonMat);
+          const palaHead = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.036, 24), carbonFrameMat);
           palaHead.rotation.x = Math.PI / 2;
           palaHead.scale.set(0.92, 1.0, 1.15);
           palaHead.position.y = 0.38;
@@ -4284,52 +4294,60 @@
           palaRim.position.y = 0.38;
           racketGroup.add(palaRim);
 
-          // Pala Bridge Heart
-          const bridgeL = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.14, 8), frameMat);
+          // Pala Bridge Heart (carbon)
+          const bridgeL = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.14, 8), carbonFrameMat);
           bridgeL.position.set(-0.04, 0.21, 0);
           bridgeL.rotation.z = 0.28;
-          const bridgeR = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.14, 8), frameMat);
+          const bridgeR = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.018, 0.14, 8), carbonFrameMat);
           bridgeR.position.set(0.04, 0.21, 0);
           bridgeR.rotation.z = -0.28;
           racketGroup.add(bridgeL, bridgeR);
         } else {
-          // Authentic 3D Pro Tennis Racket (Y-Throat + Oval Frame + String Bed + Stencil)
-          const throatL = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.16, 8), frameMat);
+          // Authentic 3D Pro Tennis Racket — full carbon frame (Y-Throat + Oval Head)
+          const throatL = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.16, 8), carbonFrameMat);
           throatL.position.set(-0.045, 0.24, 0);
           throatL.rotation.z = 0.34;
-          const throatR = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.16, 8), frameMat);
+          const throatR = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.16, 8), carbonFrameMat);
           throatR.position.set(0.045, 0.24, 0);
           throatR.rotation.z = -0.34;
-          const throatBar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.11, 8), carbonMat);
+          const throatBar = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.11, 8), carbonFrameMat);
           throatBar.rotation.z = Math.PI / 2;
           throatBar.position.set(0, 0.27, 0);
           racketGroup.add(throatL, throatR, throatBar);
 
-          const rim = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.018, 12, 32), frameMat);
+          const rim = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.018, 12, 32), carbonFrameMat);
           rim.scale.set(0.84, 1.18, 1.0);
           rim.position.y = 0.50;
           rim.castShadow = true;
           racketGroup.add(rim);
 
-          // Dense String Bed Texture
-          const sCanvas = document.createElement('canvas');
-          sCanvas.width = 128;
-          sCanvas.height = 128;
-          const sCtx = sCanvas.getContext('2d');
-          sCtx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
-          sCtx.lineWidth = 2;
-          for (let i = 0; i < 128; i += 8) {
-            sCtx.beginPath(); sCtx.moveTo(i, 0); sCtx.lineTo(i, 128); sCtx.stroke();
-            sCtx.beginPath(); sCtx.moveTo(0, i); sCtx.lineTo(128, i); sCtx.stroke();
+          // Accent pinstripe keeps the athlete's colors on the carbon frame (detail >= 1)
+          if (rDetail >= 1) {
+            const pinstripe = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 8, 40), frameMat);
+            pinstripe.scale.set(0.84, 1.18, 1.0);
+            pinstripe.position.y = 0.50;
+            pinstripe.position.z = 0.016;
+            racketGroup.add(pinstripe);
           }
-          const sTex = new THREE.CanvasTexture(sCanvas);
+
+          // Dense String Bed (shared cached texture, quality-scaled)
+          const strSize = rDetail >= 2 ? 256 : (rDetail >= 1 ? 128 : 64);
           const strings = new THREE.Mesh(
             new THREE.CircleGeometry(0.20, 24),
-            new THREE.MeshBasicMaterial({ map: sTex, transparent: true, side: THREE.DoubleSide })
+            new THREE.MeshBasicMaterial({ map: getStringBedTexture(strSize), transparent: true, side: THREE.DoubleSide })
           );
           strings.scale.set(0.84, 1.18, 1.0);
           strings.position.y = 0.50;
           racketGroup.add(strings);
+
+          // Grommet strip detail (detail >= 2)
+          if (rDetail >= 2) {
+            const grommets = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.008, 6, 32), carbonFlatMat);
+            grommets.scale.set(0.84, 1.18, 1.0);
+            grommets.position.y = 0.50;
+            grommets.position.z = -0.014;
+            racketGroup.add(grommets);
+          }
         }
 
         return racketGroup;
@@ -6258,52 +6276,107 @@
           char.swingTimer -= dt;
           const prog = 1.0 - Math.max(0, char.swingTimer / 0.44);
 
+          // --- KINETIC CHAIN: hips -> knees -> torso -> shoulder -> elbow -> wrist ---
+          // Each link fires after the previous one (phase-lagged smoothstep), like a real stroke:
+          // ground force -> hip rotation -> trunk uncoil -> shoulder -> elbow snap -> wrist snap.
+          const kc = (delay) => {
+            const x = Math.min(1, Math.max(0, (prog - delay) / (1 - delay)));
+            return x * x * (3 - 2 * x);
+          };
+          const pHips = kc(0.00), pKnee = kc(0.04), pTorso = kc(0.12), pSh = kc(0.22), pElb = kc(0.32), pWr = kc(0.42);
+          const dipDrive = Math.sin(Math.min(1, prog / 0.5) * Math.PI); // dip-then-drive for hips
+
           if (char.swingType === 'smash') {
             char.hips.position.y = 0.96 + Math.sin(prog * Math.PI) * 0.55;
-            char.chest.rotation.x = -0.35 + prog * 0.85;
-            char.chest.rotation.y = (0.5 - prog) * 1.4;
-            char.rightShoulder.rotation.set(-2.6 + prog * 3.4, 0, 0.2);
-            char.rightElbow.rotation.set(-0.9 + Math.sin(prog * Math.PI) * 0.8, 0, 0);
-            char.leftShoulder.rotation.set(-1.8 + prog * 2.2, 0, -0.3);
+            char.hips.rotation.y = 0.40 - pHips * 0.95;
+            char.chest.rotation.x = -0.35 + pTorso * 0.85;
+            char.chest.rotation.y = (0.5 - pTorso) * 1.4;
+            char.rightShoulder.rotation.set(-2.6 + pSh * 3.4, 0, 0.2);
+            char.rightElbow.rotation.set(-1.25 + Math.sin(pElb * Math.PI) * 1.05, 0, 0);
+            char.rightWrist.rotation.x = -0.35 + pWr * 0.7;
+            char.leftShoulder.rotation.set(-1.8 + pTorso * 2.2, 0, -0.3);
+            char.leftKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
+            char.rightKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
           } else if (char.swingType === 'backhand') {
-            char.chest.rotation.y = 1.05 - prog * 2.1;
-            char.rightShoulder.rotation.set(-0.4 - Math.sin(prog * Math.PI) * 0.9, 0.8 - prog * 1.9, -0.3 + prog * 0.9);
-            char.rightElbow.rotation.set(-0.8 + prog * 0.4, 0, 0);
-            char.leftShoulder.rotation.set(-0.4 - prog * 0.6, 0.4 - prog * 1.2, 0.3);
+            char.hips.position.y = 0.91 - dipDrive * 0.06;
+            char.hips.rotation.y = 0.45 - pHips * 1.00;
+            char.hips.position.x = -0.08 + pHips * 0.16;
+            char.chest.rotation.y = 1.05 - pTorso * 2.1;
+            char.chest.rotation.x = 0.08 + pTorso * 0.12;
+            char.rightShoulder.rotation.set(-0.4 - Math.sin(pSh * Math.PI) * 0.9, 0.8 - pSh * 1.9, -0.3 + pSh * 0.9);
+            char.rightElbow.rotation.set(-0.85 + pElb * 0.45, 0, 0);
+            char.rightWrist.rotation.x = -0.3 + pWr * 0.45;
+            char.leftShoulder.rotation.set(-0.4 - pTorso * 0.3, 0.4 + pTorso * 0.7, 0.3);
             char.leftElbow.rotation.set(-0.85, 0, 0);
+            char.leftKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
+            char.rightKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
           } else if (char.swingType === 'slice') {
-            char.chest.rotation.y = -0.8 + prog * 1.5;
-            char.rightShoulder.rotation.set(-1.1 + prog * 1.2, -0.7 + prog * 1.5, 0.5);
-            char.rightElbow.rotation.set(-0.5, 0, 0);
+            char.hips.position.y = 0.89 - dipDrive * 0.05;
+            char.hips.rotation.y = -0.25 + pHips * 0.60;
+            char.chest.rotation.y = -0.8 + pTorso * 1.5;
+            char.chest.rotation.x = 0.12;
+            char.rightShoulder.rotation.set(-1.55 + pSh * 1.15, -0.7 + pSh * 1.5, 0.5 - pSh * 0.2);
+            char.rightElbow.rotation.set(-0.35, 0, 0);
             char.rightWrist.rotation.z = 0.45;
+            char.rightWrist.rotation.x = -0.15;
+            char.leftShoulder.rotation.set(-0.5, 0.3 - pTorso * 0.5, -0.35);
+            char.leftKnee.rotation.x = 0.50 + (1 - pKnee) * 0.30;
+            char.rightKnee.rotation.x = 0.50 + (1 - pKnee) * 0.30;
           } else {
-            char.chest.rotation.y = -1.1 + prog * 2.3;
-            char.rightShoulder.rotation.set(-0.3 - Math.sin(prog * Math.PI) * 1.15, -0.9 + prog * 2.2, 0.6 - prog * 0.8);
-            char.rightElbow.rotation.set(-0.5 - prog * 0.65, 0, 0);
-            char.rightWrist.rotation.z = Math.sin(prog * Math.PI) * 0.5;
-            char.leftShoulder.rotation.set(-0.6, 0.4 - prog * 0.8, -0.4);
-            char.leftElbow.rotation.set(-0.9, 0, 0);
+            // Forehand: full kinetic chain, low-to-high topspin path
+            char.hips.position.y = 0.91 - dipDrive * 0.07 + pHips * 0.03;
+            char.hips.rotation.y = -0.45 + pHips * 1.00;
+            char.hips.position.x = 0.08 - pHips * 0.16;
+            char.chest.rotation.y = -1.05 + pTorso * 2.3;
+            char.chest.rotation.x = 0.10 + pTorso * 0.15;
+            char.rightShoulder.rotation.set(-0.3 - Math.sin(pSh * Math.PI) * 1.15, -0.9 + pSh * 2.2, 0.6 - pSh * 0.8);
+            char.rightElbow.rotation.set(-0.7 + pElb * 0.25 - Math.sin(pElb * Math.PI) * 0.35, 0, 0);
+            char.rightWrist.rotation.z = Math.sin(pWr * Math.PI) * 0.5;
+            char.rightWrist.rotation.x = -0.40 + pWr * 0.55;
+            char.leftShoulder.rotation.set(-0.6, 0.4 - pTorso * 0.8, -0.4);
+            char.leftElbow.rotation.set(-0.9 - pTorso * 0.3, 0, 0);
+            char.leftKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
+            char.rightKnee.rotation.x = 0.35 + (1 - pKnee) * 0.5;
           }
 
           if (char.swingTimer <= 0) {
             char.state = 'idle';
             char.chest.rotation.set(0, 0, 0);
             char.rightWrist.rotation.set(0, 0, 0);
+            char.hips.rotation.y = 0;
           }
         } else if (char.state === 'serving') {
           char.swingTimer -= dt;
           const prog = 1.0 - Math.max(0, char.swingTimer / 0.52);
 
-          char.hips.position.y = 0.95 + Math.sin(prog * Math.PI) * 0.48;
-          char.spine.rotation.x = -0.35 + prog * 0.75;
-          char.chest.rotation.y = -0.75 + prog * 1.65;
-          char.leftShoulder.rotation.set(-2.4 + prog * 2.2, 0, -0.2);
-          char.rightShoulder.rotation.set(-2.7 + prog * 3.5, 0, 0.25);
-          char.rightElbow.rotation.set(-1.1 + Math.sin(prog * Math.PI) * 1.0, 0, 0);
+          // --- SERVE KINETIC CHAIN: knee bend -> leg drive -> hip coil -> trunk -> shoulder -> elbow -> pronation ---
+          const kc = (delay) => {
+            const x = Math.min(1, Math.max(0, (prog - delay) / (1 - delay)));
+            return x * x * (3 - 2 * x);
+          };
+          const pHips = kc(0.00), pKnee = kc(0.05), pTorso = kc(0.14), pSh = kc(0.24), pElb = kc(0.34), pWr = kc(0.44);
+          const legDip = Math.sin(Math.min(1, prog / 0.40) * Math.PI);          // knee bend loading
+          const legDrive = Math.sin(Math.min(1, Math.max(0, prog - 0.22) / 0.78) * Math.PI); // explosive extension
+
+          char.hips.position.y = 0.95 - legDip * 0.11 + legDrive * 0.50;
+          char.hips.rotation.y = -0.40 + pHips * 0.90;
+          char.leftKnee.rotation.x = 0.30 + (1 - pKnee) * 0.62;
+          char.rightKnee.rotation.x = 0.30 + (1 - pKnee) * 0.62;
+          char.spine.rotation.x = -0.35 + pTorso * 0.75;
+          char.chest.rotation.y = -0.75 + pTorso * 1.65;
+          char.chest.rotation.x = -0.30 + pTorso * 0.70;
+          char.leftShoulder.rotation.set(-2.4 + kc(0.28) * 2.2, 0, -0.2);
+          char.leftElbow.rotation.set(-0.15, 0, 0);
+          char.rightShoulder.rotation.set(-2.7 + pSh * 3.5, 0, 0.25);
+          char.rightElbow.rotation.set(-1.30 + Math.sin(pElb * Math.PI) * 0.40 + pElb * 0.90, 0, 0);
+          char.rightWrist.rotation.y = -pWr * 1.15;   // pronation snap through contact
+          char.rightWrist.rotation.x = -0.25 + pWr * 0.45;
 
           if (char.swingTimer <= 0) {
             char.state = 'idle';
             char.chest.rotation.set(0, 0, 0);
+            char.rightWrist.rotation.set(0, 0, 0);
+            char.hips.rotation.y = 0;
           }
         } else {
           char.chest.rotation.y += (0 - char.chest.rotation.y) * dt * 10;
