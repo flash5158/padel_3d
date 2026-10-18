@@ -724,7 +724,7 @@
           <select id="sel-quality" class="bg-black/50 text-white text-xs rounded-lg px-2 py-1.5 border border-white/15 cursor-pointer">
             <option value="auto" selected>Auto (adaptativo)</option>
             <option value="high">Alta (4K HDR + Bloom)</option>
-            <option value="medium">Media (Equilibrada)</option>
+            <option value="medium">Media (Equilibrada + Bloom ligero)</option>
             <option value="low">Baja (Móvil Rápido)</option>
           </select>
         </div>
@@ -1909,6 +1909,368 @@
       return { diffuseTex, normalTex, canvas, ctx };
     }
 
+    // =====================================================================
+    // QUALITY PROFILES — every new visual detail scales through this table.
+    // 'low' keeps the previous lightweight look (no post-processing at all).
+    // =====================================================================
+    const QualityProfiles = {
+      high: {
+        bloom: true, bloomHDR: true, bloomMips: 5, bloomRes: 0.5, bloomStrength: 0.62, bloomThreshold: 0.92,
+        bloomThresholdLDR: 0.78, bloomKnee: 0.55, bloomScatter: 0.74, msaa: 4, dither: true,
+        crowdFill: 1.0, crowdHeads: true, crowdArms: true, crowdShadows: true, crowdEvery: 1,
+        flashSlots: 40, flashAmbient: 1.0,
+        jumboScale: 2, jumboFps: 12, jumboAnim: true, jumboScanlines: true,
+        bodyDetail: 2, racketDetail: 2, racketCarbonTex: 256, racketClearcoat: true
+      },
+      medium: {
+        bloom: true, bloomHDR: true, bloomMips: 4, bloomRes: 0.25, bloomStrength: 0.5, bloomThreshold: 0.95,
+        bloomThresholdLDR: 0.8, bloomKnee: 0.5, bloomScatter: 0.7, msaa: 2, dither: false,
+        crowdFill: 0.75, crowdHeads: true, crowdArms: true, crowdShadows: false, crowdEvery: 2,
+        flashSlots: 16, flashAmbient: 0.6,
+        jumboScale: 1, jumboFps: 5, jumboAnim: true, jumboScanlines: false,
+        bodyDetail: 1, racketDetail: 1, racketCarbonTex: 128, racketClearcoat: false
+      },
+      low: {
+        bloom: false, bloomHDR: false, bloomMips: 0, bloomRes: 0.25, bloomStrength: 0, bloomThreshold: 1,
+        bloomThresholdLDR: 1, bloomKnee: 0.5, bloomScatter: 0.7, msaa: 0, dither: false,
+        crowdFill: 0.5, crowdHeads: false, crowdArms: false, crowdShadows: false, crowdEvery: 3,
+        flashSlots: 6, flashAmbient: 0.35,
+        jumboScale: 0.75, jumboFps: 2, jumboAnim: false, jumboScanlines: false,
+        bodyDetail: 0, racketDetail: 0, racketCarbonTex: 64, racketClearcoat: false
+      }
+    };
+
+    // =====================================================================
+    // CUSTOM BLOOM PIPELINE (no EffectComposer dependency, single file)
+    // scene -> HDR render target (MSAA when WebGL2) -> soft-knee bright pass
+    // -> 13-tap dual-filter downsample chain -> tent upsample chain
+    // -> composite (+ACES tone mapping when HDR, + dither) -> screen.
+    // Falls back gracefully: HDR -> LDR (RGBA8) -> disabled (direct render).
+    // =====================================================================
+    class BloomPipeline {
+      constructor(renderer) {
+        this.renderer = renderer;
+        this.active = false;
+        this.hdr = false;
+        this.profile = null;
+        this.sceneRT = null;
+        this.down = [];
+        this.up = [];
+        this.size = new THREE.Vector2();
+        this.strengthMul = 1.0;
+        this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        this.scene = new THREE.Scene();
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([0, 0, 2, 0, 0, 2]), 2));
+        this.quad = new THREE.Mesh(geo, null);
+        this.quad.frustumCulled = false;
+        this.scene.add(this.quad);
+
+        const vert = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+        const mk = (frag, uniforms) => new THREE.ShaderMaterial({
+          uniforms, vertexShader: vert, fragmentShader: frag,
+          depthTest: false, depthWrite: false, transparent: false, toneMapped: false
+        });
+
+        this.matPre = mk(`
+          precision highp float;
+          uniform sampler2D tSrc; uniform vec2 texel; uniform vec3 thr; varying vec2 vUv;
+          vec3 pf(vec3 c){
+            c = min(c, vec3(thr.z));
+            float br = max(max(c.r, c.g), c.b);
+            float soft = clamp(br - thr.x + thr.y, 0.0, 2.0 * thr.y);
+            soft = soft * soft / (4.0 * thr.y + 0.0001);
+            float k = max(soft, br - thr.x) / max(br, 0.0001);
+            return c * k;
+          }
+          float lum(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+          void main(){
+            vec3 a = pf(texture2D(tSrc, vUv + texel * vec2(-1.0, -1.0)).rgb);
+            vec3 b = pf(texture2D(tSrc, vUv + texel * vec2( 1.0, -1.0)).rgb);
+            vec3 c = pf(texture2D(tSrc, vUv + texel * vec2(-1.0,  1.0)).rgb);
+            vec3 d = pf(texture2D(tSrc, vUv + texel * vec2( 1.0,  1.0)).rgb);
+            float wa = 1.0 / (1.0 + lum(a)), wb = 1.0 / (1.0 + lum(b)), wc = 1.0 / (1.0 + lum(c)), wd = 1.0 / (1.0 + lum(d));
+            gl_FragColor = vec4((a * wa + b * wb + c * wc + d * wd) / (wa + wb + wc + wd), 1.0);
+          }`, {
+          tSrc: { value: null }, texel: { value: new THREE.Vector2() }, thr: { value: new THREE.Vector3(1, 0.5, 24) }
+        });
+
+        this.matDown = mk(`
+          precision highp float;
+          uniform sampler2D tSrc; uniform vec2 texel; varying vec2 vUv;
+          vec3 s(vec2 o){ return texture2D(tSrc, vUv + o * texel).rgb; }
+          void main(){
+            vec3 e = s(vec2( 0.0,  0.0));
+            vec3 a = s(vec2(-2.0,  2.0)), b = s(vec2(0.0,  2.0)), c = s(vec2(2.0,  2.0));
+            vec3 d = s(vec2(-2.0,  0.0)), f = s(vec2(2.0,  0.0));
+            vec3 g = s(vec2(-2.0, -2.0)), h = s(vec2(0.0, -2.0)), i = s(vec2(2.0, -2.0));
+            vec3 j = s(vec2(-1.0,  1.0)), k = s(vec2(1.0,  1.0)), l = s(vec2(-1.0, -1.0)), m = s(vec2(1.0, -1.0));
+            vec3 r = e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625 + (j + k + l + m) * 0.125;
+            gl_FragColor = vec4(r, 1.0);
+          }`, { tSrc: { value: null }, texel: { value: new THREE.Vector2() } });
+
+        this.matUp = mk(`
+          precision highp float;
+          uniform sampler2D tLow; uniform sampler2D tHigh; uniform vec2 texel; uniform float scatter; varying vec2 vUv;
+          vec3 s(vec2 o){ return texture2D(tLow, vUv + o * texel).rgb; }
+          void main(){
+            vec3 t = s(vec2(-1.0, 1.0)) + s(vec2(1.0, 1.0)) + s(vec2(-1.0, -1.0)) + s(vec2(1.0, -1.0))
+                   + 2.0 * (s(vec2(0.0, 1.0)) + s(vec2(0.0, -1.0)) + s(vec2(-1.0, 0.0)) + s(vec2(1.0, 0.0)))
+                   + 4.0 * s(vec2(0.0, 0.0));
+            t /= 16.0;
+            vec3 h = texture2D(tHigh, vUv).rgb;
+            gl_FragColor = vec4(mix(h, t, scatter), 1.0);
+          }`, {
+          tLow: { value: null }, tHigh: { value: null }, texel: { value: new THREE.Vector2() }, scatter: { value: 0.7 }
+        });
+
+        this.matComp = mk(`
+          precision highp float;
+          uniform sampler2D tScene; uniform sampler2D tBloom;
+          uniform float strength; uniform float exposure; uniform float uTone; uniform float uDither; uniform vec3 tint;
+          varying vec2 vUv;
+          vec3 RRTAndODTFit(vec3 v){
+            vec3 a = v * (v + 0.0245786) - 0.000090537;
+            vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+            return a / b;
+          }
+          vec3 ACESFilmic(vec3 color){
+            const mat3 ACESInputMat = mat3(vec3(0.59719, 0.07600, 0.02840), vec3(0.35458, 0.90834, 0.13383), vec3(0.04823, 0.01566, 0.83777));
+            const mat3 ACESOutputMat = mat3(vec3(1.60475, -0.10208, -0.00327), vec3(-0.53108, 1.10813, -0.07276), vec3(-0.07367, -0.00605, 1.07602));
+            color *= exposure / 0.6;
+            color = ACESInputMat * color;
+            color = RRTAndODTFit(color);
+            color = ACESOutputMat * color;
+            return clamp(color, 0.0, 1.0);
+          }
+          float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+          void main(){
+            vec3 c = texture2D(tScene, vUv).rgb;
+            c += texture2D(tBloom, vUv).rgb * tint * strength;
+            if (uTone > 0.5) c = ACESFilmic(c);
+            if (uDither > 0.5) c += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
+            gl_FragColor = vec4(c, 1.0);
+          }`, {
+          tScene: { value: null }, tBloom: { value: null }, strength: { value: 0.5 }, exposure: { value: 1.0 },
+          uTone: { value: 1 }, uDither: { value: 0 }, tint: { value: new THREE.Vector3(1.0, 0.97, 0.92) }
+        });
+      }
+
+      _hdrSupported() {
+        const r = this.renderer;
+        try {
+          if (r.capabilities.isWebGL2) return !!(r.extensions.has('EXT_color_buffer_float') || r.extensions.has('EXT_color_buffer_half_float'));
+          return !!(r.extensions.has('OES_texture_half_float') && r.extensions.has('EXT_color_buffer_half_float'));
+        } catch (e) { return false; }
+      }
+
+      _freeTargets() {
+        if (this.sceneRT) this.sceneRT.dispose();
+        this.down.forEach(t => t.dispose());
+        this.up.forEach(t => t.dispose());
+        this.sceneRT = null;
+        this.down = [];
+        this.up = [];
+      }
+
+      _allocate(hdr) {
+        this._freeTargets();
+        const r = this.renderer, p = this.profile;
+        r.getDrawingBufferSize(this.size);
+        const W = Math.max(8, this.size.x | 0), H = Math.max(8, this.size.y | 0);
+        const type = hdr ? THREE.HalfFloatType : THREE.UnsignedByteType;
+        const base = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type, generateMipmaps: false, stencilBuffer: false };
+        try {
+          if (p.msaa > 0 && r.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) {
+            this.sceneRT = new THREE.WebGLMultisampleRenderTarget(W, H, Object.assign({ depthBuffer: true }, base));
+            this.sceneRT.samples = p.msaa;
+          } else {
+            this.sceneRT = new THREE.WebGLRenderTarget(W, H, Object.assign({ depthBuffer: true }, base));
+          }
+          let w = Math.max(4, Math.round(W * p.bloomRes)), h = Math.max(4, Math.round(H * p.bloomRes));
+          for (let i = 0; i < p.bloomMips; i++) {
+            this.down.push(new THREE.WebGLRenderTarget(w, h, Object.assign({ depthBuffer: false }, base)));
+            if (i < p.bloomMips - 1) this.up.push(new THREE.WebGLRenderTarget(w, h, Object.assign({ depthBuffer: false }, base)));
+            w = Math.max(2, w >> 1);
+            h = Math.max(2, h >> 1);
+          }
+          // Verify the GPU really accepts these framebuffers (half-float / MSAA support varies on mobile)
+          const gl = r.getContext();
+          let ok = true;
+          [this.sceneRT, this.down[0]].forEach(rt => {
+            r.setRenderTarget(rt);
+            if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) ok = false;
+          });
+          r.setRenderTarget(null);
+          while (gl.getError() !== gl.NO_ERROR) { /* drain */ }
+          if (!ok) this._freeTargets();
+          return ok;
+        } catch (e) {
+          r.setRenderTarget(null);
+          this._freeTargets();
+          return false;
+        }
+      }
+
+      // Returns true when bloom is running after configuration
+      configure(profile) {
+        this.profile = profile;
+        this.active = false;
+        this.hdr = false;
+        if (!profile || !profile.bloom) {
+          this._freeTargets();
+          this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          return false;
+        }
+        const modes = (profile.bloomHDR && this._hdrSupported()) ? [true, false] : [false];
+        for (let i = 0; i < modes.length; i++) {
+          if (this._allocate(modes[i])) { this.hdr = modes[i]; this.active = true; break; }
+        }
+        if (!this.active) {
+          this._freeTargets();
+          this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          return false;
+        }
+        // HDR: scene stays linear and the composite pass applies ACES (same curve as the direct path)
+        this.renderer.toneMapping = this.hdr ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
+        return true;
+      }
+
+      resize() {
+        if (this.active && this.profile) {
+          if (!this._allocate(this.hdr)) this.disable();
+        }
+      }
+
+      disable() {
+        this.active = false;
+        this._freeTargets();
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      }
+
+      _pass(mat, target) {
+        this.quad.material = mat;
+        this.renderer.setRenderTarget(target);
+        this.renderer.render(this.scene, this.camera);
+      }
+
+      render(scene, camera, exposure) {
+        const r = this.renderer, p = this.profile;
+        r.setRenderTarget(this.sceneRT);
+        r.render(scene, camera);
+
+        const thresh = this.hdr ? p.bloomThreshold : p.bloomThresholdLDR;
+        const n = this.down.length;
+        let u = this.matPre.uniforms;
+        u.tSrc.value = this.sceneRT.texture;
+        u.texel.value.set(1 / this.sceneRT.width, 1 / this.sceneRT.height);
+        u.thr.value.set(thresh, p.bloomKnee, this.hdr ? 24 : 1);
+        this._pass(this.matPre, this.down[0]);
+
+        u = this.matDown.uniforms;
+        for (let i = 1; i < n; i++) {
+          u.tSrc.value = this.down[i - 1].texture;
+          u.texel.value.set(1 / this.down[i - 1].width, 1 / this.down[i - 1].height);
+          this._pass(this.matDown, this.down[i]);
+        }
+
+        u = this.matUp.uniforms;
+        u.scatter.value = p.bloomScatter;
+        let low = this.down[n - 1];
+        for (let i = n - 2; i >= 0; i--) {
+          u.tLow.value = low.texture;
+          u.tHigh.value = this.down[i].texture;
+          u.texel.value.set(1 / low.width, 1 / low.height);
+          this._pass(this.matUp, this.up[i]);
+          low = this.up[i];
+        }
+
+        u = this.matComp.uniforms;
+        u.tScene.value = this.sceneRT.texture;
+        u.tBloom.value = low.texture;
+        u.strength.value = p.bloomStrength * this.strengthMul;
+        u.exposure.value = exposure;
+        u.uTone.value = this.hdr ? 1 : 0;
+        u.uDither.value = p.dither ? 1 : 0;
+        this._pass(this.matComp, null);
+      }
+    }
+
+    // --- Shared procedural textures for the athlete gear / crowd (cached: zero GC churn on rebuilds) ---
+    const _gearTexCache = {};
+    function getCarbonTexture(size) {
+      const key = 'carbon' + size;
+      if (_gearTexCache[key]) return _gearTexCache[key];
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#08080b';
+      ctx.fillRect(0, 0, size, size);
+      const n = 8, cell = size / n;
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const over = ((x + y) % 4) < 2; // 2x2 twill
+          const gx = x * cell, gy = y * cell;
+          const g = over ? ctx.createLinearGradient(gx, gy, gx, gy + cell) : ctx.createLinearGradient(gx, gy, gx + cell, gy);
+          g.addColorStop(0, over ? '#4a4a55' : '#2c2c34');
+          g.addColorStop(0.5, over ? '#1c1c22' : '#121216');
+          g.addColorStop(1, over ? '#0d0d11' : '#07070a');
+          ctx.fillStyle = g;
+          ctx.fillRect(gx + 0.5, gy + 0.5, cell - 1, cell - 1);
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
+      _gearTexCache[key] = tex;
+      return tex;
+    }
+    function getGripTexture() {
+      if (_gearTexCache.grip) return _gearTexCache.grip;
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, 64, 128);
+      ctx.strokeStyle = 'rgba(100,116,139,0.55)';
+      ctx.lineWidth = 3;
+      for (let i = -128; i < 192; i += 16) {
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(64, i + 64); ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      _gearTexCache.grip = tex;
+      return tex;
+    }
+    function getStarFlashTexture() {
+      if (_gearTexCache.star) return _gearTexCache.star;
+      const c = document.createElement('canvas');
+      c.width = c.height = 64;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 30);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.18, 'rgba(255,250,235,0.85)');
+      g.addColorStop(0.5, 'rgba(255,240,210,0.18)');
+      g.addColorStop(1, 'rgba(255,240,210,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 64, 64);
+      ctx.globalCompositeOperation = 'lighter';
+      const s = ctx.createLinearGradient(0, 32, 64, 32);
+      s.addColorStop(0, 'rgba(255,255,255,0)');
+      s.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+      s.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = s; ctx.fillRect(0, 30, 64, 4);
+      const v = ctx.createLinearGradient(32, 0, 32, 64);
+      v.addColorStop(0, 'rgba(255,255,255,0)');
+      v.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+      v.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = v; ctx.fillRect(30, 0, 4, 64);
+      const tex = new THREE.CanvasTexture(c);
+      _gearTexCache.star = tex;
+      return tex;
+    }
+
     // --- GAME ENGINE CORE CLASS ---
     class GameEngine {
       constructor() {
@@ -2056,6 +2418,44 @@
         this.fillLight = new THREE.DirectionalLight(0x93c5fd, 0.48);
         this.fillLight.position.set(-16, 20, -16);
         this.scene.add(this.fillLight);
+
+        // Custom bloom (calibrated per quality level; 'low' renders straight to screen)
+        this.bloom = new BloomPipeline(this.renderer);
+        this.configureBloom();
+      }
+
+      // Re-flags every material so programs recompile after a tone-mapping pipeline switch
+      refreshMaterials() {
+        this.scene.traverse(o => {
+          if (!o.material) return;
+          if (Array.isArray(o.material)) o.material.forEach(m => { m.needsUpdate = true; });
+          else o.material.needsUpdate = true;
+        });
+      }
+
+      configureBloom() {
+        if (!this.bloom) return;
+        const profile = QualityProfiles[this.qualityLevel] || QualityProfiles.medium;
+        try { this.bloom.configure(profile); } catch (err) { this.bloom.disable(); }
+        this.refreshMaterials();
+      }
+
+      renderFrame() {
+        if (this.bloom && this.bloom.active) {
+          try {
+            const th = CourtThemes[this.courtTheme];
+            // Night arenas carry far more emissive light; daylight arenas get a gentler glow
+            this.bloom.strengthMul = (th && th.isNight) ? 1.0 : 0.72;
+            this.bloom.render(this.scene, this.camera, this.renderer.toneMappingExposure);
+            return;
+          } catch (err) {
+            console.warn('Bloom desactivado por error de GPU', err);
+            this.renderer.setRenderTarget(null);
+            this.bloom.disable();
+            this.refreshMaterials();
+          }
+        }
+        this.renderer.render(this.scene, this.camera);
       }
 
       formatPointIndices() {
@@ -3921,6 +4321,10 @@
           this.camera.aspect = window.innerWidth / window.innerHeight;
           this.camera.updateProjectionMatrix();
           this.renderer.setSize(window.innerWidth, window.innerHeight);
+          if (this.bloom) {
+            clearTimeout(this._bloomResizeT);
+            this._bloomResizeT = setTimeout(() => { if (this.bloom) this.bloom.resize(); }, 120);
+          }
         });
 
         window.addEventListener('keydown', (e) => {
@@ -4055,6 +4459,11 @@
           this.currentCamIndex = parseInt(selCamera.value, 10) % this.camModes.length;
           const labels = { chase: 'CAM: TRASERA', broadcast: 'CAM: TV BROADCAST', action: 'CAM: ACCIÓN PRO', topdown: 'CAM: TÁCTICA AÉREA' };
           document.getElementById('cam-mode-label').textContent = labels[this.camModes[this.currentCamIndex]];
+        });
+        const chkPostfx = document.getElementById('chk-postfx');
+        const postfxOverlay = document.getElementById('postfx-overlay');
+        if (chkPostfx && postfxOverlay) chkPostfx.addEventListener('change', () => {
+          postfxOverlay.classList.toggle('off', !chkPostfx.checked);
         });
         const chkShadows = document.getElementById('chk-shadows');
         if (chkShadows) chkShadows.addEventListener('change', () => {
@@ -4317,6 +4726,9 @@
         if (this.lightPools) this.lightPools.forEach(p => { p.visible = isHigh; });
         if (this.lightTowerExtras) this.lightTowerExtras.forEach(e => { e.visible = isHigh; });
         if (this.lightTowerPoles) this.lightTowerPoles.forEach(t => { t.castShadow = isHigh; });
+        this.configureBloom();
+        if (this.applyStadiumQuality) this.applyStadiumQuality();
+        if (this.applyPlayerQuality) this.applyPlayerQuality();
         const lblQ = document.getElementById('lbl-active-quality');
         if (lblQ) lblQ.textContent = (mode === 'auto') ? 'AUTO' : level.toUpperCase();
         const chk = document.getElementById('chk-shadows');
@@ -5941,7 +6353,7 @@
 
         this.updateCamera(dt);
         this.drawRadar();
-        this.renderer.render(this.scene, this.camera);
+        this.renderFrame();
       }
     }
 
