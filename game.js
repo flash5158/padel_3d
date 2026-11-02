@@ -279,6 +279,27 @@ class TennisAudioPro {
     });
   }
 
+  playFanfare() {
+    this.init();
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const start = t + idx * 0.12;
+      const dur = idx === notes.length - 1 ? 0.65 : 0.18;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      g.gain.setValueAtTime(0.18, start);
+      g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
+    });
+  }
+
   // --- High-Energy Sports Synthwave / Arcade Music Engine (124 BPM) ---
   startMusic() {
     this.init();
@@ -5581,12 +5602,16 @@ class TennisGameEngine {
       this.connectToPeer(roomParam.toUpperCase());
     }
 
-    if (urlParams.get('controls')) {
-      this.setControlMode(urlParams.get('controls'));
+    const validControls = ['keyboard', 'mouse', 'mobile'];
+    const ctrlParam = urlParams.get('controls');
+    if (ctrlParam && validControls.includes(ctrlParam)) {
+      this.setControlMode(ctrlParam);
     }
 
     if (urlParams.get('autostart')) {
-      const targetMap = urlParams.get('map') || 'stadium';
+      const validMaps = ['stadium', 'beach', 'zen', 'whitehouse'];
+      const rawMap = urlParams.get('map');
+      const targetMap = (rawMap && validMaps.includes(rawMap)) ? rawMap : 'stadium';
       this.setMap(targetMap, false);
       this.applyProfileAndStart('ai');
     }
@@ -5809,45 +5834,48 @@ class TennisGameEngine {
 
   setupDataConnection() {
     if (!this.conn) return;
+    const validMaps = ['stadium', 'beach', 'zen', 'whitehouse'];
 
     this.conn.on('data', (data) => {
+      if (!data || typeof data !== 'object') return;
       if (data.type === 'sync' && this.gameMode === 'online_guest') {
+        if (!data.p1 || !data.b || !data.sc) return;
         // Guest receives authoritative state from host
         // Smooth target interpolation for Player 1 (Host) to prevent teleports
-        this.player.netTargetPos.set(data.p1.x, 0, data.p1.z);
-        this.player.runCycle = data.p1.rc;
+        this.player.netTargetPos.set(Number(data.p1.x) || 0, 0, Number(data.p1.z) || 0);
+        this.player.runCycle = Number(data.p1.rc) || 0;
         if (data.p1.sw && !this.player.isSwinging) {
-          this.startSwingAnimation(this.player, data.p1.st || 'forehand');
+          this.startSwingAnimation(this.player, data.p1.st === 'backhand' ? 'backhand' : 'forehand');
         }
 
         // Smooth Ball Interpolation without jitter or teleports
-        const bTarget = this._v1.set(data.b.x, data.b.y, data.b.z);
+        const bTarget = this._v1.set(Number(data.b.x) || 0, Number(data.b.y) || 0, Number(data.b.z) || 0);
         const dist = this.ball.pos.distanceTo(bTarget);
         if (dist > 3.2 || !this.pointActive) {
           this.ball.pos.copy(bTarget);
-          this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
+          this.ball.vel.set(Number(data.b.vx) || 0, Number(data.b.vy) || 0, Number(data.b.vz) || 0);
         } else {
           this.ball.pos.lerp(bTarget, 0.42);
-          this.ball.vel.set(data.b.vx, data.b.vy, data.b.vz);
+          this.ball.vel.set(Number(data.b.vx) || 0, Number(data.b.vy) || 0, Number(data.b.vz) || 0);
         }
 
         // Set initial spawn position once upon connecting or when point ends to reset to serve line, never continuously overwrite guest movement!
         const pointJustEnded = this.pointActive && !data.pa;
         if ((!this._guestInitialPosSet || pointJustEnded) && data.p2) {
-          this.ai.pos.set(data.p2.x, 0, data.p2.z);
+          this.ai.pos.set(Number(data.p2.x) || 0, 0, Number(data.p2.z) || 0);
           this._guestInitialPosSet = true;
         }
 
-        this.scorePlayer = data.sc.sp;
-        this.scoreAI = data.sc.sa;
-        this.gamesPlayer = data.sc.gp;
-        this.gamesAI = data.sc.ga;
-        this.rally = data.rally;
-        this.pointActive = data.pa;
+        this.scorePlayer = Number(data.sc.sp) || 0;
+        this.scoreAI = Number(data.sc.sa) || 0;
+        this.gamesPlayer = Number(data.sc.gp) || 0;
+        this.gamesAI = Number(data.sc.ga) || 0;
+        this.rally = Number(data.rally) || 0;
+        this.pointActive = Boolean(data.pa);
         this.updateHUD();
 
-        if (data.ann) {
-          this.showAnnouncement(data.ann.title, data.ann.sub);
+        if (data.ann && typeof data.ann === 'object') {
+          this.showAnnouncement(String(data.ann.title || ''), String(data.ann.sub || ''));
         }
 
         if (data.snd) {
@@ -5858,7 +5886,7 @@ class TennisGameEngine {
           else if (data.snd === 'crowd') this.audio.playCrowd();
         }
 
-        if (data.map && data.map !== this.currentMap) {
+        if (data.map && validMaps.includes(data.map) && data.map !== this.currentMap) {
           this.setMap(data.map, false);
         }
 
@@ -5866,7 +5894,7 @@ class TennisGameEngine {
         if (this.pointActive) {
           if (promptEl) promptEl.classList.add('hidden');
         } else if (data.srv) {
-          this.server = data.srv;
+          this.server = data.srv === 'ai' ? 'ai' : 'player';
           this.servingSide = data.side || this.servingSide;
           if (this.server === 'ai') {
             if (promptEl) {
@@ -5886,12 +5914,12 @@ class TennisGameEngine {
         }
       } else if (data.type === 'p2_input' && this.gameMode === 'online_host') {
         // Host receives Guest controls: smooth target interpolation
-        this.ai.netTargetPos.set(data.x, 0, data.z);
-        this.ai.runCycle = data.rc;
+        this.ai.netTargetPos.set(Number(data.x) || 0, 0, Number(data.z) || 0);
+        this.ai.runCycle = Number(data.rc) || 0;
         if (data.sw && !this.ai.isSwinging) {
-          this.startSwingAnimation(this.ai, data.st || 'forehand');
+          this.startSwingAnimation(this.ai, data.st === 'backhand' ? 'backhand' : 'forehand');
         }
-        if (data.shot) {
+        if (data.shot && typeof data.shot === 'object') {
           // Tennis Rule 24: Receiver cannot volley the serve before it bounces!
           if (this.rally === 0 && this.server !== 'ai' && !this.ball.hitGroundInCourt) {
             return;
@@ -5905,15 +5933,17 @@ class TennisGameEngine {
           if ((canHit || canLunge) && this.ball.pos.z < 1.0 && this.ball.lastHitter !== 'ai') {
             const swingType = (this.ball.pos.x < this.ai.pos.x) ? 'forehand' : 'backhand';
             this.startSwingAnimation(this.ai, swingType);
-            this.shotType = data.shot.shotType || 'DRIVE';
-            this._guestAimX = data.shot.aimX || 0;
-            this._guestAimZ = data.shot.aimZ || 0;
+            const allowedShots = ['DRIVE', 'SLICE', 'LOB', 'DROP'];
+            this.shotType = allowedShots.includes(data.shot.shotType) ? data.shot.shotType : 'DRIVE';
+            this._guestAimX = Number(data.shot.aimX) || 0;
+            this._guestAimZ = Number(data.shot.aimZ) || 0;
+            const rawPower = Math.max(0.2, Math.min(1.0, Number(data.shot.power) || 0.88));
             if (canLunge) {
               this.particles.burst(this.ai.pos, 16, 0xff0055, 2.4);
               this.ai.pos.x = THREE.MathUtils.lerp(this.ai.pos.x, this.ball.pos.x, 0.40);
-              this.executeHitWithHitbox('ai', Math.min(data.shot.power || 0.88, 0.72), 0, false);
+              this.executeHitWithHitbox('ai', Math.min(rawPower, 0.72), 0, false);
             } else {
-              this.executeHitWithHitbox('ai', data.shot.power || 0.88, 0, true);
+              this.executeHitWithHitbox('ai', rawPower, 0, true);
             }
           }
         }
@@ -5922,7 +5952,7 @@ class TennisGameEngine {
           this.executeAIServe();
         }
       } else if (data.type === 'map_change' && this.gameMode === 'online_guest') {
-        if (data.map) {
+        if (data.map && validMaps.includes(data.map)) {
           this.setMap(data.map, false);
         }
       }
@@ -6558,10 +6588,16 @@ class TennisGameEngine {
     if (gameWon) {
       if (this.gamesPlayer >= 6 && this.gamesPlayer - this.gamesAI >= 2) {
         this.setsPlayer++;
+        if (this.tournament && this.tournament.active) {
+          this.checkTournamentProgress();
+        }
         this.gamesPlayer = 0; this.gamesAI = 0;
         this.showAnnouncement(`¡SET PARA ${p1Label}!`, 'Consigue la primera manga');
       } else if (this.gamesAI >= 6 && this.gamesAI - this.gamesPlayer >= 2) {
         this.setsAI++;
+        if (this.tournament && this.tournament.active) {
+          this.checkTournamentProgress();
+        }
         this.gamesPlayer = 0; this.gamesAI = 0;
         this.showAnnouncement(`¡SET PARA ${p2Label}!`, 'Consigue la primera manga');
       }
@@ -7207,13 +7243,22 @@ class TennisGameEngine {
     }
   }
 
+  _escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   setupTournamentHost() {
     this.gameMode = 'tournament_host';
     this.tournament.active = true;
     this.tournament.isHost = true;
     this.tournament.round = 1;
 
-    const myName = (document.getElementById('player-nickname')?.value || 'CAMPEÓN').trim();
+    const myName = (document.getElementById('player-nickname')?.value || 'CAMPEÓN').trim().slice(0, 24);
     const myGender = document.querySelector('.gender-btn.active')?.dataset.gender || 'male';
 
     if (!this.peer || this.peer.destroyed) {
@@ -7225,6 +7270,28 @@ class TennisGameEngine {
       try {
         this.peer = new Peer(code, {
           config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+        });
+        this.peer.on('connection', (conn) => {
+          conn.on('data', (data) => {
+            if (!data || typeof data !== 'object') return;
+            if (data.type === 'tournament_join' && this.tournament.players.length < 4) {
+              const guestName = String(data.name || 'INVITADO').trim().slice(0, 24) || 'INVITADO';
+              const guestGender = data.gender === 'female' ? 'female' : 'male';
+              this.tournament.players.push({
+                id: 'peer_' + (this.tournament.players.length + 1),
+                name: guestName,
+                gender: guestGender,
+                isHost: false,
+                isAI: false,
+                wins: 0,
+                games: 0
+              });
+              this.updateTournamentLobbyUI();
+              try {
+                conn.send({ type: 'tournament_sync', tournament: this.tournament });
+              } catch (err) {}
+            }
+          });
         });
       } catch (e) {
         console.warn('PeerJS init fallback', e);
@@ -7286,10 +7353,11 @@ class TennisGameEngine {
           const genderIcon = p.gender === 'female' ? '♀️' : '♂️';
           const badgeClass = p.isHost ? 'badge-host' : (p.isAI ? 'badge-ai' : 'badge-ready');
           const badgeText = p.isHost ? 'ANFITRIÓN' : (p.isAI ? 'IA PRO' : 'LISTO');
+          const safeName = this._escapeHtml(p.name);
           item.innerHTML = `
             <div class="slot-name">
               <span>${genderIcon}</span>
-              <span>${p.name}</span>
+              <span>${safeName}</span>
             </div>
             <span class="slot-badge ${badgeClass}">${badgeText}</span>
           `;
@@ -7337,14 +7405,31 @@ class TennisGameEngine {
     });
 
     this.conn.on('data', (data) => {
-      if (data.type === 'tournament_sync') {
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'tournament_sync' && data.tournament && Array.isArray(data.tournament.players)) {
         this.tournament = data.tournament;
         this.updateTournamentLobbyUI();
-      } else if (data.type === 'tournament_start') {
+      } else if (data.type === 'tournament_start' && data.tournament) {
         this.tournament = data.tournament;
         this.startTournamentMatch(data.assignedMatch);
       }
     });
+  }
+
+  startTournamentMatch(assignedMatch) {
+    const match = assignedMatch || (this.tournament.matches && this.tournament.matches[0]);
+    if (!match) return;
+    const validMaps = ['stadium', 'beach', 'zen', 'whitehouse'];
+    const mapKey = validMaps.includes(match.court) ? match.court : 'stadium';
+    document.getElementById('start-screen')?.classList.add('fade-out');
+    this.isPlaying = true;
+    this.setMap(mapKey, false);
+    if (match.p2 && match.p2.name) {
+      this.ai.nickname = String(match.p2.name);
+      const hudAi = document.getElementById('hud-ai-name');
+      if (hudAi) hudAi.innerText = this.ai.nickname;
+    }
+    this.showAnnouncement('¡TORNEO INICIADO!', `${match.p1?.name || 'J1'} vs ${match.p2?.name || 'J2'}`);
   }
 
   startTournament() {
@@ -7439,19 +7524,24 @@ class TennisGameEngine {
       this.tournament.matches.forEach((m, idx) => {
         const card = document.createElement('div');
         card.className = 'match-bracket-card';
+        const safeCourtName = this._escapeHtml(m.courtName);
+        const safeP1Name = this._escapeHtml(m.p1?.name);
+        const safeP2Name = this._escapeHtml(m.p2?.name);
+        const safeScoreP1 = Number(m.scoreP1) || 0;
+        const safeScoreP2 = Number(m.scoreP2) || 0;
         card.innerHTML = `
           <div class="match-header">
             <span>SET ${idx + 1}</span>
-            <span class="match-arena-tag">${m.courtName}</span>
+            <span class="match-arena-tag">${safeCourtName}</span>
           </div>
           <div class="match-competitors">
-            <div class="match-player-row ${m.winner && m.winner.name === m.p1.name ? 'winner' : ''}">
-              <span>${m.p1.name}</span>
-              <span>${m.scoreP1}</span>
+            <div class="match-player-row ${m.winner && m.p1 && m.winner.name === m.p1.name ? 'winner' : ''}">
+              <span>${safeP1Name}</span>
+              <span>${safeScoreP1}</span>
             </div>
-            <div class="match-player-row ${m.winner && m.winner.name === m.p2.name ? 'winner' : ''}">
-              <span>${m.p2.name}</span>
-              <span>${m.scoreP2}</span>
+            <div class="match-player-row ${m.winner && m.p2 && m.winner.name === m.p2.name ? 'winner' : ''}">
+              <span>${safeP2Name}</span>
+              <span>${safeScoreP2}</span>
             </div>
           </div>
         `;
@@ -7465,11 +7555,14 @@ class TennisGameEngine {
       tableBody.innerHTML = '';
       this.tournament.players.forEach((p, idx) => {
         const tr = document.createElement('tr');
+        const safeName = this._escapeHtml(p.name);
+        const safeWins = Number(p.wins) || 1;
+        const safeGames = Number(p.games) || 4;
         tr.innerHTML = `
           <td>#${idx + 1}</td>
-          <td><strong>${p.name}</strong></td>
-          <td>${p.wins || 1}</td>
-          <td>${p.games || 4}</td>
+          <td><strong>${safeName}</strong></td>
+          <td>${safeWins}</td>
+          <td>${safeGames}</td>
           <td><span class="slot-badge badge-ready">CLASIFICADO</span></td>
         `;
         tableBody.appendChild(tr);

@@ -1219,7 +1219,7 @@
         netTapeColor: 0xffffff,
         restitution: 0.76,
         friction: 0.68,
-        isPadel: false,
+        isPadel: true,
         isNight: true,
         exposure: 1.22,
         skyTop: '#1e1b4b',
@@ -2397,7 +2397,7 @@
           server: 'p1'
         };
         this.tennisPoints = ['0', '15', '30', '40', 'AD'];
-        this.matchState = 'serving';
+        this.matchState = 'paused';
         this.rallyCount = 0;
         this.lastHitter = null;
         this.ballBounces = 0;
@@ -4322,13 +4322,12 @@
           racketGroup.add(rim);
 
           // Accent pinstripe keeps the athlete's colors on the carbon frame (detail >= 1)
-          if (rDetail >= 1) {
-            const pinstripe = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 8, 40), frameMat);
-            pinstripe.scale.set(0.84, 1.18, 1.0);
-            pinstripe.position.y = 0.50;
-            pinstripe.position.z = 0.016;
-            racketGroup.add(pinstripe);
-          }
+          const pinstripe = markLod(new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.006, 8, 40), frameMat), 1, 'racket');
+          pinstripe.scale.set(0.84, 1.18, 1.0);
+          pinstripe.position.y = 0.50;
+          pinstripe.position.z = 0.016;
+          pinstripe.visible = (rDetail >= 1);
+          racketGroup.add(pinstripe);
 
           // Dense String Bed (shared cached texture, quality-scaled)
           const strSize = rDetail >= 2 ? 256 : (rDetail >= 1 ? 128 : 64);
@@ -4341,13 +4340,12 @@
           racketGroup.add(strings);
 
           // Grommet strip detail (detail >= 2)
-          if (rDetail >= 2) {
-            const grommets = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.008, 6, 32), carbonFlatMat);
-            grommets.scale.set(0.84, 1.18, 1.0);
-            grommets.position.y = 0.50;
-            grommets.position.z = -0.014;
-            racketGroup.add(grommets);
-          }
+          const grommets = markLod(new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.008, 6, 32), carbonFlatMat), 2, 'racket');
+          grommets.scale.set(0.84, 1.18, 1.0);
+          grommets.position.y = 0.50;
+          grommets.position.z = -0.014;
+          grommets.visible = (rDetail >= 2);
+          racketGroup.add(grommets);
         }
 
         return racketGroup;
@@ -4365,6 +4363,28 @@
         this.opponent.root.position.set(0, 0, -10.2);
         this.opponent.root.rotation.y = Math.PI;
         this.scene.add(this.opponent.root);
+
+        this.applyPlayerQuality();
+      }
+
+      applyPlayerQuality() {
+        const prof = QualityProfiles[this.qualityLevel] || QualityProfiles.high;
+        const bodyLvl = prof.bodyDetail ?? 2;
+        const racketLvl = prof.racketDetail ?? 2;
+        const shadowsOn = this.qualityLevel !== 'low';
+        [this.player, this.opponent].forEach(actor => {
+          if (!actor || !actor.root) return;
+          actor.root.traverse(obj => {
+            if (obj.userData && typeof obj.userData.lod === 'number') {
+              const req = obj.userData.lod;
+              const maxLvl = (obj.userData.lodKind === 'racket') ? racketLvl : bodyLvl;
+              obj.visible = (maxLvl >= req);
+              if (obj.userData.lodShadow) {
+                obj.castShadow = shadowsOn && obj.visible;
+              }
+            }
+          });
+        });
       }
 
       // --- 3D BALL, AERODYNAMIC RIBBON TRAIL & PARTICLES ---
@@ -4660,17 +4680,17 @@
           sound.init();
 
           // FIX: Escape toggles real pause overlay
+          const mainMenuOpen = !document.getElementById('modal-main-menu').classList.contains('hidden');
+          const victoryOpen = !document.getElementById('modal-victory').classList.contains('hidden');
           if (e.code === 'Escape') {
-            const mainMenuOpen = !document.getElementById('modal-main-menu').classList.contains('hidden');
-            const victoryOpen = !document.getElementById('modal-victory').classList.contains('hidden');
             if (!mainMenuOpen && !victoryOpen) {
               const isPaused = (this.matchState === 'paused');
               this.togglePause(!isPaused);
             }
             return;
           }
-          // Ignore gameplay keys while paused
-          if (this.matchState === 'paused') return;
+          // Ignore gameplay keys while paused or when main/victory modals are open
+          if (this.matchState === 'paused' || mainMenuOpen || victoryOpen) return;
 
           // Player 2 Controls in 2-Player Local Mode
           if (this.gameMode === '2p') {
@@ -4728,6 +4748,7 @@
           }
 
           if (e.code === 'Space' || ['j', 'k', 'l', 'i', 'e'].includes(k) || e.code === 'ShiftLeft') {
+            this.serveInputHeld = false;
             if (this.serveTossActive && this.serveTossTime >= 0.14) {
               this.releaseServeStrike();
             } else if (this.charging) {
@@ -4739,6 +4760,7 @@
         // Mouse Controls on Canvas
         this.canvas.addEventListener('mousedown', (e) => {
           if (e.target !== this.canvas) return;
+          if (this.matchState === 'paused') return;
           sound.init();
           const sType = (e.button === 2) ? 'topspin' : 'flat';
           if (this.matchState === 'serving' && this.scores.server === 'p1') {
@@ -4750,6 +4772,7 @@
         });
 
         this.canvas.addEventListener('mouseup', () => {
+          this.serveInputHeld = false;
           if (this.serveTossActive && this.serveTossTime >= 0.14) this.releaseServeStrike();
           else if (this.charging) this.releaseShot();
         });
@@ -4824,10 +4847,12 @@
           btn.addEventListener('pointerup', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            this.serveInputHeld = false;
             if (this.serveTossActive && this.serveTossTime >= 0.14) this.releaseServeStrike();
             else if (this.charging) this.releaseShot();
           });
           btn.addEventListener('pointercancel', () => {
+            this.serveInputHeld = false;
             if (this.serveTossActive && this.serveTossTime >= 0.14) this.releaseServeStrike();
             else if (this.charging) this.releaseShot();
           });
@@ -5161,7 +5186,7 @@
             if (this.matchState === 'paused') {
               const prev = this.prevMatchState || (this.ballPhysics.inPlay ? 'in_rally' : 'serving');
               if (prev === 'point_ended') {
-                this.prepareServe(this.scores.server === 'p1');
+                this.prepareServe(this.scores.server === 'p1', this.serveFaults > 0);
               } else {
                 this.matchState = this.ballPhysics.inPlay ? 'in_rally' : 'serving';
                 if (this.matchState === 'serving' && this.scores.server === 'p2' && this.gameMode !== '2p') {
@@ -5190,6 +5215,14 @@
       }
 
       returnToMainMenu() {
+        if (this.pointEndTimer) {
+          clearTimeout(this.pointEndTimer);
+          this.pointEndTimer = null;
+        }
+        if (this.aiServeTimer) {
+          clearTimeout(this.aiServeTimer);
+          this.aiServeTimer = null;
+        }
         document.getElementById('modal-pause').classList.add('hidden');
         document.getElementById('modal-victory').classList.add('hidden');
         document.getElementById('modal-main-menu').classList.remove('hidden');
@@ -5319,7 +5352,8 @@
         }
 
         this.updateScoreUI();
-        setTimeout(() => {
+        if (this.pointEndTimer) clearTimeout(this.pointEndTimer);
+        this.pointEndTimer = setTimeout(() => {
           if (this.matchState === 'point_ended') {
             this.prepareServe(this.scores.server === 'p1');
           }
@@ -5355,7 +5389,8 @@
         }
 
         this.updateScoreUI();
-        setTimeout(() => {
+        if (this.pointEndTimer) clearTimeout(this.pointEndTimer);
+        this.pointEndTimer = setTimeout(() => {
           if (this.matchState === 'point_ended') {
             this.prepareServe(this.scores.server === 'p1');
           }
@@ -5393,6 +5428,10 @@
 
       // --- SERVE & BALL TOSS MECHANICS ---
       prepareServe(playerServing, keepFaults = false) {
+        if (this.pointEndTimer) {
+          clearTimeout(this.pointEndTimer);
+          this.pointEndTimer = null;
+        }
         if (this.aiServeTimer) {
           clearTimeout(this.aiServeTimer);
           this.aiServeTimer = null;
@@ -5405,6 +5444,7 @@
         this.ballPhysics.isServe = false;
         this.ballPhysics.isSmash = false;
         this.serveTossActive = false;
+        this.serveInputHeld = false;
         this.serveTossTime = 0;
         this.serveAimOffset = 0;
         this.charging = false;
@@ -5461,6 +5501,7 @@
       beginServeToss(shotType = 'flat') {
         if (this.matchState !== 'serving' || this.scores.server !== 'p1') return;
         this.serveTossActive = true;
+        this.serveInputHeld = true;
         this.serveTossTime = 0;
         this.serveShotType = (shotType === 'lob') ? 'flat' : shotType;
         this.serveAimOffset = 0;
@@ -5477,6 +5518,7 @@
 
         const tossT = this.serveTossActive ? this.serveTossTime : 0.36;
         this.serveTossActive = false;
+        this.serveInputHeld = false;
         document.getElementById('power-bar').style.width = '0%';
 
         // Contact height based on toss timing (apex around t = 0.36s -> y = 2.70m)
@@ -5571,7 +5613,8 @@
           this.serveFaults = 1;
           this.showCallout('¡FALTA DE SAQUE!', `${reason} • SEGUNDO SERVICIO`);
           sound.speak('Falta. Segundo servicio');
-          setTimeout(() => {
+          if (this.pointEndTimer) clearTimeout(this.pointEndTimer);
+          this.pointEndTimer = setTimeout(() => {
             if (this.matchState === 'point_ended') {
               this.prepareServe(this.scores.server === 'p1', true);
             }
@@ -6228,12 +6271,14 @@
           char.leftAnkle.rotation.x = -stride * 0.25;
           char.rightAnkle.rotation.x = -oppStride * 0.25;
 
+          char.hips.position.x = 0;
           char.hips.position.y = 0.92 + Math.abs(Math.sin(t * 2)) * 0.09;
           char.hips.rotation.y = Math.cos(t) * 0.14;
           char.spine.rotation.z = -moveVec.x * (isPlayer ? 0.16 : -0.16);
           char.spine.rotation.x = 0.18;
         } else {
           const hop = Math.abs(Math.sin(t * 1.5));
+          char.hips.position.x = 0;
           char.hips.position.y = 0.91 + hop * 0.045;
           char.hips.rotation.y = 0;
           char.spine.rotation.set(0.16, 0, 0);
@@ -6344,6 +6389,7 @@
             char.chest.rotation.set(0, 0, 0);
             char.rightWrist.rotation.set(0, 0, 0);
             char.hips.rotation.y = 0;
+            char.hips.position.x = 0;
           }
         } else if (char.state === 'serving') {
           char.swingTimer -= dt;
@@ -6377,6 +6423,7 @@
             char.chest.rotation.set(0, 0, 0);
             char.rightWrist.rotation.set(0, 0, 0);
             char.hips.rotation.y = 0;
+            char.hips.position.x = 0;
           }
         } else {
           char.chest.rotation.y += (0 - char.chest.rotation.y) * dt * 10;
@@ -6439,7 +6486,7 @@
           document.getElementById('power-bar').style.width = gaugePct + '%';
 
           // Auto-strike at apex if player did a quick tap (already released button)
-          const anyShotHeld = this.keys[' '] || this.keys['Space'] || this.keys['j'] || this.keys['k'] || this.keys['l'] || this.keys['i'];
+          const anyShotHeld = this.serveInputHeld || this.keys[' '] || this.keys['Space'] || this.keys['j'] || this.keys['k'] || this.keys['l'] || this.keys['i'] || this.keys['e'] || this.keys['ShiftLeft'];
           if (!anyShotHeld && t >= 0.34) {
             this.releaseServeStrike();
           } else if (t > 0.74 && tossY <= 1.05) {
